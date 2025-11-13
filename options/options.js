@@ -48,14 +48,21 @@ async function loadSettings() {
 
 function addRepo() {
   const input = document.getElementById('repoInput');
-  const repo = input.value.trim();
+  let repo = input.value.trim();
 
   if (!repo) {
     return;
   }
 
+  // Parse GitHub URL if provided
+  const urlMatch = repo.match(/github\.com\/([^\/]+\/[^\/]+)/);
+  if (urlMatch) {
+    repo = urlMatch[1].replace(/\.git$/, '');
+  }
+
+  // Validate owner/repo format
   if (!repo.match(/^[\w-]+\/[\w-]+$/)) {
-    showMessage('Invalid format. Use: owner/repo', 'error');
+    showMessage('Invalid format. Use: owner/repo or GitHub URL', 'error');
     return;
   }
 
@@ -104,11 +111,6 @@ async function saveSettings() {
 
   if (!token) {
     showMessage('GitHub token is required', 'error');
-    return;
-  }
-
-  if (watchedRepos.length === 0) {
-    showMessage('Add at least one repository', 'error');
     return;
   }
 
