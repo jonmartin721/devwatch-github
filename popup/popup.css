@@ -220,10 +220,19 @@ h1 {
   padding: 4px;
   opacity: 0.6;
   transition: opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
   opacity: 1;
+}
+
+.action-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .activity-header {

@@ -76,10 +76,53 @@
       margin-bottom: 32px;
     }
 
+    .settings-nav {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+
+    .settings-nav h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .nav-links a {
+      color: var(--link-color);
+      text-decoration: none;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .nav-links a:hover {
+      opacity: 0.7;
+      text-decoration: underline;
+    }
+
+    .nav-links li:not(:last-child)::after {
+      content: "•";
+      margin-left: 12px;
+      color: var(--text-secondary);
+    }
+
     .section {
       margin-bottom: 32px;
       padding-bottom: 32px;
       border-bottom: 1px solid var(--border-color);
+      scroll-margin-top: 20px;
     }
 
     .section:last-child {
@@ -415,25 +458,37 @@
     <h1>Settings</h1>
     <p class="subtitle">Configure your GitHub notifications</p>
 
+    <nav class="settings-nav">
+      <h3>Quick Navigation</h3>
+      <ul class="nav-links">
+        <li><a href="#token">GitHub Token</a></li>
+        <li><a href="#repositories">Repositories</a></li>
+        <li><a href="#filters">Activity Filters</a></li>
+        <li><a href="#notifications">Notifications</a></li>
+        <li><a href="#appearance">Appearance</a></li>
+        <li><a href="#interval">Check Interval</a></li>
+      </ul>
+    </nav>
+
     <div id="statusMessage" class="status-message"></div>
 
-    <div class="section">
+    <div class="section" id="token">
       <h2>GitHub Personal Access Token</h2>
-      <div class="form-row">
-        <label for="githubToken">Token</label>
-        <div class="token-input-wrapper">
-          <input type="password" id="githubToken" placeholder="ghp_...">
-          <button id="clearTokenBtn" class="danger" style="display: none;">Clear Token</button>
+        <div class="form-row">
+          <label for="githubToken">Token</label>
+          <div class="token-input-wrapper">
+            <input type="password" id="githubToken" placeholder="ghp_...">
+            <button id="clearTokenBtn" class="danger" style="display: none;">Clear Token</button>
+          </div>
+          <span id="tokenStatus" class="token-status"></span>
+          <p class="help-text">
+            Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
+            with <code>repo</code> scope for private repos or <code>public_repo</code> for public only.
+          </p>
         </div>
-        <span id="tokenStatus" class="token-status"></span>
-        <p class="help-text">
-          Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
-          with <code>repo</code> scope for private repos or <code>public_repo</code> for public only.
-        </p>
-      </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="repositories">
       <h2>Watched Repositories</h2>
       <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
 
@@ -461,7 +516,7 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="filters">
       <h2>Activity Filters</h2>
       <p class="help-text">Choose which types of activity to monitor</p>
 
@@ -481,7 +536,44 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="notifications">
+      <h2>Notifications</h2>
+      <p class="help-text">Control browser notifications</p>
+
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="enableNotifications" checked>
+          <label for="enableNotifications">Enable browser notifications</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="notifyPrs" checked>
+          <label for="notifyPrs">Notify for Pull Requests</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="notifyIssues" checked>
+          <label for="notifyIssues">Notify for Issues</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="notifyReleases" checked>
+          <label for="notifyReleases">Notify for Releases</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="appearance">
+      <h2>Appearance</h2>
+      <div class="form-row">
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="system">System (auto)</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <p class="help-text" style="margin-top: 8px;">Choose your preferred color scheme. System follows your OS preference.</p>
+      </div>
+    </div>
+
+    <div class="section" id="interval">
       <h2>Check Interval</h2>
       <div class="form-row">
         <label for="checkInterval">How often to check for updates</label>
