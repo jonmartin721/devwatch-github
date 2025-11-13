@@ -1,5 +1,5 @@
 import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
-import { getSyncItem, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getSyncItem } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
 
 let currentFilter = 'all';

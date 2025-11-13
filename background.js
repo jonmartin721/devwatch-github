@@ -1,5 +1,5 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, setSyncItem, getExcludedRepos } from './shared/storage-helpers.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos } from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/utils.js';
 
 const ALARM_NAME = 'checkGitHub';

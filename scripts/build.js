@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 console.log('Validating Chrome extension structure...\n');
 
@@ -28,8 +32,9 @@ let errors = 0;
 
 // Check directories
 console.log('Checking directories...');
+const rootDir = path.join(__dirname, '..');
 requiredDirs.forEach(dir => {
-  const dirPath = path.join(process.cwd(), dir);
+  const dirPath = path.join(rootDir, dir);
   if (!fs.existsSync(dirPath)) {
     console.error(`✗ Missing directory: ${dir}`);
     errors++;
@@ -40,7 +45,7 @@ requiredDirs.forEach(dir => {
 
 console.log('\nChecking required files...');
 requiredFiles.forEach(file => {
-  const filePath = path.join(process.cwd(), file);
+  const filePath = path.join(rootDir, file);
   if (!fs.existsSync(filePath)) {
     console.error(`✗ Missing file: ${file}`);
     errors++;
@@ -52,7 +57,7 @@ requiredFiles.forEach(file => {
 // Validate manifest.json
 console.log('\nValidating manifest.json...');
 try {
-  const manifestPath = path.join(process.cwd(), 'manifest.json');
+  const manifestPath = path.join(rootDir, 'manifest.json');
   const manifestContent = fs.readFileSync(manifestPath, 'utf8');
   const manifest = JSON.parse(manifestContent);
 
