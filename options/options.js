@@ -14,11 +14,21 @@ if (typeof document !== 'undefined') {
 }
 
 function loadDarkMode() {
-  chrome.storage.sync.get(['darkMode'], (result) => {
-    if (result.darkMode) {
-      document.body.classList.add('dark-mode');
-    }
+  chrome.storage.sync.get(['theme'], (result) => {
+    const theme = result.theme || 'system';
+    applyTheme(theme);
   });
+}
+
+function applyTheme(theme) {
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.body.classList.toggle('dark-mode', prefersDark);
+  } else if (theme === 'dark') {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
 }
 
 function setupEventListeners() {
@@ -151,7 +161,9 @@ async function loadSettings() {
       'githubToken',
       'watchedRepos',
       'checkInterval',
-      'filters'
+      'filters',
+      'notifications',
+      'theme'
     ]);
 
     if (settings.githubToken) {
@@ -178,6 +190,17 @@ async function loadSettings() {
       document.getElementById('filterPrs').checked = settings.filters.prs !== false;
       document.getElementById('filterIssues').checked = settings.filters.issues !== false;
       document.getElementById('filterReleases').checked = settings.filters.releases !== false;
+    }
+
+    if (settings.notifications) {
+      document.getElementById('enableNotifications').checked = settings.notifications.enabled !== false;
+      document.getElementById('notifyPrs').checked = settings.notifications.prs !== false;
+      document.getElementById('notifyIssues').checked = settings.notifications.issues !== false;
+      document.getElementById('notifyReleases').checked = settings.notifications.releases !== false;
+    }
+
+    if (settings.theme) {
+      document.getElementById('theme').value = settings.theme;
     }
   } catch (error) {
     showMessage('Error loading settings', 'error');
@@ -564,13 +587,27 @@ async function saveSettings() {
     releases: document.getElementById('filterReleases').checked
   };
 
+  const notifications = {
+    enabled: document.getElementById('enableNotifications').checked,
+    prs: document.getElementById('notifyPrs').checked,
+    issues: document.getElementById('notifyIssues').checked,
+    releases: document.getElementById('notifyReleases').checked
+  };
+
+  const theme = document.getElementById('theme').value;
+
   try {
     await chrome.storage.sync.set({
       githubToken: token,
       watchedRepos: state.watchedRepos,
       checkInterval: interval,
-      filters: filters
+      filters: filters,
+      notifications: notifications,
+      theme: theme
     });
+
+    // Apply theme immediately
+    applyTheme(theme);
 
     // Update alarm with new interval
     chrome.runtime.sendMessage({

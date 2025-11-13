@@ -28,9 +28,24 @@ global.chrome = {
   }
 };
 
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
+
 // Import functions from popup.js
 const {
-  toggleDarkMode,
+  applyTheme,
   updateDarkModeIcon,
   groupByTime,
   updateRateLimit,
@@ -48,12 +63,19 @@ describe('Dark Mode', () => {
     `;
   });
 
-  test('toggles dark mode class on body', () => {
+  test('applies theme correctly', () => {
+    // Test light theme
+    applyTheme('light');
     expect(document.body.classList.contains('dark-mode')).toBe(false);
-    toggleDarkMode();
+
+    // Test dark theme
+    applyTheme('dark');
     expect(document.body.classList.contains('dark-mode')).toBe(true);
-    toggleDarkMode();
-    expect(document.body.classList.contains('dark-mode')).toBe(false);
+
+    // Test system theme (depends on media query)
+    applyTheme('system');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    expect(document.body.classList.contains('dark-mode')).toBe(prefersDark);
   });
 
   test('updates dark mode icon', () => {
@@ -99,7 +121,7 @@ describe('Rate Limit Display', () => {
     document.body.innerHTML = '<span id="rateLimitInfo"></span>';
   });
 
-  test('shows warning when rate limit low', () => {
+  test('shows warning when rate limit low (<=1000)', () => {
     const rateLimit = {
       remaining: 500,
       limit: 5000,
@@ -111,9 +133,10 @@ describe('Rate Limit Display', () => {
     const info = document.getElementById('rateLimitInfo');
     expect(info.textContent).toContain('⚠️');
     expect(info.textContent).toContain('500/5000');
+    expect(info.style.display).toBe('block');
   });
 
-  test('shows normal display when rate limit ok', () => {
+  test('hides rate limit when remaining > 1000', () => {
     const rateLimit = {
       remaining: 4500,
       limit: 5000,
@@ -123,8 +146,8 @@ describe('Rate Limit Display', () => {
     updateRateLimit(rateLimit);
 
     const info = document.getElementById('rateLimitInfo');
-    expect(info.textContent).not.toContain('⚠️');
-    expect(info.textContent).toContain('4500/5000');
+    expect(info.textContent).toBe('');
+    expect(info.style.display).toBe('none');
   });
 
   test('hides rate limit when no data', () => {
@@ -132,6 +155,7 @@ describe('Rate Limit Display', () => {
 
     const info = document.getElementById('rateLimitInfo');
     expect(info.textContent).toBe('');
+    expect(info.style.display).toBe('none');
   });
 });
 

@@ -26,19 +26,43 @@ function setupEventListeners() {
     });
   });
 
-  // Load dark mode preference
-  chrome.storage.sync.get(['darkMode'], (result) => {
-    if (result.darkMode) {
-      document.body.classList.add('dark-mode');
-      updateDarkModeIcon();
-    }
+  // Load theme preference
+  chrome.storage.sync.get(['theme'], (result) => {
+    const theme = result.theme || 'system';
+    applyTheme(theme);
+    updateDarkModeIcon();
   });
 }
 
+function applyTheme(theme) {
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.body.classList.toggle('dark-mode', prefersDark);
+  } else if (theme === 'dark') {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+}
+
 function toggleDarkMode() {
-  const isDark = document.body.classList.toggle('dark-mode');
-  chrome.storage.sync.set({ darkMode: isDark });
-  updateDarkModeIcon();
+  // Cycle through: light -> dark -> system
+  chrome.storage.sync.get(['theme'], (result) => {
+    let currentTheme = result.theme || 'system';
+    let newTheme;
+
+    if (currentTheme === 'light') {
+      newTheme = 'dark';
+    } else if (currentTheme === 'dark') {
+      newTheme = 'system';
+    } else {
+      newTheme = 'light';
+    }
+
+    chrome.storage.sync.set({ theme: newTheme });
+    applyTheme(newTheme);
+    updateDarkModeIcon();
+  });
 }
 
 function updateDarkModeIcon() {
@@ -90,19 +114,28 @@ async function loadActivities() {
 
 function updateRateLimit(rateLimit) {
   const rateLimitInfo = document.getElementById('rateLimitInfo');
-  if (!rateLimit) {
+
+  // Only show rate limit when remaining <= 1000
+  if (!rateLimit || rateLimit.remaining > 1000) {
     rateLimitInfo.textContent = '';
+    rateLimitInfo.style.display = 'none';
     return;
   }
 
-  const percent = (rateLimit.remaining / rateLimit.limit) * 100;
+  // Show in yellow warning when low
+  rateLimitInfo.textContent = `⚠️ ${rateLimit.remaining}/${rateLimit.limit} API calls remaining`;
+  rateLimitInfo.style.color = '#f0ad4e'; // Yellow/orange warning color
+  rateLimitInfo.style.display = 'block';
 
-  if (percent < 20) {
-    rateLimitInfo.textContent = `⚠️ ${rateLimit.remaining}/${rateLimit.limit} API calls left`;
-    rateLimitInfo.style.color = '#dc3545';
-  } else {
-    rateLimitInfo.textContent = `${rateLimit.remaining}/${rateLimit.limit} API calls`;
-    rateLimitInfo.style.color = 'var(--text-secondary)';
+  // Show when rate limit resets
+  if (rateLimit.reset) {
+    const resetDate = new Date(rateLimit.reset);
+    const now = new Date();
+    const minutesUntilReset = Math.ceil((resetDate - now) / 60000);
+
+    if (minutesUntilReset > 0) {
+      rateLimitInfo.textContent += ` (resets in ${minutesUntilReset}m)`;
+    }
   }
 }
 
@@ -201,6 +234,11 @@ function renderActivities() {
 
 function renderActivityItem(activity) {
   const isRead = readItems.includes(activity.id);
+
+  const readIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" fill="none"/></svg>`;
+  const unreadIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>`;
+  const copyIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>`;
+
   return `
     <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${activity.id}" data-url="${activity.url}">
       <img src="${activity.authorAvatar}" class="activity-avatar" alt="${activity.author}">
@@ -216,9 +254,11 @@ function renderActivityItem(activity) {
       </div>
       <div class="activity-actions">
         <button class="action-btn" data-action="toggle-read" title="${isRead ? 'Mark as unread' : 'Mark as read'}">
-          ${isRead ? '○' : '●'}
+          ${isRead ? readIcon : unreadIcon}
         </button>
-        <button class="action-btn" data-action="copy" title="Copy URL">📋</button>
+        <button class="action-btn" data-action="copy" title="Copy URL">
+          ${copyIcon}
+        </button>
       </div>
     </div>
   `;
@@ -317,6 +357,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderActivities,
     groupByTime,
     formatDate,
+    applyTheme,
     toggleDarkMode,
     updateDarkModeIcon,
     updateRateLimit,

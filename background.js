@@ -49,11 +49,12 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    const { githubToken, watchedRepos, lastCheck, filters } = await chrome.storage.sync.get([
+    const { githubToken, watchedRepos, lastCheck, filters, notifications } = await chrome.storage.sync.get([
       'githubToken',
       'watchedRepos',
       'lastCheck',
-      'filters'
+      'filters',
+      'notifications'
     ]);
 
     if (!githubToken || !watchedRepos || watchedRepos.length === 0) {
@@ -74,7 +75,7 @@ async function checkGitHubActivity() {
     if (newActivities.length > 0) {
       await storeActivities(newActivities);
       await updateBadge();
-      showNotifications(newActivities);
+      showNotifications(newActivities, notifications);
     }
 
     await chrome.storage.sync.set({ lastCheck: new Date().toISOString() });
@@ -221,8 +222,34 @@ async function updateBadge() {
   chrome.action.setBadgeBackgroundColor({ color: '#0366d6' });
 }
 
-function showNotifications(activities) {
-  const grouped = activities.reduce((acc, activity) => {
+function showNotifications(activities, notificationSettings = {}) {
+  // Default to enabled if not specified
+  const settings = {
+    enabled: notificationSettings.enabled !== false,
+    prs: notificationSettings.prs !== false,
+    issues: notificationSettings.issues !== false,
+    releases: notificationSettings.releases !== false
+  };
+
+  // Return early if notifications are disabled
+  if (!settings.enabled) {
+    return;
+  }
+
+  // Filter activities based on notification preferences
+  const filteredActivities = activities.filter(activity => {
+    if (activity.type === 'pr' && !settings.prs) return false;
+    if (activity.type === 'issue' && !settings.issues) return false;
+    if (activity.type === 'release' && !settings.releases) return false;
+    return true;
+  });
+
+  // Return early if no activities to notify about
+  if (filteredActivities.length === 0) {
+    return;
+  }
+
+  const grouped = filteredActivities.reduce((acc, activity) => {
     if (!acc[activity.repo]) {
       acc[activity.repo] = [];
     }
