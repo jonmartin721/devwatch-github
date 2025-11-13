@@ -558,19 +558,20 @@ function renderRepoList() {
     if (typeof repo === 'string') {
       const isMuted = state.mutedRepos.includes(repo);
       return `
-        <li class="repo-item">
+        <li class="repo-item ${isMuted ? 'muted' : ''}">
           <div class="repo-content">
             <div class="repo-name">${repo}</div>
             <div class="repo-description">Legacy format - remove and re-add to see details</div>
           </div>
           <div class="repo-actions">
-            <label class="mute-toggle-label">
-              <span>Muted</span>
-              <label class="toggle-switch">
-                <input type="checkbox" class="mute-toggle" data-repo="${repo}" ${isMuted ? 'checked' : ''}>
-                <span class="toggle-slider"></span>
-              </label>
-            </label>
+            <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${repo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                ${isMuted ?
+                  '<path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/><path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>' :
+                  '<path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>'
+                }
+              </svg>
+            </button>
             <button class="danger" data-repo="${repo}">Remove</button>
           </div>
         </li>
@@ -583,7 +584,7 @@ function renderRepoList() {
     const starIcon = '<svg class="star-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>';
 
     return `
-      <li class="repo-item">
+      <li class="repo-item ${isMuted ? 'muted' : ''}">
         <div class="repo-content">
           <div class="repo-name">${fullName}</div>
           <div class="repo-description">${description}</div>
@@ -595,28 +596,32 @@ function renderRepoList() {
           </div>
         </div>
         <div class="repo-actions">
-          <label class="mute-toggle-label">
-            <span>Muted</span>
-            <label class="toggle-switch">
-              <input type="checkbox" class="mute-toggle" data-repo="${fullName}" ${isMuted ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </label>
+          <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${fullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              ${isMuted ?
+                '<path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/><path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>' :
+                '<path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>'
+              }
+            </svg>
+          </button>
           <button class="danger" data-repo="${fullName}">Remove</button>
         </div>
       </li>
     `;
   }).join('');
 
-  list.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      removeRepo(btn.dataset.repo);
+  list.querySelectorAll('.mute-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      const isMuted = state.mutedRepos.includes(repo);
+      toggleMuteRepo(repo, !isMuted);
     });
   });
 
-  list.querySelectorAll('.mute-toggle').forEach(toggle => {
-    toggle.addEventListener('change', (e) => {
-      toggleMuteRepo(toggle.dataset.repo, e.target.checked);
+  list.querySelectorAll('button.danger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      removeRepo(btn.dataset.repo);
     });
   });
 }
@@ -630,8 +635,9 @@ async function toggleMuteRepo(repoFullName, mute) {
     state.mutedRepos = state.mutedRepos.filter(r => r !== repoFullName);
   }
 
-  // Auto-save
+  // Auto-save and re-render
   await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
+  renderRepoList();
   showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
 }
 
