@@ -1,21 +1,23 @@
 const ALARM_NAME = 'checkGitHub';
 const DEFAULT_INTERVAL = 15;
 
-// Setup alarm when extension is installed
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(['checkInterval'], (result) => {
-    const interval = result.checkInterval || DEFAULT_INTERVAL;
-    setupAlarm(interval);
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  // Setup alarm when extension is installed
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.sync.get(['checkInterval'], (result) => {
+      const interval = result.checkInterval || DEFAULT_INTERVAL;
+      setupAlarm(interval);
+    });
   });
-});
 
-// Setup alarm on startup
-chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.sync.get(['checkInterval'], (result) => {
-    const interval = result.checkInterval || DEFAULT_INTERVAL;
-    setupAlarm(interval);
+  // Setup alarm on startup
+  chrome.runtime.onStartup.addListener(() => {
+    chrome.storage.sync.get(['checkInterval'], (result) => {
+      const interval = result.checkInterval || DEFAULT_INTERVAL;
+      setupAlarm(interval);
+    });
   });
-});
+}
 
 function setupAlarm(intervalMinutes) {
   chrome.alarms.clear(ALARM_NAME, () => {
@@ -25,21 +27,25 @@ function setupAlarm(intervalMinutes) {
   });
 }
 
-// Listen for alarm and check GitHub
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) {
-    checkGitHubActivity();
-  }
-});
+if (typeof chrome !== 'undefined' && chrome.alarms) {
+  // Listen for alarm and check GitHub
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === ALARM_NAME) {
+      checkGitHubActivity();
+    }
+  });
+}
 
-// Handle notification clicks
-chrome.notifications.onClicked.addListener((notificationId) => {
-  const url = notificationId.startsWith('http') ? notificationId : null;
-  if (url) {
-    chrome.tabs.create({ url });
-    chrome.notifications.clear(notificationId);
-  }
-});
+if (typeof chrome !== 'undefined' && chrome.notifications) {
+  // Handle notification clicks
+  chrome.notifications.onClicked.addListener((notificationId) => {
+    const url = notificationId.startsWith('http') ? notificationId : null;
+    if (url) {
+      chrome.tabs.create({ url });
+      chrome.notifications.clear(notificationId);
+    }
+  });
+}
 
 async function checkGitHubActivity() {
   try {
@@ -205,7 +211,7 @@ async function storeActivities(newActivities) {
   await chrome.storage.local.set({ activities: updated });
 }
 
-async function updateBadge(count) {
+async function updateBadge() {
   const { readItems = [] } = await chrome.storage.local.get(['readItems']);
   const { activities = [] } = await chrome.storage.local.get(['activities']);
 
@@ -244,55 +250,69 @@ function showNotifications(activities) {
   });
 }
 
-// Allow manual check from popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'checkNow') {
-    checkGitHubActivity().then(() => sendResponse({ success: true }));
-    return true;
-  }
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  // Allow manual check from popup
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'checkNow') {
+      checkGitHubActivity().then(() => sendResponse({ success: true }));
+      return true;
+    }
 
-  if (request.action === 'clearBadge') {
-    chrome.action.setBadgeText({ text: '' });
-    sendResponse({ success: true });
-  }
+    if (request.action === 'clearBadge') {
+      chrome.action.setBadgeText({ text: '' });
+      sendResponse({ success: true });
+    }
 
-  if (request.action === 'markAsRead') {
-    chrome.storage.local.get(['readItems'], (result) => {
-      const readItems = result.readItems || [];
-      if (!readItems.includes(request.id)) {
-        readItems.push(request.id);
-        chrome.storage.local.set({ readItems }, () => {
+    if (request.action === 'markAsRead') {
+      chrome.storage.local.get(['readItems'], (result) => {
+        const readItems = result.readItems || [];
+        if (!readItems.includes(request.id)) {
+          readItems.push(request.id);
+          chrome.storage.local.set({ readItems }, () => {
+            updateBadge();
+            sendResponse({ success: true });
+          });
+        } else {
+          sendResponse({ success: true });
+        }
+      });
+      return true;
+    }
+
+    if (request.action === 'markAsUnread') {
+      chrome.storage.local.get(['readItems'], (result) => {
+        const readItems = result.readItems || [];
+        const updated = readItems.filter(id => id !== request.id);
+        chrome.storage.local.set({ readItems: updated }, () => {
           updateBadge();
           sendResponse({ success: true });
         });
-      } else {
-        sendResponse({ success: true });
-      }
-    });
-    return true;
-  }
-
-  if (request.action === 'markAsUnread') {
-    chrome.storage.local.get(['readItems'], (result) => {
-      const readItems = result.readItems || [];
-      const updated = readItems.filter(id => id !== request.id);
-      chrome.storage.local.set({ readItems: updated }, () => {
-        updateBadge();
-        sendResponse({ success: true });
       });
-    });
-    return true;
-  }
+      return true;
+    }
 
-  if (request.action === 'markAllAsRead') {
-    chrome.storage.local.get(['activities'], (result) => {
-      const activities = result.activities || [];
-      const allIds = activities.map(a => a.id);
-      chrome.storage.local.set({ readItems: allIds }, () => {
-        updateBadge();
-        sendResponse({ success: true });
+    if (request.action === 'markAllAsRead') {
+      chrome.storage.local.get(['activities'], (result) => {
+        const activities = result.activities || [];
+        const allIds = activities.map(a => a.id);
+        chrome.storage.local.set({ readItems: allIds }, () => {
+          updateBadge();
+          sendResponse({ success: true });
+        });
       });
-    });
-    return true;
-  }
-});
+      return true;
+    }
+  });
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    setupAlarm,
+    checkGitHubActivity,
+    fetchRepoActivity,
+    storeActivities,
+    updateBadge,
+    showNotifications
+  };
+}

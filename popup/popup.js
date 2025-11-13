@@ -2,10 +2,12 @@ let currentFilter = 'all';
 let allActivities = [];
 let readItems = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadActivities();
-  setupEventListeners();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadActivities();
+    setupEventListeners();
+  });
+}
 
 function setupEventListeners() {
   document.getElementById('refreshBtn').addEventListener('click', handleRefresh);
@@ -94,9 +96,6 @@ function updateRateLimit(rateLimit) {
   }
 
   const percent = (rateLimit.remaining / rateLimit.limit) * 100;
-  const resetDate = new Date(rateLimit.reset);
-  const now = new Date();
-  const resetIn = Math.ceil((resetDate - now) / 60000);
 
   if (percent < 20) {
     rateLimitInfo.textContent = `⚠️ ${rateLimit.remaining}/${rateLimit.limit} API calls left`;
@@ -309,4 +308,21 @@ function formatDate(dateString) {
   } else {
     return date.toLocaleDateString();
   }
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    loadActivities,
+    renderActivities,
+    groupByTime,
+    formatDate,
+    toggleDarkMode,
+    updateDarkModeIcon,
+    updateRateLimit,
+    showError,
+    toggleReadState,
+    markAsRead,
+    handleMarkAllRead
+  };
 }

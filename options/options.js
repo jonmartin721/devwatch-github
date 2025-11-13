@@ -1,13 +1,17 @@
-let watchedRepos = [];
-let currentPage = 1;
-let reposPerPage = 10;
-let searchQuery = '';
+const state = {
+  watchedRepos: [],
+  currentPage: 1,
+  reposPerPage: 10,
+  searchQuery: ''
+};
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadDarkMode();
-  loadSettings();
-  setupEventListeners();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadDarkMode();
+    loadSettings();
+    setupEventListeners();
+  });
+}
 
 function loadDarkMode() {
   chrome.storage.sync.get(['darkMode'], (result) => {
@@ -30,24 +34,24 @@ function setupEventListeners() {
 
   // Search functionality
   document.getElementById('repoSearch').addEventListener('input', (e) => {
-    searchQuery = e.target.value.toLowerCase();
-    currentPage = 1; // Reset to first page when searching
+    state.searchQuery = e.target.value.toLowerCase();
+    state.currentPage = 1; // Reset to first page when searching
     renderRepoList();
   });
 
   // Pagination controls
   document.getElementById('prevPage').addEventListener('click', () => {
-    if (currentPage > 1) {
-      currentPage--;
+    if (state.currentPage > 1) {
+      state.currentPage--;
       renderRepoList();
     }
   });
 
   document.getElementById('nextPage').addEventListener('click', () => {
     const filteredRepos = getFilteredRepos();
-    const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
-    if (currentPage < totalPages) {
-      currentPage++;
+    const totalPages = Math.ceil(filteredRepos.length / state.reposPerPage);
+    if (state.currentPage < totalPages) {
+      state.currentPage++;
       renderRepoList();
     }
   });
@@ -157,10 +161,10 @@ async function loadSettings() {
       validateToken(settings.githubToken);
     }
 
-    watchedRepos = settings.watchedRepos || [];
+    state.watchedRepos = settings.watchedRepos || [];
 
     // Migrate old string format to new object format
-    if (settings.githubToken && watchedRepos.some(r => typeof r === 'string')) {
+    if (settings.githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
       await migrateRepoFormat(settings.githubToken);
     }
 
@@ -180,8 +184,8 @@ async function loadSettings() {
   }
 }
 
-async function migrateRepoFormat(token) {
-  const oldRepos = watchedRepos.filter(r => typeof r === 'string');
+async function migrateRepoFormat() {
+  const oldRepos = state.watchedRepos.filter(r => typeof r === 'string');
 
   if (oldRepos.length === 0) return;
 
@@ -192,9 +196,9 @@ async function migrateRepoFormat(token) {
       const result = await validateRepo(repoName);
       if (result.valid) {
         // Replace string with object
-        const index = watchedRepos.findIndex(r => r === repoName);
+        const index = state.watchedRepos.findIndex(r => r === repoName);
         if (index !== -1) {
-          watchedRepos[index] = result.metadata;
+          state.watchedRepos[index] = result.metadata;
         }
       }
     } catch (error) {
@@ -203,7 +207,7 @@ async function migrateRepoFormat(token) {
   }
 
   // Save migrated repos
-  await chrome.storage.sync.set({ watchedRepos });
+  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
   console.log('Migration complete');
 }
 
@@ -222,7 +226,7 @@ async function addRepo() {
   }
 
   // Check if we've hit the 50 repo limit
-  if (watchedRepos.length >= 50) {
+  if (state.watchedRepos.length >= 50) {
     showRepoError('Maximum of 50 repositories allowed');
     statusEl.className = 'repo-validation-status error';
     return;
@@ -232,7 +236,7 @@ async function addRepo() {
   statusEl.className = 'repo-validation-status checking';
 
   // Parse GitHub URL if provided
-  const urlMatch = repo.match(/github\.com\/([^\/]+\/[^\/]+)/);
+  const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
   if (urlMatch) {
     repo = urlMatch[1].replace(/\.git$/, '');
     input.value = repo; // Update input to show parsed format
@@ -257,7 +261,7 @@ async function addRepo() {
     return;
   }
 
-  if (watchedRepos.includes(repo)) {
+  if (state.watchedRepos.includes(repo)) {
     showRepoError('Repository already added');
     statusEl.className = 'repo-validation-status error';
     return;
@@ -273,7 +277,7 @@ async function addRepo() {
   }
 
   // Check if already added (by fullName)
-  if (watchedRepos.some(r => (typeof r === 'string' ? r : r.fullName) === validationResult.metadata.fullName)) {
+  if (state.watchedRepos.some(r => (typeof r === 'string' ? r : r.fullName) === validationResult.metadata.fullName)) {
     showRepoError('Repository already added');
     statusEl.className = 'repo-validation-status error';
     return;
@@ -282,16 +286,16 @@ async function addRepo() {
   // Show success indicator
   statusEl.className = 'repo-validation-status success';
 
-  watchedRepos.push(validationResult.metadata);
+  state.watchedRepos.push(validationResult.metadata);
 
   // Reset to last page to show the newly added repo
-  const totalPages = Math.ceil(watchedRepos.length / reposPerPage);
-  currentPage = totalPages;
+  const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
+  state.currentPage = totalPages;
 
   renderRepoList();
 
   // Auto-save
-  await chrome.storage.sync.set({ watchedRepos });
+  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
   showRepoMessage('Repository added', 'success');
 
   // Clear input and success indicator after brief delay
@@ -321,7 +325,7 @@ async function fetchGitHubRepoFromNpm(packageName) {
     let repoUrl = typeof data.repository === 'string' ? data.repository : data.repository.url;
 
     // Extract GitHub repo from URL
-    const githubMatch = repoUrl.match(/github\.com[\/:]([^\/]+\/[^\/\.]+)/);
+    const githubMatch = repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
     if (!githubMatch) {
       return { success: false, error: `Package "${packageName}" is not hosted on GitHub` };
     }
@@ -407,38 +411,61 @@ async function validateRepo(repo) {
 }
 
 async function removeRepo(repoFullName) {
-  watchedRepos = watchedRepos.filter(r => {
+  state.watchedRepos = state.watchedRepos.filter(r => {
     const fullName = typeof r === 'string' ? r : r.fullName;
     return fullName !== repoFullName;
   });
 
   // Adjust current page if we deleted the last item on a page
-  const totalPages = Math.ceil(watchedRepos.length / reposPerPage);
-  if (currentPage > totalPages && currentPage > 1) {
-    currentPage = totalPages;
+  const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
+  if (state.currentPage > totalPages && state.currentPage > 1) {
+    state.currentPage = totalPages;
   }
 
   renderRepoList();
 
   // Auto-save
-  await chrome.storage.sync.set({ watchedRepos });
+  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
   showRepoMessage('Repository removed', 'success');
 }
 
 function getFilteredRepos() {
-  if (!searchQuery) {
-    return watchedRepos;
+  if (!state.searchQuery) {
+    return state.watchedRepos;
   }
 
-  return watchedRepos.filter(repo => {
+  return state.watchedRepos.filter(repo => {
     const fullName = typeof repo === 'string' ? repo : repo.fullName;
     const description = typeof repo === 'string' ? '' : repo.description;
     const language = typeof repo === 'string' ? '' : repo.language;
 
-    return fullName.toLowerCase().includes(searchQuery) ||
-           description.toLowerCase().includes(searchQuery) ||
-           language.toLowerCase().includes(searchQuery);
+    return fullName.toLowerCase().includes(state.searchQuery) ||
+           description.toLowerCase().includes(state.searchQuery) ||
+           language.toLowerCase().includes(state.searchQuery);
   });
+}
+
+function formatNumber(num) {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
 }
 
 function renderRepoList() {
@@ -446,7 +473,7 @@ function renderRepoList() {
   const searchContainer = document.getElementById('repoSearchContainer');
   const paginationControls = document.getElementById('paginationControls');
 
-  if (watchedRepos.length === 0) {
+  if (state.watchedRepos.length === 0) {
     list.innerHTML = '<p class="help-text">No repositories added yet</p>';
     searchContainer.style.display = 'none';
     paginationControls.style.display = 'none';
@@ -454,7 +481,7 @@ function renderRepoList() {
   }
 
   // Show search if we have repos
-  searchContainer.style.display = watchedRepos.length > 0 ? 'block' : 'none';
+  searchContainer.style.display = state.watchedRepos.length > 0 ? 'block' : 'none';
 
   const filteredRepos = getFilteredRepos();
 
@@ -465,42 +492,19 @@ function renderRepoList() {
   }
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
-  const startIndex = (currentPage - 1) * reposPerPage;
-  const endIndex = startIndex + reposPerPage;
+  const totalPages = Math.ceil(filteredRepos.length / state.reposPerPage);
+  const startIndex = (state.currentPage - 1) * state.reposPerPage;
+  const endIndex = startIndex + state.reposPerPage;
   const reposToDisplay = filteredRepos.slice(startIndex, endIndex);
 
   // Show/hide pagination based on number of repos
-  if (filteredRepos.length > reposPerPage) {
+  if (filteredRepos.length > state.reposPerPage) {
     paginationControls.style.display = 'flex';
-    document.getElementById('prevPage').disabled = currentPage === 1;
-    document.getElementById('nextPage').disabled = currentPage === totalPages;
-    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevPage').disabled = state.currentPage === 1;
+    document.getElementById('nextPage').disabled = state.currentPage === totalPages;
+    document.getElementById('pageInfo').textContent = `Page ${state.currentPage} of ${totalPages}`;
   } else {
     paginationControls.style.display = 'none';
-  }
-
-  function formatNumber(num) {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
-  }
-
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'today';
-    if (diffDays === 1) return 'yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return `${Math.floor(diffDays / 365)} years ago`;
   }
 
   list.innerHTML = reposToDisplay.map(repo => {
@@ -563,7 +567,7 @@ async function saveSettings() {
   try {
     await chrome.storage.sync.set({
       githubToken: token,
-      watchedRepos: watchedRepos,
+      watchedRepos: state.watchedRepos,
       checkInterval: interval,
       filters: filters
     });
@@ -598,4 +602,21 @@ function showRepoMessage(text, type) {
   setTimeout(() => {
     message.classList.remove('show');
   }, 3000);
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    state,
+    validateToken,
+    addRepo,
+    fetchGitHubRepoFromNpm,
+    validateRepo,
+    removeRepo,
+    getFilteredRepos,
+    renderRepoList,
+    migrateRepoFormat,
+    formatNumber,
+    formatDate
+  };
 }
