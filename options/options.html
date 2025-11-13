@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Notifications - Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f6f8fa;
+      color: #24292e;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #586069;
+      margin-bottom: 32px;
+    }
+
+    .section {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e1e4e8;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #0366d6;
+      box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #586069;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .help-text a {
+      color: #0366d6;
+      text-decoration: none;
+    }
+
+    .help-text a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #f6f8fa;
+    }
+
+    button.primary {
+      background: #0366d6;
+      color: white;
+      border-color: #0366d6;
+    }
+
+    button.primary:hover {
+      background: #0256c7;
+    }
+
+    button.danger {
+      background: #dc3545;
+      color: white;
+      border-color: #dc3545;
+    }
+
+    button.danger:hover {
+      background: #c82333;
+    }
+
+    .repo-list {
+      list-style: none;
+      margin-top: 16px;
+    }
+
+    .repo-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: #f6f8fa;
+    }
+
+    .repo-item span {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .add-repo-form {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .add-repo-form input {
+      flex: 1;
+    }
+
+    .checkbox-group {
+      margin-top: 16px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+    }
+
+    .status-message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status-message.show {
+      display: block;
+    }
+
+    .form-row {
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Settings</h1>
+    <p class="subtitle">Configure your GitHub notifications</p>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <div class="section">
+      <h2>GitHub Personal Access Token</h2>
+      <div class="form-row">
+        <label for="githubToken">Token</label>
+        <input type="password" id="githubToken" placeholder="ghp_...">
+        <p class="help-text">
+          Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
+          with <code>repo</code> scope for private repos or <code>public_repo</code> for public only.
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Watched Repositories</h2>
+      <p class="help-text">Add repositories to monitor (format: owner/repo)</p>
+
+      <div class="add-repo-form">
+        <input type="text" id="repoInput" placeholder="e.g., facebook/react">
+        <button id="addRepoBtn" class="primary">Add</button>
+      </div>
+
+      <ul id="repoList" class="repo-list"></ul>
+    </div>
+
+    <div class="section">
+      <h2>Activity Filters</h2>
+      <p class="help-text">Choose which types of activity to monitor</p>
+
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="filterPrs" checked>
+          <label for="filterPrs">Pull Requests</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="filterIssues" checked>
+          <label for="filterIssues">Issues</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="filterReleases" checked>
+          <label for="filterReleases">Releases</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Check Interval</h2>
+      <div class="form-row">
+        <label for="checkInterval">How often to check for updates</label>
+        <select id="checkInterval">
+          <option value="5">Every 5 minutes</option>
+          <option value="15" selected>Every 15 minutes</option>
+          <option value="30">Every 30 minutes</option>
+          <option value="60">Every hour</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="saveBtn" class="primary">Save Settings</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

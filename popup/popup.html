@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Notifications</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GitHub Activity</h1>
+      <button id="refreshBtn" class="icon-btn" title="Check now">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM5.5 8a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0z"/>
+          <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8 8 0 1 1 8 0v1z"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="filters">
+      <button class="filter-btn active" data-type="all">All</button>
+      <button class="filter-btn" data-type="pr">PRs</button>
+      <button class="filter-btn" data-type="issue">Issues</button>
+      <button class="filter-btn" data-type="release">Releases</button>
+    </div>
+
+    <div id="activityList" class="activity-list">
+      <div class="empty-state">
+        <p>No recent activity</p>
+        <small>Check your settings to add repositories</small>
+      </div>
+    </div>
+
+    <footer>
+      <a href="#" id="settingsLink">Settings</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

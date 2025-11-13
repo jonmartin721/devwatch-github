@@ -1,0 +1,180 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 400px;
+  max-height: 600px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 14px;
+  color: #24292e;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e1e4e8;
+  background: #f6f8fa;
+}
+
+h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #586069;
+}
+
+.icon-btn:hover {
+  background: #e1e4e8;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e1e4e8;
+  background: white;
+}
+
+.filter-btn {
+  padding: 4px 12px;
+  border: 1px solid #e1e4e8;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: #0366d6;
+}
+
+.filter-btn.active {
+  background: #0366d6;
+  color: white;
+  border-color: #0366d6;
+}
+
+.activity-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 450px;
+}
+
+.empty-state {
+  padding: 48px 16px;
+  text-align: center;
+  color: #586069;
+}
+
+.empty-state small {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.activity-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e1e4e8;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.activity-item:hover {
+  background: #f6f8fa;
+}
+
+.activity-item.unread {
+  background: #f1f8ff;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.activity-type {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.activity-type.pr {
+  background: #dcffe4;
+  color: #28a745;
+}
+
+.activity-type.issue {
+  background: #fff5b1;
+  color: #735c0f;
+}
+
+.activity-type.release {
+  background: #ddf4ff;
+  color: #0969da;
+}
+
+.activity-repo {
+  font-size: 11px;
+  color: #586069;
+}
+
+.activity-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.activity-meta {
+  font-size: 12px;
+  color: #586069;
+}
+
+footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e1e4e8;
+  background: #f6f8fa;
+  text-align: center;
+}
+
+footer a {
+  color: #0366d6;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: #586069;
+}

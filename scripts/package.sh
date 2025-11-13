@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Package extension for distribution
+echo "Packaging GitHub Notifications extension..."
+
+# Create dist directory
+mkdir -p dist
+
+# Copy necessary files
+zip -r dist/github-notifications.zip \
+  manifest.json \
+  background.js \
+  popup/ \
+  options/ \
+  icons/ \
+  -x "*.DS_Store" \
+  -x "**/.git*"
+
+echo "✓ Extension packaged to dist/github-notifications.zip"
+echo "Load this in Chrome via chrome://extensions/ (Developer mode)"

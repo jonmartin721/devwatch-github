@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Extension Icons</title>
+</head>
+<body>
+  <h2>Icon Generator</h2>
+  <p>Click "Generate" to create extension icons, then right-click each image to save.</p>
+  <button onclick="generateIcons()">Generate Icons</button>
+  <div id="icons"></div>
+
+  <script>
+    function generateIcons() {
+      const sizes = [16, 32, 48, 128];
+      const container = document.getElementById('icons');
+      container.innerHTML = '';
+
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#0366d6';
+        ctx.fillRect(0, 0, size, size);
+
+        // Bell icon (simplified)
+        ctx.fillStyle = '#ffffff';
+        const scale = size / 48;
+
+        ctx.beginPath();
+        // Bell body
+        ctx.arc(size/2, size/2.2, size/3.5, Math.PI * 0.8, Math.PI * 2.2);
+        ctx.lineTo(size/2, size/1.8);
+        ctx.fill();
+
+        // Bell clapper
+        ctx.beginPath();
+        ctx.arc(size/2, size/1.6, size/12, 0, Math.PI * 2);
+        ctx.fill();
+
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL();
+        img.style.margin = '10px';
+        img.style.border = '1px solid #ccc';
+
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL();
+        link.download = `icon${size}.png`;
+        link.appendChild(img);
+
+        const div = document.createElement('div');
+        div.style.display = 'inline-block';
+        div.appendChild(link);
+        div.appendChild(document.createTextNode(` ${size}x${size}`));
+
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
