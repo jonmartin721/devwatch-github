@@ -4,6 +4,7 @@ let readItems = [];
 let showArchive = false;
 let searchQuery = '';
 let focusMode = false;
+let collapsedRepos = new Set();
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -114,8 +115,11 @@ async function loadActivities() {
   list.innerHTML = '<div class="loading">Loading...</div>';
 
   try {
-    const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError']);
+    const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError', 'collapsedRepos']);
     const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+
+    // Load collapsed state
+    collapsedRepos = new Set(data.collapsedRepos || []);
 
     // Filter out muted and snoozed repos
     const mutedRepos = settings.mutedRepos || [];
@@ -221,12 +225,18 @@ function renderActivities() {
   }
 
   const unreadCount = filtered.filter(a => !readItems.includes(a.id)).length;
-  const header = unreadCount > 0 ? `
+  const repoCount = Object.keys(groupByRepo(filtered)).length;
+  const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
+
+  const header = `
     <div class="list-header">
-      <span>${unreadCount} unread</span>
-      <button id="markAllReadBtn" class="text-btn">Mark all as read</button>
+      <span>${unreadCount > 0 ? `${unreadCount} unread` : ''}</span>
+      <div class="header-actions">
+        ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
+        ${unreadCount > 0 ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
+      </div>
     </div>
-  ` : '';
+  `;
 
   // Group activities by repository
   const grouped = groupByRepo(filtered);
@@ -237,10 +247,18 @@ function renderActivities() {
   Object.keys(grouped).forEach(repo => {
     const activities = grouped[repo];
     const repoUnreadCount = activities.filter(a => !readItems.includes(a.id)).length;
+    const isCollapsed = collapsedRepos.has(repo);
 
     htmlContent += `
-      <div class="repo-group-header">
-        <span class="repo-group-name">${repo}</span>
+      <div class="repo-group-header" data-repo="${repo}">
+        <div class="repo-group-title">
+          <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="chevron ${isCollapsed ? 'collapsed' : ''}">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </button>
+          <span class="repo-group-name">${repo}</span>
+        </div>
         <div class="repo-group-actions">
           ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
           <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository">
@@ -250,17 +268,27 @@ function renderActivities() {
           </button>
         </div>
       </div>
+      <div class="repo-activities ${isCollapsed ? 'collapsed' : ''}" data-repo="${repo}">
     `;
 
     htmlContent += activities.map(activity => renderActivityItem(activity)).join('');
+    htmlContent += '</div>';
   });
 
   list.innerHTML = htmlContent;
 
   // Event listeners
-  if (unreadCount > 0) {
-    document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
-  }
+  document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
+  document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
+
+  // Collapse button listeners
+  list.querySelectorAll('.repo-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      toggleRepoCollapse(repo);
+    });
+  });
 
   // Snooze button listeners
   list.querySelectorAll('.repo-snooze-btn').forEach(btn => {
@@ -423,6 +451,20 @@ function groupByRepo(activities) {
   return sortedGroups;
 }
 
+async function toggleRepoCollapse(repo) {
+  if (collapsedRepos.has(repo)) {
+    collapsedRepos.delete(repo);
+  } else {
+    collapsedRepos.add(repo);
+  }
+
+  // Save collapsed state
+  await chrome.storage.local.set({ collapsedRepos: Array.from(collapsedRepos) });
+
+  // Re-render
+  renderActivities();
+}
+
 async function snoozeRepo(repo) {
   try {
     // Get snooze duration from settings
@@ -506,6 +548,24 @@ async function handleMarkAllRead() {
   }
 }
 
+async function handleCollapseAll() {
+  const grouped = groupByRepo(allActivities);
+  const allRepos = Object.keys(grouped);
+  const allCollapsed = collapsedRepos.size === allRepos.length;
+
+  if (allCollapsed) {
+    // Expand all
+    collapsedRepos.clear();
+  } else {
+    // Collapse all
+    allRepos.forEach(repo => collapsedRepos.add(repo));
+  }
+
+  // Save and re-render
+  await chrome.storage.local.set({ collapsedRepos: Array.from(collapsedRepos) });
+  renderActivities();
+}
+
 function formatDate(dateString) {
   const date = new Date(dateString);
   const now = new Date();
@@ -532,6 +592,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderActivities,
     groupByTime,
     groupByRepo,
+    toggleRepoCollapse,
     snoozeRepo,
     formatDate,
     applyTheme,
@@ -543,6 +604,7 @@ if (typeof module !== 'undefined' && module.exports) {
     markAsRead,
     markAsReadWithAnimation,
     handleMarkAllRead,
+    handleCollapseAll,
     toggleSearch,
     toggleFocus,
     toggleArchive
