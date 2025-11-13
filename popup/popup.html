@@ -28,11 +28,34 @@
       </div>
     </header>
 
-    <div class="filters">
-      <button class="filter-btn active" data-type="all">All</button>
-      <button class="filter-btn" data-type="pr">PRs</button>
-      <button class="filter-btn" data-type="issue">Issues</button>
-      <button class="filter-btn" data-type="release">Releases</button>
+    <div class="toolbar">
+      <div class="filters">
+        <button class="filter-btn active" data-type="all">All</button>
+        <button class="filter-btn" data-type="pr">PRs</button>
+        <button class="filter-btn" data-type="issue">Issues</button>
+        <button class="filter-btn" data-type="release">Releases</button>
+      </div>
+      <div class="toolbar-actions">
+        <button id="searchBtn" class="toolbar-btn" title="Search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.5 4.5 0 1 0-8.999.001A4.5 4.5 0 0 0 11.5 7Z"/>
+          </svg>
+        </button>
+        <button id="focusBtn" class="toolbar-btn" title="Focus mode (only your activity)">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm0-1.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13ZM8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm0-1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
+          </svg>
+        </button>
+        <button id="archiveBtn" class="toolbar-btn" title="Show archive">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 14.25 6H1.75A1.75 1.75 0 0 1 0 4.25Zm1.75-.25a.25.25 0 0 0-.25.25v1.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25v-1.5a.25.25 0 0 0-.25-.25ZM2 7.5h12a.5.5 0 0 1 .5.5v6.25a1.75 1.75 0 0 1-1.75 1.75H3.25a1.75 1.75 0 0 1-1.75-1.75V8a.5.5 0 0 1 .5-.5Zm10.5 2a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0 0 1h4a.5.5 0 0 0 .5-.5Z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="searchBox" class="search-box" style="display: none;">
+      <input type="text" id="searchInput" placeholder="Search activities...">
     </div>
 
     <div id="activityList" class="activity-list">

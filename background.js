@@ -49,17 +49,28 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    const { githubToken, watchedRepos, lastCheck, filters, notifications } = await chrome.storage.sync.get([
+    const { githubToken, watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await chrome.storage.sync.get([
       'githubToken',
       'watchedRepos',
       'lastCheck',
       'filters',
-      'notifications'
+      'notifications',
+      'mutedRepos',
+      'snoozedRepos'
     ]);
 
     if (!githubToken || !watchedRepos || watchedRepos.length === 0) {
       return;
     }
+
+    // Clean up expired snoozes
+    const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos || []);
+
+    // Get list of repos to exclude (muted + snoozed)
+    const excludedRepos = new Set([
+      ...(mutedRepos || []),
+      ...activeSnoozedRepos.map(s => s.repo)
+    ]);
 
     const enabledFilters = filters || { prs: true, issues: true, releases: true };
     const lastCheckDate = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -68,6 +79,12 @@ async function checkGitHubActivity() {
     for (const repo of watchedRepos) {
       // Handle both string format (legacy) and object format (new)
       const repoName = typeof repo === 'string' ? repo : repo.fullName;
+
+      // Skip muted and snoozed repos
+      if (excludedRepos.has(repoName)) {
+        continue;
+      }
+
       const activities = await fetchRepoActivity(repoName, githubToken, lastCheckDate, enabledFilters);
       newActivities.push(...activities);
     }
@@ -201,14 +218,40 @@ async function fetchRepoActivity(repo, token, since, filters) {
   return activities;
 }
 
+async function cleanExpiredSnoozes(snoozedRepos) {
+  const now = Date.now();
+  const activeSnoozes = snoozedRepos.filter(s => s.expiresAt > now);
+
+  // Update storage if any snoozes expired
+  if (activeSnoozes.length !== snoozedRepos.length) {
+    await chrome.storage.sync.set({ snoozedRepos: activeSnoozes });
+  }
+
+  return activeSnoozes;
+}
+
 async function storeActivities(newActivities) {
   const { activities = [] } = await chrome.storage.local.get(['activities']);
+  const { mutedRepos = [], snoozedRepos = [] } = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+
+  // Clean up expired snoozes
+  const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);
+
+  // Get list of repos to exclude
+  const excludedRepos = new Set([
+    ...mutedRepos,
+    ...activeSnoozedRepos.map(s => s.repo)
+  ]);
 
   // Merge new activities, avoiding duplicates
   const existingIds = new Set(activities.map(a => a.id));
   const uniqueNew = newActivities.filter(a => !existingIds.has(a.id));
 
-  const updated = [...uniqueNew, ...activities].slice(0, 100);
+  // Filter out activities from excluded repos
+  const allActivities = [...uniqueNew, ...activities];
+  const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
+
+  const updated = filtered.slice(0, 100);
   await chrome.storage.local.set({ activities: updated });
 }
 
@@ -340,6 +383,7 @@ if (typeof module !== 'undefined' && module.exports) {
     fetchRepoActivity,
     storeActivities,
     updateBadge,
-    showNotifications
+    showNotifications,
+    cleanExpiredSnoozes
   };
 }

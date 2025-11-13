@@ -1,6 +1,9 @@
 let currentFilter = 'all';
 let allActivities = [];
 let readItems = [];
+let showArchive = false;
+let searchQuery = '';
+let focusMode = false;
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -15,6 +18,17 @@ function setupEventListeners() {
   document.getElementById('settingsLink').addEventListener('click', (e) => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
+  });
+
+  // Toolbar buttons
+  document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+  document.getElementById('focusBtn').addEventListener('click', toggleFocus);
+  document.getElementById('archiveBtn').addEventListener('click', toggleArchive);
+
+  // Search input
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    renderActivities();
   });
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -101,7 +115,16 @@ async function loadActivities() {
 
   try {
     const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError']);
-    allActivities = data.activities || [];
+    const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+
+    // Filter out muted and snoozed repos
+    const mutedRepos = settings.mutedRepos || [];
+    const snoozedRepos = settings.snoozedRepos || [];
+    const now = Date.now();
+    const activeSnoozedRepos = snoozedRepos.filter(s => s.expiresAt > now).map(s => s.repo);
+    const excludedRepos = new Set([...mutedRepos, ...activeSnoozedRepos]);
+
+    allActivities = (data.activities || []).filter(a => !excludedRepos.has(a.repo));
     readItems = data.readItems || [];
     renderActivities();
     updateRateLimit(data.rateLimit);
@@ -158,14 +181,39 @@ function renderActivities() {
   const list = document.getElementById('activityList');
 
   let filtered = allActivities;
+
+  // Filter by type
   if (currentFilter !== 'all') {
-    filtered = allActivities.filter(a => a.type === currentFilter);
+    filtered = filtered.filter(a => a.type === currentFilter);
   }
 
+  // Filter by archive (show/hide read items)
+  if (!showArchive) {
+    filtered = filtered.filter(a => !readItems.includes(a.id));
+  }
+
+  // Filter by search query
+  if (searchQuery) {
+    filtered = filtered.filter(a =>
+      a.title.toLowerCase().includes(searchQuery) ||
+      a.repo.toLowerCase().includes(searchQuery) ||
+      a.author.toLowerCase().includes(searchQuery)
+    );
+  }
+
+  // Filter by focus mode (only user's own activity)
+  // TODO: Implement proper focus filtering based on GitHub username
+  // For now, focus mode is a placeholder that doesn't filter
+  // Future: Store and compare against user's GitHub username
+
   if (filtered.length === 0) {
+    let emptyMessage = 'No activity';
+    if (!showArchive) emptyMessage = 'No unread activity';
+    if (searchQuery) emptyMessage = 'No matches found';
+
     list.innerHTML = `
       <div class="empty-state">
-        <p>No ${currentFilter === 'all' ? 'recent' : currentFilter} activity</p>
+        <p>${emptyMessage}</p>
         <small>Check your settings to add repositories</small>
       </div>
     `;
@@ -180,23 +228,31 @@ function renderActivities() {
     </div>
   ` : '';
 
-  // Group activities by time
-  const grouped = groupByTime(filtered);
+  // Group activities by repository
+  const grouped = groupByRepo(filtered);
 
   let htmlContent = header;
 
-  ['today', 'yesterday', 'thisWeek', 'older'].forEach(group => {
-    if (grouped[group].length > 0) {
-      const groupTitle = {
-        today: 'Today',
-        yesterday: 'Yesterday',
-        thisWeek: 'This Week',
-        older: 'Older'
-      }[group];
+  // Render each repo group
+  Object.keys(grouped).forEach(repo => {
+    const activities = grouped[repo];
+    const repoUnreadCount = activities.filter(a => !readItems.includes(a.id)).length;
 
-      htmlContent += `<div class="time-group-header">${groupTitle}</div>`;
-      htmlContent += grouped[group].map(activity => renderActivityItem(activity)).join('');
-    }
+    htmlContent += `
+      <div class="repo-group-header">
+        <span class="repo-group-name">${repo}</span>
+        <div class="repo-group-actions">
+          ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
+          <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5zm1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0zM1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+    htmlContent += activities.map(activity => renderActivityItem(activity)).join('');
   });
 
   list.innerHTML = htmlContent;
@@ -205,6 +261,15 @@ function renderActivities() {
   if (unreadCount > 0) {
     document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
   }
+
+  // Snooze button listeners
+  list.querySelectorAll('.repo-snooze-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      snoozeRepo(repo);
+    });
+  });
 
   list.querySelectorAll('.activity-item').forEach(item => {
     const content = item.querySelector('.activity-content');
@@ -220,24 +285,65 @@ function renderActivities() {
         e.stopPropagation();
         const action = btn.dataset.action;
         const id = item.dataset.id;
-        const url = item.dataset.url;
 
-        if (action === 'toggle-read') {
-          toggleReadState(id);
-        } else if (action === 'copy') {
-          navigator.clipboard.writeText(url);
+        if (action === 'mark-read') {
+          markAsReadWithAnimation(id, item);
         }
       });
     });
   });
 }
 
+function markAsReadWithAnimation(id, itemElement) {
+  // Add removing animation class
+  itemElement.classList.add('removing');
+
+  // Wait for animation to complete, then mark as read
+  setTimeout(() => {
+    markAsRead(id);
+    renderActivities();
+  }, 300); // Match CSS transition duration
+}
+
+function toggleSearch() {
+  const searchBox = document.getElementById('searchBox');
+  const searchBtn = document.getElementById('searchBtn');
+  const searchInput = document.getElementById('searchInput');
+
+  if (searchBox.style.display === 'none' || !searchBox.style.display) {
+    searchBox.style.display = 'block';
+    searchBtn.classList.add('active');
+    searchInput.focus();
+  } else {
+    searchBox.style.display = 'none';
+    searchBtn.classList.remove('active');
+    searchQuery = '';
+    searchInput.value = '';
+    renderActivities();
+  }
+}
+
+function toggleFocus() {
+  const focusBtn = document.getElementById('focusBtn');
+  focusMode = !focusMode;
+  focusBtn.classList.toggle('active', focusMode);
+  renderActivities();
+}
+
+function toggleArchive() {
+  const archiveBtn = document.getElementById('archiveBtn');
+  showArchive = !showArchive;
+  archiveBtn.classList.toggle('active', showArchive);
+  renderActivities();
+}
+
 function renderActivityItem(activity) {
   const isRead = readItems.includes(activity.id);
 
-  const readIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" fill="none"/></svg>`;
-  const unreadIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>`;
-  const copyIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>`;
+  // Simple checkmark icon
+  const checkIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/>
+  </svg>`;
 
   return `
     <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${activity.id}" data-url="${activity.url}">
@@ -253,11 +359,8 @@ function renderActivityItem(activity) {
         </div>
       </div>
       <div class="activity-actions">
-        <button class="action-btn" data-action="toggle-read" title="${isRead ? 'Mark as unread' : 'Mark as read'}">
-          ${isRead ? readIcon : unreadIcon}
-        </button>
-        <button class="action-btn" data-action="copy" title="Copy URL">
-          ${copyIcon}
+        <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done">
+          ${checkIcon}
         </button>
       </div>
     </div>
@@ -291,6 +394,78 @@ function groupByTime(activities) {
   });
 
   return groups;
+}
+
+function groupByRepo(activities) {
+  const groups = {};
+
+  activities.forEach(activity => {
+    if (!groups[activity.repo]) {
+      groups[activity.repo] = [];
+    }
+    groups[activity.repo].push(activity);
+  });
+
+  // Sort repos by most recent activity
+  const sortedGroups = {};
+  Object.keys(groups)
+    .sort((a, b) => {
+      const latestA = new Date(groups[a][0].createdAt);
+      const latestB = new Date(groups[b][0].createdAt);
+      return latestB - latestA;
+    })
+    .forEach(repo => {
+      // Sort activities within each repo by newest first
+      groups[repo].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      sortedGroups[repo] = groups[repo];
+    });
+
+  return sortedGroups;
+}
+
+async function snoozeRepo(repo) {
+  try {
+    // Get snooze duration from settings
+    const settings = await chrome.storage.sync.get(['snoozeHours', 'snoozedRepos']);
+    const snoozeHours = settings.snoozeHours || 1;
+    const snoozedRepos = settings.snoozedRepos || [];
+
+    // Calculate expiration time
+    const expiresAt = Date.now() + (snoozeHours * 60 * 60 * 1000);
+
+    // Check if repo is already snoozed and update, otherwise add new
+    const existingIndex = snoozedRepos.findIndex(s => s.repo === repo);
+    if (existingIndex >= 0) {
+      snoozedRepos[existingIndex].expiresAt = expiresAt;
+    } else {
+      snoozedRepos.push({ repo, expiresAt });
+    }
+
+    // Save to storage
+    await chrome.storage.sync.set({ snoozedRepos });
+
+    // Reload activities to reflect the snooze
+    await loadActivities();
+
+    // Show confirmation
+    showSnoozeMessage(repo, snoozeHours);
+  } catch (error) {
+    console.error('Error snoozing repo:', error);
+  }
+}
+
+function showSnoozeMessage(repo, hours) {
+  const errorMsg = document.getElementById('errorMessage');
+  errorMsg.textContent = `${repo} snoozed for ${hours} hour${hours > 1 ? 's' : ''}`;
+  errorMsg.style.display = 'block';
+  errorMsg.style.background = 'var(--success-bg)';
+  errorMsg.style.color = 'var(--success-text)';
+
+  setTimeout(() => {
+    errorMsg.style.display = 'none';
+    errorMsg.style.background = '';
+    errorMsg.style.color = '';
+  }, 3000);
 }
 
 async function toggleReadState(id) {
@@ -356,6 +531,8 @@ if (typeof module !== 'undefined' && module.exports) {
     loadActivities,
     renderActivities,
     groupByTime,
+    groupByRepo,
+    snoozeRepo,
     formatDate,
     applyTheme,
     toggleDarkMode,
@@ -364,6 +541,10 @@ if (typeof module !== 'undefined' && module.exports) {
     showError,
     toggleReadState,
     markAsRead,
-    handleMarkAllRead
+    markAsReadWithAnimation,
+    handleMarkAllRead,
+    toggleSearch,
+    toggleFocus,
+    toggleArchive
   };
 }
