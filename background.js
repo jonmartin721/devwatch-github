@@ -73,7 +73,7 @@ async function checkGitHubActivity() {
     ]);
 
     const enabledFilters = filters || { prs: true, issues: true, releases: true };
-    const lastCheckDate = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const globalLastCheck = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 24 * 60 * 60 * 1000);
     const newActivities = [];
 
     for (const repo of watchedRepos) {
@@ -85,7 +85,17 @@ async function checkGitHubActivity() {
         continue;
       }
 
-      const activities = await fetchRepoActivity(repoName, githubToken, lastCheckDate, enabledFilters);
+      // Use repo's addedAt timestamp if it exists and is newer than global lastCheck
+      // This prevents showing old notifications for newly added repos
+      let checkDate = globalLastCheck;
+      if (typeof repo === 'object' && repo.addedAt) {
+        const addedDate = new Date(repo.addedAt);
+        if (addedDate > globalLastCheck) {
+          checkDate = addedDate;
+        }
+      }
+
+      const activities = await fetchRepoActivity(repoName, githubToken, checkDate, enabledFilters);
       newActivities.push(...activities);
     }
 

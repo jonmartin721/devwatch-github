@@ -216,30 +216,44 @@ async function loadSettings() {
 }
 
 async function migrateRepoFormat() {
+  let needsMigration = false;
   const oldRepos = state.watchedRepos.filter(r => typeof r === 'string');
 
-  if (oldRepos.length === 0) return;
+  if (oldRepos.length > 0) {
+    needsMigration = true;
+    console.log(`Migrating ${oldRepos.length} repositories to new format...`);
 
-  console.log(`Migrating ${oldRepos.length} repositories to new format...`);
-
-  for (const repoName of oldRepos) {
-    try {
-      const result = await validateRepo(repoName);
-      if (result.valid) {
-        // Replace string with object
-        const index = state.watchedRepos.findIndex(r => r === repoName);
-        if (index !== -1) {
-          state.watchedRepos[index] = result.metadata;
+    for (const repoName of oldRepos) {
+      try {
+        const result = await validateRepo(repoName);
+        if (result.valid) {
+          // Replace string with object
+          const index = state.watchedRepos.findIndex(r => r === repoName);
+          if (index !== -1) {
+            state.watchedRepos[index] = result.metadata;
+          }
         }
+      } catch (error) {
+        console.error(`Failed to migrate ${repoName}:`, error);
       }
-    } catch (error) {
-      console.error(`Failed to migrate ${repoName}:`, error);
     }
   }
 
-  // Save migrated repos
-  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
-  console.log('Migration complete');
+  // Add addedAt to repos that don't have it (set to now to avoid old notifications)
+  const reposWithoutAddedAt = state.watchedRepos.filter(r => typeof r === 'object' && !r.addedAt);
+  if (reposWithoutAddedAt.length > 0) {
+    needsMigration = true;
+    const now = new Date().toISOString();
+    reposWithoutAddedAt.forEach(repo => {
+      repo.addedAt = now;
+    });
+  }
+
+  if (needsMigration) {
+    // Save migrated repos
+    await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+    console.log('Migration complete');
+  }
 }
 
 async function addRepo() {
@@ -424,7 +438,8 @@ async function validateRepo(repo) {
           stars: data.stargazers_count,
           forks: data.forks_count,
           updatedAt: data.updated_at,
-          latestRelease
+          latestRelease,
+          addedAt: new Date().toISOString()
         }
       };
     } else if (response.status === 404) {
