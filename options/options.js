@@ -1,7 +1,7 @@
 import { applyTheme, showStatusMessage } from '../shared/utils.js';
-import { getSyncItem, getSyncItems, setSyncItem } from '../shared/storage-helpers.js';
-import { createHeaders, handleApiResponse } from '../shared/github-api.js';
-import { EYE_ICON, EYE_SLASH_ICON, STAR_ICON, createSvg, getMuteIcon } from '../shared/icons.js';
+import { getSyncItem } from '../shared/storage-helpers.js';
+import { createHeaders } from '../shared/github-api.js';
+import { STAR_ICON, createSvg, getMuteIcon } from '../shared/icons.js';
 
 const state = {
   watchedRepos: [],
