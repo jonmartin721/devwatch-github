@@ -451,6 +451,68 @@
       color: var(--text-secondary);
       background: transparent;
     }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--link-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .repo-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .mute-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -583,6 +645,17 @@
           <option value="30">Every 30 minutes</option>
           <option value="60">Every hour</option>
         </select>
+      </div>
+      <div class="form-row">
+        <label for="snoozeHours">Snooze duration (hours)</label>
+        <select id="snoozeHours">
+          <option value="1" selected>1 hour</option>
+          <option value="2">2 hours</option>
+          <option value="4">4 hours</option>
+          <option value="8">8 hours</option>
+          <option value="24">24 hours</option>
+        </select>
+        <p class="help-text" style="margin-top: 8px;">How long to snooze repositories when you snooze them from the popup</p>
       </div>
     </div>
 

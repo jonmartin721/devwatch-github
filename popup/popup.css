@@ -14,6 +14,8 @@
   --text-secondary: #586069;
   --link-color: #0366d6;
   --badge-bg: #0366d6;
+  --success-bg: #d4edda;
+  --success-text: #155724;
 }
 
 body.dark-mode {
@@ -26,6 +28,8 @@ body.dark-mode {
   --text-secondary: #8b949e;
   --link-color: #58a6ff;
   --badge-bg: #58a6ff;
+  --success-bg: #1b4620;
+  --success-text: #7ee787;
 }
 
 body {
@@ -91,12 +95,18 @@ h1 {
   }
 }
 
-.filters {
+.toolbar {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-primary);
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
 }
 
 .filter-btn {
@@ -117,6 +127,62 @@ h1 {
 .filter-btn.active {
   background: var(--link-color);
   color: white;
+  border-color: var(--link-color);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.toolbar-btn:hover {
+  opacity: 1;
+  background: var(--bg-secondary);
+}
+
+.toolbar-btn.active {
+  opacity: 1;
+  background: var(--link-color);
+  color: white;
+}
+
+.toolbar-btn.active svg {
+  color: white;
+}
+
+.search-box {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.search-box input:focus {
+  outline: none;
   border-color: var(--link-color);
 }
 
@@ -160,6 +226,58 @@ h1 {
   letter-spacing: 0.5px;
 }
 
+.repo-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.repo-group-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.repo-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-unread-count {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--link-color);
+  color: white;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.repo-snooze-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.repo-snooze-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .text-btn {
   background: none;
   border: none;
@@ -179,7 +297,10 @@ h1 {
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
-  transition: background 0.2s;
+  transition: all 0.3s ease-out;
+  transform-origin: top;
+  max-height: 200px;
+  overflow: hidden;
 }
 
 .activity-item:hover {
@@ -192,6 +313,16 @@ h1 {
 
 .activity-item.read {
   opacity: 0.7;
+}
+
+.activity-item.removing {
+  opacity: 0;
+  transform: translateX(20px) scale(0.95);
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom-width: 0;
 }
 
 .activity-avatar {
@@ -217,22 +348,39 @@ h1 {
   border: none;
   cursor: pointer;
   font-size: 16px;
-  padding: 4px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  padding: 6px;
+  opacity: 0.5;
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
 }
 
 .action-btn:hover {
   opacity: 1;
+  background: var(--bg-secondary);
+  transform: scale(1.1);
 }
 
 .action-btn svg {
   display: block;
   width: 16px;
   height: 16px;
+}
+
+.mark-read-btn {
+  color: var(--link-color);
+  opacity: 0.7;
+}
+
+.mark-read-btn:hover {
+  opacity: 1;
+  background: var(--link-color);
+}
+
+.mark-read-btn:hover svg {
+  color: white;
 }
 
 .activity-header {

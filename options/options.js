@@ -1,5 +1,6 @@
 const state = {
   watchedRepos: [],
+  mutedRepos: [],
   currentPage: 1,
   reposPerPage: 10,
   searchQuery: ''
@@ -160,7 +161,9 @@ async function loadSettings() {
     const settings = await chrome.storage.sync.get([
       'githubToken',
       'watchedRepos',
+      'mutedRepos',
       'checkInterval',
+      'snoozeHours',
       'filters',
       'notifications',
       'theme'
@@ -174,6 +177,7 @@ async function loadSettings() {
     }
 
     state.watchedRepos = settings.watchedRepos || [];
+    state.mutedRepos = settings.mutedRepos || [];
 
     // Migrate old string format to new object format
     if (settings.githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
@@ -184,6 +188,10 @@ async function loadSettings() {
 
     if (settings.checkInterval) {
       document.getElementById('checkInterval').value = settings.checkInterval;
+    }
+
+    if (settings.snoozeHours) {
+      document.getElementById('snoozeHours').value = settings.snoozeHours;
     }
 
     if (settings.filters) {
@@ -533,18 +541,29 @@ function renderRepoList() {
   list.innerHTML = reposToDisplay.map(repo => {
     // Handle both old string format and new object format
     if (typeof repo === 'string') {
+      const isMuted = state.mutedRepos.includes(repo);
       return `
         <li class="repo-item">
           <div class="repo-content">
             <div class="repo-name">${repo}</div>
             <div class="repo-description">Legacy format - remove and re-add to see details</div>
           </div>
-          <button class="danger" data-repo="${repo}">Remove</button>
+          <div class="repo-actions">
+            <label class="mute-toggle-label">
+              <span>Muted</span>
+              <label class="toggle-switch">
+                <input type="checkbox" class="mute-toggle" data-repo="${repo}" ${isMuted ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </label>
+            <button class="danger" data-repo="${repo}">Remove</button>
+          </div>
         </li>
       `;
     }
 
     const { fullName, description, language, stars, updatedAt, latestRelease } = repo;
+    const isMuted = state.mutedRepos.includes(fullName);
 
     const starIcon = '<svg class="star-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>';
 
@@ -560,7 +579,16 @@ function renderRepoList() {
             <span class="meta-item">Updated ${formatDate(updatedAt)}</span>
           </div>
         </div>
-        <button class="danger" data-repo="${fullName}">Remove</button>
+        <div class="repo-actions">
+          <label class="mute-toggle-label">
+            <span>Muted</span>
+            <label class="toggle-switch">
+              <input type="checkbox" class="mute-toggle" data-repo="${fullName}" ${isMuted ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+          <button class="danger" data-repo="${fullName}">Remove</button>
+        </div>
       </li>
     `;
   }).join('');
@@ -570,11 +598,32 @@ function renderRepoList() {
       removeRepo(btn.dataset.repo);
     });
   });
+
+  list.querySelectorAll('.mute-toggle').forEach(toggle => {
+    toggle.addEventListener('change', (e) => {
+      toggleMuteRepo(toggle.dataset.repo, e.target.checked);
+    });
+  });
+}
+
+async function toggleMuteRepo(repoFullName, mute) {
+  if (mute) {
+    if (!state.mutedRepos.includes(repoFullName)) {
+      state.mutedRepos.push(repoFullName);
+    }
+  } else {
+    state.mutedRepos = state.mutedRepos.filter(r => r !== repoFullName);
+  }
+
+  // Auto-save
+  await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
+  showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
 }
 
 async function saveSettings() {
   const token = document.getElementById('githubToken').value.trim();
   const interval = parseInt(document.getElementById('checkInterval').value);
+  const snoozeHours = parseInt(document.getElementById('snoozeHours').value);
 
   if (!token) {
     showMessage('GitHub token is required', 'error');
@@ -600,7 +649,9 @@ async function saveSettings() {
     await chrome.storage.sync.set({
       githubToken: token,
       watchedRepos: state.watchedRepos,
+      mutedRepos: state.mutedRepos,
       checkInterval: interval,
+      snoozeHours: snoozeHours,
       filters: filters,
       notifications: notifications,
       theme: theme
@@ -650,6 +701,7 @@ if (typeof module !== 'undefined' && module.exports) {
     fetchGitHubRepoFromNpm,
     validateRepo,
     removeRepo,
+    toggleMuteRepo,
     getFilteredRepos,
     renderRepoList,
     migrateRepoFormat,
