@@ -59,13 +59,15 @@ async function checkGitHubActivity() {
     const newActivities = [];
 
     for (const repo of watchedRepos) {
-      const activities = await fetchRepoActivity(repo, githubToken, lastCheckDate, enabledFilters);
+      // Handle both string format (legacy) and object format (new)
+      const repoName = typeof repo === 'string' ? repo : repo.fullName;
+      const activities = await fetchRepoActivity(repoName, githubToken, lastCheckDate, enabledFilters);
       newActivities.push(...activities);
     }
 
     if (newActivities.length > 0) {
       await storeActivities(newActivities);
-      updateBadge(newActivities.length);
+      await updateBadge();
       showNotifications(newActivities);
     }
 
@@ -82,71 +84,111 @@ async function fetchRepoActivity(repo, token, since, filters) {
     'Accept': 'application/vnd.github.v3+json'
   };
 
+  async function fetchWithRateLimit(url) {
+    const response = await fetch(url, { headers });
+
+    // Track rate limits
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const limit = response.headers.get('X-RateLimit-Limit');
+    const reset = response.headers.get('X-RateLimit-Reset');
+
+    if (remaining && limit) {
+      await chrome.storage.local.set({
+        rateLimit: {
+          remaining: parseInt(remaining),
+          limit: parseInt(limit),
+          reset: parseInt(reset) * 1000
+        }
+      });
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid GitHub token');
+      } else if (response.status === 403) {
+        throw new Error('Rate limit exceeded');
+      } else if (response.status === 404) {
+        throw new Error(`Repository ${repo} not found`);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    }
+
+    return response;
+  }
+
   try {
     // Fetch PRs
     if (filters.prs) {
-      const prsResponse = await fetch(
-        `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc`,
-        { headers }
+      const prsResponse = await fetchWithRateLimit(
+        `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc`
       );
 
-      if (prsResponse.ok) {
-        const prs = await prsResponse.json();
-        const newPrs = prs.filter(pr => new Date(pr.created_at) > since);
-        activities.push(...newPrs.map(pr => ({
-          type: 'pr',
-          repo,
-          title: pr.title,
-          url: pr.html_url,
-          createdAt: pr.created_at,
-          author: pr.user.login
-        })));
-      }
+      const prs = await prsResponse.json();
+      const newPrs = prs.filter(pr => new Date(pr.created_at) > since);
+      activities.push(...newPrs.map(pr => ({
+        id: `pr-${repo}-${pr.number}`,
+        type: 'pr',
+        repo,
+        title: pr.title,
+        url: pr.html_url,
+        createdAt: pr.created_at,
+        author: pr.user.login,
+        authorAvatar: pr.user.avatar_url,
+        number: pr.number
+      })));
     }
 
     // Fetch Issues
     if (filters.issues) {
-      const issuesResponse = await fetch(
-        `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc`,
-        { headers }
+      const issuesResponse = await fetchWithRateLimit(
+        `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc`
       );
 
-      if (issuesResponse.ok) {
-        const issues = await issuesResponse.json();
-        const newIssues = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) > since);
-        activities.push(...newIssues.map(issue => ({
-          type: 'issue',
-          repo,
-          title: issue.title,
-          url: issue.html_url,
-          createdAt: issue.created_at,
-          author: issue.user.login
-        })));
-      }
+      const issues = await issuesResponse.json();
+      const newIssues = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) > since);
+      activities.push(...newIssues.map(issue => ({
+        id: `issue-${repo}-${issue.number}`,
+        type: 'issue',
+        repo,
+        title: issue.title,
+        url: issue.html_url,
+        createdAt: issue.created_at,
+        author: issue.user.login,
+        authorAvatar: issue.user.avatar_url,
+        number: issue.number
+      })));
     }
 
     // Fetch Releases
     if (filters.releases) {
-      const releasesResponse = await fetch(
-        `https://api.github.com/repos/${repo}/releases`,
-        { headers }
+      const releasesResponse = await fetchWithRateLimit(
+        `https://api.github.com/repos/${repo}/releases`
       );
 
-      if (releasesResponse.ok) {
-        const releases = await releasesResponse.json();
-        const newReleases = releases.filter(release => new Date(release.published_at) > since);
-        activities.push(...newReleases.map(release => ({
-          type: 'release',
-          repo,
-          title: release.name || release.tag_name,
-          url: release.html_url,
-          createdAt: release.published_at,
-          author: release.author.login
-        })));
-      }
+      const releases = await releasesResponse.json();
+      const newReleases = releases.filter(release => new Date(release.published_at) > since);
+      activities.push(...newReleases.map(release => ({
+        id: `release-${repo}-${release.id}`,
+        type: 'release',
+        repo,
+        title: release.name || release.tag_name,
+        url: release.html_url,
+        createdAt: release.published_at,
+        author: release.author.login,
+        authorAvatar: release.author.avatar_url
+      })));
     }
   } catch (error) {
-    console.error(`Error fetching activity for ${repo}:`, error);
+    console.error(`Error fetching activity for ${repo}:`, error.message);
+    await chrome.storage.local.set({
+      lastError: {
+        message: error.message,
+        repo,
+        timestamp: Date.now()
+      }
+    });
+    throw error;
   }
 
   return activities;
@@ -154,12 +196,22 @@ async function fetchRepoActivity(repo, token, since, filters) {
 
 async function storeActivities(newActivities) {
   const { activities = [] } = await chrome.storage.local.get(['activities']);
-  const updated = [...newActivities, ...activities].slice(0, 100); // Keep last 100
+
+  // Merge new activities, avoiding duplicates
+  const existingIds = new Set(activities.map(a => a.id));
+  const uniqueNew = newActivities.filter(a => !existingIds.has(a.id));
+
+  const updated = [...uniqueNew, ...activities].slice(0, 100);
   await chrome.storage.local.set({ activities: updated });
 }
 
-function updateBadge(count) {
-  chrome.action.setBadgeText({ text: count > 0 ? count.toString() : '' });
+async function updateBadge(count) {
+  const { readItems = [] } = await chrome.storage.local.get(['readItems']);
+  const { activities = [] } = await chrome.storage.local.get(['activities']);
+
+  const unreadCount = activities.filter(a => !readItems.includes(a.id)).length;
+
+  chrome.action.setBadgeText({ text: unreadCount > 0 ? unreadCount.toString() : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#0366d6' });
 }
 
@@ -202,5 +254,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'clearBadge') {
     chrome.action.setBadgeText({ text: '' });
     sendResponse({ success: true });
+  }
+
+  if (request.action === 'markAsRead') {
+    chrome.storage.local.get(['readItems'], (result) => {
+      const readItems = result.readItems || [];
+      if (!readItems.includes(request.id)) {
+        readItems.push(request.id);
+        chrome.storage.local.set({ readItems }, () => {
+          updateBadge();
+          sendResponse({ success: true });
+        });
+      } else {
+        sendResponse({ success: true });
+      }
+    });
+    return true;
+  }
+
+  if (request.action === 'markAsUnread') {
+    chrome.storage.local.get(['readItems'], (result) => {
+      const readItems = result.readItems || [];
+      const updated = readItems.filter(id => id !== request.id);
+      chrome.storage.local.set({ readItems: updated }, () => {
+        updateBadge();
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+
+  if (request.action === 'markAllAsRead') {
+    chrome.storage.local.get(['activities'], (result) => {
+      const activities = result.activities || [];
+      const allIds = activities.map(a => a.id);
+      chrome.storage.local.set({ readItems: allIds }, () => {
+        updateBadge();
+        sendResponse({ success: true });
+      });
+    });
+    return true;
   }
 });
