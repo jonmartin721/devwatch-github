@@ -11,17 +11,55 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #f6f8fa;
+      --border-color: #e1e4e8;
+      --border-color-dark: #d0d7de;
+      --text-primary: #24292e;
+      --text-secondary: #586069;
+      --link-color: #0366d6;
+      --success-bg: #d4edda;
+      --success-text: #155724;
+      --success-border: #c3e6cb;
+      --error-bg: #f8d7da;
+      --error-text: #721c24;
+      --error-border: #f5c6cb;
+      --danger-bg: #dc3545;
+      --danger-hover: #c82333;
+    }
+
+    body.dark-mode {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #161b22;
+      --border-color: #30363d;
+      --border-color-dark: #30363d;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --link-color: #58a6ff;
+      --success-bg: #1b4620;
+      --success-text: #7ee787;
+      --success-border: #2d5a2d;
+      --error-bg: #4b1e1e;
+      --error-text: #f8d7da;
+      --error-border: #6e2a2a;
+      --danger-bg: #dc3545;
+      --danger-hover: #c82333;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: #f6f8fa;
-      color: #24292e;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
       padding: 40px 20px;
     }
 
     .container {
       max-width: 800px;
       margin: 0 auto;
-      background: white;
+      background: var(--bg-primary);
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       padding: 32px;
@@ -30,17 +68,18 @@
     h1 {
       font-size: 24px;
       margin-bottom: 8px;
+      color: var(--text-primary);
     }
 
     .subtitle {
-      color: #586069;
+      color: var(--text-secondary);
       margin-bottom: 32px;
     }
 
     .section {
       margin-bottom: 32px;
       padding-bottom: 32px;
-      border-bottom: 1px solid #e1e4e8;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .section:last-child {
@@ -52,6 +91,7 @@
     h2 {
       font-size: 18px;
       margin-bottom: 16px;
+      color: var(--text-primary);
     }
 
     label {
@@ -59,6 +99,7 @@
       font-weight: 500;
       margin-bottom: 8px;
       font-size: 14px;
+      color: var(--text-primary);
     }
 
     input[type="text"],
@@ -66,7 +107,9 @@
     select {
       width: 100%;
       padding: 8px 12px;
-      border: 1px solid #d0d7de;
+      border: 1px solid var(--border-color-dark);
+      background: var(--bg-primary);
+      color: var(--text-primary);
       border-radius: 6px;
       font-size: 14px;
       font-family: inherit;
@@ -76,19 +119,19 @@
     input[type="password"]:focus,
     select:focus {
       outline: none;
-      border-color: #0366d6;
+      border-color: var(--link-color);
       box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
     }
 
     .help-text {
       font-size: 12px;
-      color: #586069;
+      color: var(--text-secondary);
       margin-top: 8px;
       line-height: 1.5;
     }
 
     .help-text a {
-      color: #0366d6;
+      color: var(--link-color);
       text-decoration: none;
     }
 
@@ -98,9 +141,10 @@
 
     button {
       padding: 8px 16px;
-      border: 1px solid #d0d7de;
+      border: 1px solid var(--border-color-dark);
       border-radius: 6px;
-      background: white;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       cursor: pointer;
       font-size: 14px;
       font-family: inherit;
@@ -108,27 +152,27 @@
     }
 
     button:hover {
-      background: #f6f8fa;
+      background: var(--bg-tertiary);
     }
 
     button.primary {
-      background: #0366d6;
+      background: var(--link-color);
       color: white;
-      border-color: #0366d6;
+      border-color: var(--link-color);
     }
 
     button.primary:hover {
-      background: #0256c7;
+      opacity: 0.9;
     }
 
     button.danger {
-      background: #dc3545;
+      background: var(--danger-bg);
       color: white;
-      border-color: #dc3545;
+      border-color: var(--danger-bg);
     }
 
     button.danger:hover {
-      background: #c82333;
+      background: var(--danger-hover);
     }
 
     .repo-list {
@@ -139,17 +183,86 @@
     .repo-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      border: 1px solid #e1e4e8;
+      align-items: flex-start;
+      padding: 16px;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
-      margin-bottom: 8px;
-      background: #f6f8fa;
+      margin-bottom: 12px;
+      background: var(--bg-tertiary);
+      gap: 16px;
     }
 
-    .repo-item span {
+    .repo-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .repo-name {
       font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .repo-description {
       font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .repo-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .star-icon {
+      width: 14px;
+      height: 14px;
+      fill: #fbbf24;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
+
+    .repo-search-container {
+      margin-top: 16px;
+      margin-bottom: 12px;
+    }
+
+    .repo-search-container input {
+      width: 100%;
+    }
+
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .page-info {
+      font-size: 14px;
+      color: var(--text-secondary);
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .pagination-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .add-repo-form {
@@ -158,8 +271,61 @@
       margin-top: 16px;
     }
 
-    .add-repo-form input {
+    .repo-input-wrapper {
       flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .repo-input-wrapper input {
+      flex: 1;
+      padding-right: 32px;
+    }
+
+    .repo-validation-status {
+      position: absolute;
+      right: 8px;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .repo-validation-status.checking::after {
+      content: "⏳";
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .repo-validation-status.success::after {
+      content: "✓";
+      color: var(--success-text);
+    }
+
+    .repo-validation-status.error::after {
+      content: "✗";
+      color: var(--error-text);
+    }
+
+    .repo-input-wrapper input.error {
+      border-color: var(--error-text);
+      animation: wiggle 0.5s;
+    }
+
+    .repo-error {
+      font-size: 12px;
+      color: var(--error-text);
+      margin-top: 4px;
+      min-height: 18px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
     }
 
     .checkbox-group {
@@ -185,15 +351,15 @@
     }
 
     .status-message.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
     }
 
     .status-message.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--error-border);
     }
 
     .status-message.show {
@@ -202,6 +368,45 @@
 
     .form-row {
       margin-bottom: 16px;
+    }
+
+    .token-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .token-input-wrapper input {
+      flex: 1;
+    }
+
+    .token-status {
+      display: block;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      width: fit-content;
+    }
+
+    .token-status:empty {
+      display: none;
+    }
+
+    .token-status.valid {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .token-status.invalid {
+      background: var(--error-bg);
+      color: var(--error-text);
+    }
+
+    .token-status.checking {
+      color: var(--text-secondary);
+      background: transparent;
     }
   </style>
 </head>
@@ -216,7 +421,11 @@
       <h2>GitHub Personal Access Token</h2>
       <div class="form-row">
         <label for="githubToken">Token</label>
-        <input type="password" id="githubToken" placeholder="ghp_...">
+        <div class="token-input-wrapper">
+          <input type="password" id="githubToken" placeholder="ghp_...">
+          <button id="clearTokenBtn" class="danger" style="display: none;">Clear Token</button>
+        </div>
+        <span id="tokenStatus" class="token-status"></span>
         <p class="help-text">
           Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
           with <code>repo</code> scope for private repos or <code>public_repo</code> for public only.
@@ -226,14 +435,30 @@
 
     <div class="section">
       <h2>Watched Repositories</h2>
-      <p class="help-text">Add repositories to monitor (format: owner/repo or GitHub URL)</p>
+      <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
 
       <div class="add-repo-form">
-        <input type="text" id="repoInput" placeholder="e.g., facebook/react or https://github.com/facebook/react">
-        <button id="addRepoBtn" class="primary">Add</button>
+        <div class="repo-input-wrapper">
+          <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, or GitHub URL" disabled>
+          <span id="repoValidationStatus" class="repo-validation-status"></span>
+        </div>
+        <button id="addRepoBtn" class="primary" disabled>Add</button>
+      </div>
+      <div id="repoError" class="repo-error"></div>
+
+      <div id="repoStatusMessage" class="status-message"></div>
+
+      <div class="repo-search-container" id="repoSearchContainer" style="display: none;">
+        <input type="text" id="repoSearch" placeholder="Search repositories...">
       </div>
 
       <ul id="repoList" class="repo-list"></ul>
+
+      <div class="pagination-controls" id="paginationControls" style="display: none;">
+        <button id="prevPage" disabled>Previous</button>
+        <span id="pageInfo" class="page-info"></span>
+        <button id="nextPage" disabled>Next</button>
+      </div>
     </div>
 
     <div class="section">
