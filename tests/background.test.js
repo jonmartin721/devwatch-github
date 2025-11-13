@@ -1,13 +1,15 @@
+import { jest, describe, test, beforeEach, expect } from '@jest/globals';
+
 // Mock Chrome APIs
 global.chrome = {
   storage: {
     sync: {
-      get: jest.fn().mockResolvedValue({}),
-      set: jest.fn().mockResolvedValue(undefined)
+      get: jest.fn((keys, callback) => callback({})),
+      set: jest.fn((items, callback) => callback && callback())
     },
     local: {
-      get: jest.fn().mockResolvedValue({}),
-      set: jest.fn().mockResolvedValue(undefined)
+      get: jest.fn((keys, callback) => callback({})),
+      set: jest.fn((items, callback) => callback && callback())
     }
   },
   alarms: {
@@ -48,11 +50,11 @@ global.chrome = {
 global.fetch = jest.fn();
 
 // Import functions from background.js
-const {
+import {
   fetchRepoActivity,
   storeActivities,
   updateBadge
-} = require('../background.js');
+} from '../background.js';
 
 describe('Background Service Worker', () => {
   beforeEach(() => {
@@ -67,7 +69,7 @@ describe('Background Service Worker', () => {
 
     beforeEach(() => {
       // Setup default storage mock
-      chrome.storage.local.set.mockResolvedValue();
+      chrome.storage.local.set.mockImplementation((items, callback) => callback && callback());
     });
 
     test('fetches PRs, issues, and releases when all filters enabled', async () => {
@@ -209,13 +211,16 @@ describe('Background Service Worker', () => {
 
       await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
 
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        rateLimit: {
-          remaining: 1234,
-          limit: 5000,
-          reset: 1704110000000
-        }
-      });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        {
+          rateLimit: {
+            remaining: 1234,
+            limit: 5000,
+            reset: 1704110000000
+          }
+        },
+        expect.any(Function)
+      );
     });
 
     test('respects filter settings - only PRs', async () => {
@@ -288,16 +293,19 @@ describe('Background Service Worker', () => {
         { id: 'pr-repo-2', title: 'New PR', createdAt: '2025-01-02T10:00:00Z' }
       ];
 
-      chrome.storage.local.get.mockResolvedValue({ activities: existingActivities });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities: existingActivities }));
 
       await storeActivities(newActivities);
 
-      expect(chrome.storage.local.set).toHaveBeenCalledWith({
-        activities: expect.arrayContaining([
-          expect.objectContaining({ id: 'pr-repo-1' }),
-          expect.objectContaining({ id: 'pr-repo-2' })
-        ])
-      });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        {
+          activities: expect.arrayContaining([
+            expect.objectContaining({ id: 'pr-repo-1' }),
+            expect.objectContaining({ id: 'pr-repo-2' })
+          ])
+        },
+        expect.any(Function)
+      );
 
       const savedActivities = chrome.storage.local.set.mock.calls[0][0].activities;
       expect(savedActivities).toHaveLength(2);
@@ -317,7 +325,7 @@ describe('Background Service Worker', () => {
         { id: 'new-2', title: 'New Activity 2', createdAt: '2025-01-10T11:00:00Z' }
       ];
 
-      chrome.storage.local.get.mockResolvedValue({ activities: existingActivities });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities: existingActivities }));
 
       await storeActivities(newActivities);
 
@@ -336,7 +344,7 @@ describe('Background Service Worker', () => {
         { id: 'id-3', title: 'Third', createdAt: '2025-01-10T10:00:00Z' }
       ];
 
-      chrome.storage.local.get.mockResolvedValue({ activities: [] });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities: [] }));
 
       await storeActivities(newActivities);
 
@@ -359,7 +367,7 @@ describe('Background Service Worker', () => {
 
       const readItems = ['id-1']; // One item marked as read
 
-      chrome.storage.local.get.mockResolvedValue({ activities, readItems });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities, readItems }));
 
       await updateBadge();
 
@@ -375,7 +383,7 @@ describe('Background Service Worker', () => {
 
       const readItems = ['id-1', 'id-2']; // All read
 
-      chrome.storage.local.get.mockResolvedValue({ activities, readItems });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities, readItems }));
 
       await updateBadge();
 
@@ -384,7 +392,7 @@ describe('Background Service Worker', () => {
 
     test('clears badge when no activities', async () => {
 
-      chrome.storage.local.get.mockResolvedValue({ activities: [], readItems: [] });
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({ activities: [], readItems: [] }));
 
       await updateBadge();
 
