@@ -25,13 +25,11 @@ jobs:
     - name: Run linter
       run: npm run lint
 
+    - name: Run type checker
+      run: npm run typecheck
+
     - name: Run tests
       run: npm test
 
-    - name: Check extension structure
-      run: |
-        test -f manifest.json || exit 1
-        test -f background.js || exit 1
-        test -d popup || exit 1
-        test -d options || exit 1
-        echo "Extension structure looks good"
+    - name: Validate extension build
+      run: npm run build

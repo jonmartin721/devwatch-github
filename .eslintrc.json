@@ -3,7 +3,8 @@
     "browser": true,
     "es2021": true,
     "webextensions": true,
-    "jest": true
+    "jest": true,
+    "node": true
   },
   "extends": "eslint:recommended",
   "parserOptions": {
@@ -15,6 +16,7 @@
     "no-console": "off"
   },
   "globals": {
-    "chrome": "readonly"
+    "chrome": "readonly",
+    "global": "writable"
   }
 }
