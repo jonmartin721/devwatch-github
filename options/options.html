@@ -409,6 +409,30 @@
       display: block;
     }
 
+    /* Fixed position for top-level status to prevent shifting */
+    #statusMessage {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      min-width: 300px;
+      max-width: 500px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
     .form-row {
       margin-bottom: 16px;
     }
@@ -452,66 +476,48 @@
       background: transparent;
     }
 
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-      flex-shrink: 0;
-    }
-
-    .toggle-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: .3s;
-      border-radius: 24px;
-    }
-
-    .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s;
-      border-radius: 50%;
-    }
-
-    input:checked + .toggle-slider {
-      background-color: var(--link-color);
-    }
-
-    input:checked + .toggle-slider:before {
-      transform: translateX(20px);
-    }
-
     .repo-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
-    .mute-toggle-label {
+    .mute-btn {
+      background: none;
+      border: 1px solid var(--border-color-dark);
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      justify-content: center;
+      color: var(--link-color);
+      transition: all 0.2s;
+    }
+
+    .mute-btn:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--link-color);
+    }
+
+    .mute-btn.muted {
       color: var(--text-secondary);
-      white-space: nowrap;
+      border-color: var(--border-color);
+    }
+
+    .mute-btn.muted:hover {
+      color: var(--error-text);
+      border-color: var(--error-text);
+    }
+
+    .repo-item.muted {
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+
+    .repo-item.muted:hover {
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -563,8 +569,6 @@
       </div>
       <div id="repoError" class="repo-error"></div>
 
-      <div id="repoStatusMessage" class="status-message"></div>
-
       <div class="repo-search-container" id="repoSearchContainer" style="display: none;">
         <input type="text" id="repoSearch" placeholder="Search repositories...">
       </div>
@@ -576,6 +580,8 @@
         <span id="pageInfo" class="page-info"></span>
         <button id="nextPage" disabled>Next</button>
       </div>
+
+      <div id="repoStatusMessage" class="status-message"></div>
     </div>
 
     <div class="section" id="filters">
