@@ -31,7 +31,12 @@ global.chrome = {
 describe('Dark Mode', () => {
   beforeEach(() => {
     document.body.className = '';
-    document.body.innerHTML = '<button id="darkModeBtn"></button>';
+    document.body.innerHTML = `
+      <button id="darkModeBtn">
+        <svg class="moon-icon"></svg>
+        <svg class="sun-icon" style="display: none;"></svg>
+      </button>
+    `;
   });
 
   test('toggles dark mode class on body', () => {
@@ -60,13 +65,18 @@ describe('Dark Mode', () => {
     eval(popupJs);
 
     const btn = document.getElementById('darkModeBtn');
+    const moonIcon = btn.querySelector('.moon-icon');
+    const sunIcon = btn.querySelector('.sun-icon');
+
     document.body.classList.add('dark-mode');
     updateDarkModeIcon();
-    expect(btn.textContent).toBe('☀️');
+    expect(moonIcon.style.display).toBe('none');
+    expect(sunIcon.style.display).toBe('block');
 
     document.body.classList.remove('dark-mode');
     updateDarkModeIcon();
-    expect(btn.textContent).toBe('🌙');
+    expect(moonIcon.style.display).toBe('block');
+    expect(sunIcon.style.display).toBe('none');
   });
 });
 
