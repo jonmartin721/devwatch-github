@@ -8,3 +8,8 @@ dist/
 .vscode/
 *.crx
 *.pem
+
+# Local dev notes
+CLAUDE.md
+notes.md
+todo.txt
