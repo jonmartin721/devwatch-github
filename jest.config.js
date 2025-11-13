@@ -1,9 +1,10 @@
-module.exports = {
+export default {
   testEnvironment: 'jsdom',
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'popup/*.js',
     'options/*.js',
+    'shared/*.js',
     '!**/*.test.js'
   ],
   coverageThreshold: {
@@ -12,5 +13,6 @@ module.exports = {
       functions: 50,
       lines: 50
     }
-  }
+  },
+  transform: {}
 };

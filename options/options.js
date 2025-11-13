@@ -1,3 +1,8 @@
+import { applyTheme, showStatusMessage } from '../shared/utils.js';
+import { getSyncItem, getSyncItems, setSyncItem } from '../shared/storage-helpers.js';
+import { createHeaders, handleApiResponse } from '../shared/github-api.js';
+import { EYE_ICON, EYE_SLASH_ICON, STAR_ICON, createSvg, getMuteIcon } from '../shared/icons.js';
+
 const state = {
   watchedRepos: [],
   mutedRepos: [],
@@ -14,22 +19,9 @@ if (typeof document !== 'undefined') {
   });
 }
 
-function loadDarkMode() {
-  chrome.storage.sync.get(['theme'], (result) => {
-    const theme = result.theme || 'system';
-    applyTheme(theme);
-  });
-}
-
-function applyTheme(theme) {
-  if (theme === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.body.classList.toggle('dark-mode', prefersDark);
-  } else if (theme === 'dark') {
-    document.body.classList.add('dark-mode');
-  } else {
-    document.body.classList.remove('dark-mode');
-  }
+async function loadDarkMode() {
+  const theme = await getSyncItem('theme', 'system');
+  applyTheme(theme);
 }
 
 function setupEventListeners() {
@@ -112,10 +104,7 @@ async function validateToken(token) {
 
   try {
     const response = await fetch('https://api.github.com/user', {
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
+      headers: createHeaders(token)
     });
 
     if (response.ok) {
@@ -399,15 +388,10 @@ function showRepoError(message) {
 
 async function validateRepo(repo) {
   try {
-    const settings = await chrome.storage.sync.get(['githubToken']);
-    const headers = {
+    const githubToken = await getSyncItem('githubToken');
+    const headers = githubToken ? createHeaders(githubToken) : {
       'Accept': 'application/vnd.github.v3+json'
     };
-
-    // Use token if available for better rate limits and private repo access
-    if (settings.githubToken) {
-      headers['Authorization'] = `token ${settings.githubToken}`;
-    }
 
     const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
@@ -500,7 +484,8 @@ function formatNumber(num) {
   return num.toString();
 }
 
-function formatDate(dateString) {
+// Local formatDate for options page (different from popup's formatDate)
+function formatDateLocal(dateString) {
   const date = new Date(dateString);
   const now = new Date();
   const diffTime = Math.abs(now - date);
@@ -565,12 +550,7 @@ function renderRepoList() {
           </div>
           <div class="repo-actions">
             <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${repo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                ${isMuted ?
-                  '<path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/><path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>' :
-                  '<path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>'
-                }
-              </svg>
+              ${getMuteIcon(isMuted)}
             </button>
             <button class="danger" data-repo="${repo}">Remove</button>
           </div>
@@ -581,28 +561,21 @@ function renderRepoList() {
     const { fullName, description, language, stars, updatedAt, latestRelease } = repo;
     const isMuted = state.mutedRepos.includes(fullName);
 
-    const starIcon = '<svg class="star-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>';
-
     return `
       <li class="repo-item ${isMuted ? 'muted' : ''}">
         <div class="repo-content">
           <div class="repo-name">${fullName}</div>
           <div class="repo-description">${description}</div>
           <div class="repo-meta">
-            <span class="meta-item">${starIcon}${formatNumber(stars)}</span>
+            <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(stars)}</span>
             ${language ? `<span class="meta-item">${language}</span>` : ''}
             ${latestRelease ? `<span class="meta-item">Latest: ${latestRelease.version}</span>` : ''}
-            <span class="meta-item">Updated ${formatDate(updatedAt)}</span>
+            <span class="meta-item">Updated ${formatDateLocal(updatedAt)}</span>
           </div>
         </div>
         <div class="repo-actions">
           <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${fullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              ${isMuted ?
-                '<path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/><path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>' :
-                '<path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>'
-              }
-            </svg>
+            ${getMuteIcon(isMuted)}
           </button>
           <button class="danger" data-repo="${fullName}">Remove</button>
         </div>
@@ -694,23 +667,11 @@ async function saveSettings() {
 }
 
 function showMessage(text, type) {
-  const message = document.getElementById('statusMessage');
-  message.textContent = text;
-  message.className = `status-message ${type} show`;
-
-  setTimeout(() => {
-    message.classList.remove('show');
-  }, 3000);
+  showStatusMessage('statusMessage', text, type);
 }
 
 function showRepoMessage(text, type) {
-  const message = document.getElementById('repoStatusMessage');
-  message.textContent = text;
-  message.className = `status-message ${type} show`;
-
-  setTimeout(() => {
-    message.classList.remove('show');
-  }, 3000);
+  showStatusMessage('repoStatusMessage', text, type);
 }
 
 // Export functions for testing
@@ -727,6 +688,22 @@ if (typeof module !== 'undefined' && module.exports) {
     renderRepoList,
     migrateRepoFormat,
     formatNumber,
-    formatDate
+    formatDate: formatDateLocal  // Export local version for tests
   };
 }
+
+// ES6 exports for tests
+export {
+  state,
+  validateToken,
+  addRepo,
+  fetchGitHubRepoFromNpm,
+  validateRepo,
+  removeRepo,
+  toggleMuteRepo,
+  getFilteredRepos,
+  renderRepoList,
+  migrateRepoFormat,
+  formatNumber,
+  formatDateLocal as formatDate  // Export local version for tests
+};

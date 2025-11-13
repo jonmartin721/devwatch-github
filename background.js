@@ -1,3 +1,7 @@
+import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
+import { getSyncItems, getLocalItems, setLocalItem, setSyncItem, getExcludedRepos } from './shared/storage-helpers.js';
+import { extractRepoName } from './shared/utils.js';
+
 const ALARM_NAME = 'checkGitHub';
 const DEFAULT_INTERVAL = 15;
 
@@ -49,7 +53,7 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    const { githubToken, watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await chrome.storage.sync.get([
+    const { githubToken, watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await getSyncItems([
       'githubToken',
       'watchedRepos',
       'lastCheck',
@@ -67,10 +71,7 @@ async function checkGitHubActivity() {
     const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos || []);
 
     // Get list of repos to exclude (muted + snoozed)
-    const excludedRepos = new Set([
-      ...(mutedRepos || []),
-      ...activeSnoozedRepos.map(s => s.repo)
-    ]);
+    const excludedRepos = getExcludedRepos(mutedRepos || [], activeSnoozedRepos);
 
     const enabledFilters = filters || { prs: true, issues: true, releases: true };
     const globalLastCheck = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -78,7 +79,7 @@ async function checkGitHubActivity() {
 
     for (const repo of watchedRepos) {
       // Handle both string format (legacy) and object format (new)
-      const repoName = typeof repo === 'string' ? repo : repo.fullName;
+      const repoName = extractRepoName(repo);
 
       // Skip muted and snoozed repos
       if (excludedRepos.has(repoName)) {
@@ -113,10 +114,7 @@ async function checkGitHubActivity() {
 
 async function fetchRepoActivity(repo, token, since, filters) {
   const activities = [];
-  const headers = {
-    'Authorization': `token ${token}`,
-    'Accept': 'application/vnd.github.v3+json'
-  };
+  const headers = createHeaders(token);
 
   async function fetchWithRateLimit(url) {
     const response = await fetch(url, { headers });
@@ -127,27 +125,14 @@ async function fetchRepoActivity(repo, token, since, filters) {
     const reset = response.headers.get('X-RateLimit-Reset');
 
     if (remaining && limit) {
-      await chrome.storage.local.set({
-        rateLimit: {
-          remaining: parseInt(remaining),
-          limit: parseInt(limit),
-          reset: parseInt(reset) * 1000
-        }
+      await setLocalItem('rateLimit', {
+        remaining: parseInt(remaining),
+        limit: parseInt(limit),
+        reset: parseInt(reset) * 1000
       });
     }
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Invalid GitHub token');
-      } else if (response.status === 403) {
-        throw new Error('Rate limit exceeded');
-      } else if (response.status === 404) {
-        throw new Error(`Repository ${repo} not found`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
-
+    handleApiResponse(response, repo);
     return response;
   }
 
@@ -159,18 +144,8 @@ async function fetchRepoActivity(repo, token, since, filters) {
       );
 
       const prs = await prsResponse.json();
-      const newPrs = prs.filter(pr => new Date(pr.created_at) > since);
-      activities.push(...newPrs.map(pr => ({
-        id: `pr-${repo}-${pr.number}`,
-        type: 'pr',
-        repo,
-        title: pr.title,
-        url: pr.html_url,
-        createdAt: pr.created_at,
-        author: pr.user.login,
-        authorAvatar: pr.user.avatar_url,
-        number: pr.number
-      })));
+      const newPrs = filterActivitiesByDate(prs, since, 'created_at');
+      activities.push(...newPrs.map(pr => mapActivity(pr, 'pr', repo)));
     }
 
     // Fetch Issues
@@ -181,17 +156,7 @@ async function fetchRepoActivity(repo, token, since, filters) {
 
       const issues = await issuesResponse.json();
       const newIssues = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) > since);
-      activities.push(...newIssues.map(issue => ({
-        id: `issue-${repo}-${issue.number}`,
-        type: 'issue',
-        repo,
-        title: issue.title,
-        url: issue.html_url,
-        createdAt: issue.created_at,
-        author: issue.user.login,
-        authorAvatar: issue.user.avatar_url,
-        number: issue.number
-      })));
+      activities.push(...newIssues.map(issue => mapActivity(issue, 'issue', repo)));
     }
 
     // Fetch Releases
@@ -201,26 +166,15 @@ async function fetchRepoActivity(repo, token, since, filters) {
       );
 
       const releases = await releasesResponse.json();
-      const newReleases = releases.filter(release => new Date(release.published_at) > since);
-      activities.push(...newReleases.map(release => ({
-        id: `release-${repo}-${release.id}`,
-        type: 'release',
-        repo,
-        title: release.name || release.tag_name,
-        url: release.html_url,
-        createdAt: release.published_at,
-        author: release.author.login,
-        authorAvatar: release.author.avatar_url
-      })));
+      const newReleases = filterActivitiesByDate(releases, since, 'published_at');
+      activities.push(...newReleases.map(release => mapActivity(release, 'release', repo)));
     }
   } catch (error) {
     console.error(`Error fetching activity for ${repo}:`, error.message);
-    await chrome.storage.local.set({
-      lastError: {
-        message: error.message,
-        repo,
-        timestamp: Date.now()
-      }
+    await setLocalItem('lastError', {
+      message: error.message,
+      repo,
+      timestamp: Date.now()
     });
     throw error;
   }
@@ -241,17 +195,14 @@ async function cleanExpiredSnoozes(snoozedRepos) {
 }
 
 async function storeActivities(newActivities) {
-  const { activities = [] } = await chrome.storage.local.get(['activities']);
-  const { mutedRepos = [], snoozedRepos = [] } = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+  const { activities = [] } = await getLocalItems(['activities']);
+  const { mutedRepos = [], snoozedRepos = [] } = await getSyncItems(['mutedRepos', 'snoozedRepos']);
 
   // Clean up expired snoozes
   const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);
 
   // Get list of repos to exclude
-  const excludedRepos = new Set([
-    ...mutedRepos,
-    ...activeSnoozedRepos.map(s => s.repo)
-  ]);
+  const excludedRepos = getExcludedRepos(mutedRepos, activeSnoozedRepos);
 
   // Merge new activities, avoiding duplicates
   const existingIds = new Set(activities.map(a => a.id));
@@ -262,12 +213,11 @@ async function storeActivities(newActivities) {
   const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
 
   const updated = filtered.slice(0, 100);
-  await chrome.storage.local.set({ activities: updated });
+  await setLocalItem('activities', updated);
 }
 
 async function updateBadge() {
-  const { readItems = [] } = await chrome.storage.local.get(['readItems']);
-  const { activities = [] } = await chrome.storage.local.get(['activities']);
+  const { readItems = [], activities = [] } = await getLocalItems(['readItems', 'activities']);
 
   const unreadCount = activities.filter(a => !readItems.includes(a.id)).length;
 
@@ -397,3 +347,14 @@ if (typeof module !== 'undefined' && module.exports) {
     cleanExpiredSnoozes
   };
 }
+
+// ES6 exports for tests
+export {
+  setupAlarm,
+  checkGitHubActivity,
+  fetchRepoActivity,
+  storeActivities,
+  updateBadge,
+  showNotifications,
+  cleanExpiredSnoozes
+};

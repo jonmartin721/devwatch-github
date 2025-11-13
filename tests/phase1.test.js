@@ -1,3 +1,5 @@
+import { jest, describe, test, beforeEach, expect } from '@jest/globals';
+
 // Mock Chrome API
 global.chrome = {
   storage: {
@@ -44,13 +46,15 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Import functions from popup.js
-const {
-  applyTheme,
+import {
   updateDarkModeIcon,
   groupByTime,
   updateRateLimit,
   showError
-} = require('../popup/popup.js');
+} from '../popup/popup.js';
+
+// Import applyTheme from shared utilities
+import { applyTheme } from '../shared/utils.js';
 
 describe('Dark Mode', () => {
   beforeEach(() => {

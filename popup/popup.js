@@ -1,3 +1,7 @@
+import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
+import { getSyncItem, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
+
 let currentFilter = 'all';
 let allActivities = [];
 let readItems = [];
@@ -42,42 +46,28 @@ function setupEventListeners() {
   });
 
   // Load theme preference
-  chrome.storage.sync.get(['theme'], (result) => {
-    const theme = result.theme || 'system';
+  getSyncItem('theme', 'system').then(theme => {
     applyTheme(theme);
     updateDarkModeIcon();
   });
 }
 
-function applyTheme(theme) {
-  if (theme === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.body.classList.toggle('dark-mode', prefersDark);
-  } else if (theme === 'dark') {
-    document.body.classList.add('dark-mode');
-  } else {
-    document.body.classList.remove('dark-mode');
-  }
-}
-
-function toggleDarkMode() {
+async function toggleDarkMode() {
   // Cycle through: light -> dark -> system
-  chrome.storage.sync.get(['theme'], (result) => {
-    let currentTheme = result.theme || 'system';
-    let newTheme;
+  const currentTheme = await getSyncItem('theme', 'system');
+  let newTheme;
 
-    if (currentTheme === 'light') {
-      newTheme = 'dark';
-    } else if (currentTheme === 'dark') {
-      newTheme = 'system';
-    } else {
-      newTheme = 'light';
-    }
+  if (currentTheme === 'light') {
+    newTheme = 'dark';
+  } else if (currentTheme === 'dark') {
+    newTheme = 'system';
+  } else {
+    newTheme = 'light';
+  }
 
-    chrome.storage.sync.set({ theme: newTheme });
-    applyTheme(newTheme);
-    updateDarkModeIcon();
-  });
+  chrome.storage.sync.set({ theme: newTheme });
+  applyTheme(newTheme);
+  updateDarkModeIcon();
 }
 
 function updateDarkModeIcon() {
@@ -86,11 +76,9 @@ function updateDarkModeIcon() {
   const sunIcon = btn.querySelector('.sun-icon');
 
   if (document.body.classList.contains('dark-mode')) {
-    moonIcon.style.display = 'none';
-    sunIcon.style.display = 'block';
+    toggleElementVisibility(sunIcon, moonIcon);
   } else {
-    moonIcon.style.display = 'block';
-    sunIcon.style.display = 'none';
+    toggleElementVisibility(moonIcon, sunIcon);
   }
 }
 
@@ -253,18 +241,14 @@ function renderActivities() {
       <div class="repo-group-header" data-repo="${repo}">
         <div class="repo-group-title">
           <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="chevron ${isCollapsed ? 'collapsed' : ''}">
-              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
-            </svg>
+            ${createSvg(CHEVRON_DOWN_ICON, 12, 12, `chevron ${isCollapsed ? 'collapsed' : ''}`)}
           </button>
           <span class="repo-group-name">${repo}</span>
         </div>
         <div class="repo-group-actions">
           ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
           <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5zm1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0zM1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5z"/>
-            </svg>
+            ${createSvg(SNOOZE_ICON, 14, 14)}
           </button>
         </div>
       </div>
@@ -368,11 +352,6 @@ function toggleArchive() {
 function renderActivityItem(activity) {
   const isRead = readItems.includes(activity.id);
 
-  // Simple checkmark icon
-  const checkIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-    <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/>
-  </svg>`;
-
   return `
     <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${activity.id}" data-url="${activity.url}">
       <img src="${activity.authorAvatar}" class="activity-avatar" alt="${activity.author}">
@@ -388,7 +367,7 @@ function renderActivityItem(activity) {
       </div>
       <div class="activity-actions">
         <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done">
-          ${checkIcon}
+          ${createSvg(CHECK_ICON, 16, 16)}
         </button>
       </div>
     </div>
@@ -566,25 +545,6 @@ async function handleCollapseAll() {
   renderActivities();
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 60) {
-    return `${diffMins}m ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  } else if (diffDays < 7) {
-    return `${diffDays}d ago`;
-  } else {
-    return date.toLocaleDateString();
-  }
-}
-
 // Export functions for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -594,8 +554,6 @@ if (typeof module !== 'undefined' && module.exports) {
     groupByRepo,
     toggleRepoCollapse,
     snoozeRepo,
-    formatDate,
-    applyTheme,
     toggleDarkMode,
     updateDarkModeIcon,
     updateRateLimit,
@@ -610,3 +568,25 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleArchive
   };
 }
+
+// ES6 exports for tests
+export {
+  loadActivities,
+  renderActivities,
+  groupByTime,
+  groupByRepo,
+  toggleRepoCollapse,
+  snoozeRepo,
+  toggleDarkMode,
+  updateDarkModeIcon,
+  updateRateLimit,
+  showError,
+  toggleReadState,
+  markAsRead,
+  markAsReadWithAnimation,
+  handleMarkAllRead,
+  handleCollapseAll,
+  toggleSearch,
+  toggleFocus,
+  toggleArchive
+};

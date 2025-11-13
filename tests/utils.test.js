@@ -1,3 +1,5 @@
+import { jest, describe, test, expect } from '@jest/globals';
+
 // Mock Chrome API
 global.chrome = {
   storage: {
@@ -18,8 +20,8 @@ global.chrome = {
   }
 };
 
-// Import function from popup.js
-const { formatDate } = require('../popup/popup.js');
+// Import function from shared utilities
+import { formatDate } from '../shared/utils.js';
 
 describe('Date Formatting', () => {
 

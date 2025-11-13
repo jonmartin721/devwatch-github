@@ -1,9 +1,11 @@
+import { jest, describe, test, beforeEach, expect } from '@jest/globals';
+
 // Mock Chrome APIs
 global.chrome = {
   storage: {
     sync: {
-      get: jest.fn().mockResolvedValue({ githubToken: null }),
-      set: jest.fn().mockResolvedValue(undefined)
+      get: jest.fn((keys, callback) => callback({ githubToken: null })),
+      set: jest.fn((items, callback) => callback && callback())
     }
   }
 };
@@ -12,12 +14,12 @@ global.chrome = {
 global.fetch = jest.fn();
 
 // Import functions from options.js
-const {
+import {
   fetchGitHubRepoFromNpm,
   validateRepo,
   formatNumber,
   formatDate
-} = require('../options/options.js');
+} from '../options/options.js';
 
 describe('Options Page - Repository Management', () => {
   beforeEach(() => {
