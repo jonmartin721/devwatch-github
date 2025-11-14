@@ -3,6 +3,15 @@ import { getSyncItem } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
 import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
 import { safelyOpenUrl } from '../shared/security.js';
+import { showError, clearError, showSuccess } from '../shared/error-handler.js';
+import {
+  isOffline,
+  showOfflineStatus,
+  setupOfflineListeners,
+  getCachedData,
+  cacheForOffline,
+  showCachedActivities
+} from '../shared/offline-manager.js';
 
 let currentFilter = 'all';
 let allActivities = [];
@@ -16,6 +25,8 @@ if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     loadActivities();
     setupEventListeners();
+    setupKeyboardNavigation();
+    setupOfflineHandlers();
   });
 }
 
@@ -90,10 +101,12 @@ async function handleRefresh() {
   btn.classList.add('spinning');
 
   try {
+    clearError('errorMessage');
     await chrome.runtime.sendMessage({ action: 'checkNow' });
     await loadActivities();
+    showSuccess('errorMessage', 'Activities refreshed successfully');
   } catch (error) {
-    console.error('Error refreshing:', error);
+    showError('errorMessage', error, null, { action: 'refresh activities' }, 5000);
   } finally {
     btn.disabled = false;
     btn.classList.remove('spinning');
@@ -102,7 +115,55 @@ async function handleRefresh() {
 
 async function loadActivities() {
   const list = document.getElementById('activityList');
+
+  // Check offline status first
+  if (isOffline()) {
+    list.innerHTML = '<div class="loading">Loading cached data...</div>';
+    showOfflineStatus('errorMessage', true);
+
+    try {
+      const cachedActivities = await getCachedData('activities_cache');
+      const cachedReadItems = await getCachedData('readItems_cache');
+      const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+
+      if (cachedActivities) {
+        // Filter out muted and snoozed repos
+        const mutedRepos = settings.mutedRepos || [];
+        const snoozedRepos = settings.snoozedRepos || [];
+        const now = Date.now();
+        const activeSnoozedRepos = snoozedRepos.filter(s => s.expiresAt > now).map(s => s.repo);
+        const excludedRepos = new Set([...mutedRepos, ...activeSnoozedRepos]);
+
+        allActivities = cachedActivities.filter(a => !excludedRepos.has(a.repo));
+        readItems = cachedReadItems || [];
+
+        // Show cached indicator
+        showCachedActivities(allActivities);
+        renderActivities();
+        return;
+      } else {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="offline-empty">
+              <div class="offline-icon">📡</div>
+              <p>No cached data available</p>
+              <small>Check your connection and try again</small>
+            </div>
+          </div>
+        `;
+        return;
+      }
+    } catch (error) {
+      list.innerHTML = '<div class="empty-state"><p>Unable to load cached data</p></div>';
+      showError('errorMessage', error, null, { action: 'load cached activities' }, 0);
+      return;
+    }
+  }
+
+  // Online mode - proceed normally
   list.innerHTML = '<div class="loading">Loading...</div>';
+  showOfflineStatus('errorMessage', false);
+  clearError('errorMessage');
 
   try {
     const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError', 'collapsedRepos']);
@@ -120,12 +181,19 @@ async function loadActivities() {
 
     allActivities = (data.activities || []).filter(a => !excludedRepos.has(a.repo));
     readItems = data.readItems || [];
+
+    // Cache the loaded data for offline use
+    await cacheForOffline('activities_cache', allActivities, 3600000); // 1 hour
+    await cacheForOffline('readItems_cache', readItems, 3600000);
+
     renderActivities();
     updateRateLimit(data.rateLimit);
-    showError(data.lastError);
+    if (data.lastError) {
+      showStoredError(data.lastError);
+    }
   } catch (error) {
-    console.error('Error loading activities:', error);
-    list.innerHTML = '<div class="empty-state"><p>Error loading activities</p></div>';
+    list.innerHTML = '<div class="empty-state"><p>Unable to load activities</p></div>';
+    showError('errorMessage', error, null, { action: 'load activities' }, 0);
   }
 }
 
@@ -156,7 +224,7 @@ function updateRateLimit(rateLimit) {
   }
 }
 
-function showError(lastError) {
+function showStoredError(lastError) {
   const errorMsg = document.getElementById('errorMessage');
   if (!lastError || Date.now() - lastError.timestamp > 60000) {
     errorMsg.style.display = 'none';
@@ -295,7 +363,7 @@ function renderActivities() {
       // Validate URL before opening to prevent javascript: and data: URLs
       const opened = await safelyOpenUrl(url);
       if (!opened) {
-        console.error('Failed to open URL - validation failed:', url);
+        showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
       }
     });
 
@@ -485,7 +553,7 @@ async function snoozeRepo(repo) {
     // Show confirmation
     showSnoozeMessage(repo, snoozeHours);
   } catch (error) {
-    console.error('Error snoozing repo:', error);
+    showError('errorMessage', error, null, { action: 'snooze repository', repo }, 3000);
   }
 }
 
@@ -516,7 +584,7 @@ async function toggleReadState(id) {
     }
     renderActivities();
   } catch (error) {
-    console.error('Error toggling read state:', error);
+    showError('errorMessage', error, null, { action: 'toggle read state' }, 3000);
   }
 }
 
@@ -527,7 +595,7 @@ async function markAsRead(id) {
     await chrome.runtime.sendMessage({ action: 'markAsRead', id });
     readItems.push(id);
   } catch (error) {
-    console.error('Error marking as read:', error);
+    showError('errorMessage', error, null, { action: 'mark as read' }, 3000);
   }
 }
 
@@ -537,7 +605,7 @@ async function handleMarkAllRead() {
     readItems = allActivities.map(a => a.id);
     renderActivities();
   } catch (error) {
-    console.error('Error marking all as read:', error);
+    showError('errorMessage', error, null, { action: 'mark all as read' }, 3000);
   }
 }
 
@@ -557,6 +625,135 @@ async function handleCollapseAll() {
   // Save and re-render
   await chrome.storage.local.set({ collapsedRepos: Array.from(collapsedRepos) });
   renderActivities();
+}
+
+function setupKeyboardNavigation() {
+  const searchBox = document.getElementById('searchBox');
+
+  // Handle keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Only handle shortcuts when not in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    switch (e.key) {
+      case 'r':
+      case 'R':
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          handleRefresh();
+        }
+        break;
+      case 's':
+      case 'S':
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          toggleSearch();
+        }
+        break;
+      case 'f':
+      case 'F':
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          toggleFocus();
+        }
+        break;
+      case 'a':
+      case 'A':
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          toggleArchive();
+        }
+        break;
+      case 'Escape':
+        if (searchBox && searchBox.style.display !== 'none') {
+          toggleSearch();
+        }
+        break;
+    }
+  });
+
+  // Enhanced tab navigation for filter buttons
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  filterButtons.forEach((btn, index) => {
+    btn.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown': {
+          e.preventDefault();
+          const nextIndex = (index + 1) % filterButtons.length;
+          filterButtons[nextIndex].focus();
+          filterButtons[nextIndex].click();
+          break;
+        }
+        case 'ArrowLeft':
+        case 'ArrowUp': {
+          e.preventDefault();
+          const prevIndex = (index - 1 + filterButtons.length) % filterButtons.length;
+          filterButtons[prevIndex].focus();
+          filterButtons[prevIndex].click();
+          break;
+        }
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          btn.click();
+          break;
+      }
+    });
+  });
+
+  // Update ARIA attributes when filters change
+  const originalRenderActivities = renderActivities;
+  const wrappedRenderActivities = function() {
+    originalRenderActivities();
+
+    // Update ARIA selected states
+    filterButtons.forEach(btn => {
+      const isActive = btn.classList.contains('active');
+      btn.setAttribute('aria-selected', isActive.toString());
+      btn.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+  };
+
+  // Replace the original function with the wrapped version
+  window.renderActivities = wrappedRenderActivities;
+  Object.defineProperty(window, 'renderActivities', {
+    value: wrappedRenderActivities,
+    writable: true,
+    configurable: true
+  });
+}
+
+function setupOfflineHandlers() {
+  // Handle offline/online events
+  setupOfflineListeners(
+    // When coming back online
+    () => {
+      showOfflineStatus('errorMessage', false);
+      showSuccess('errorMessage', 'Connection restored! Loading fresh data...');
+      setTimeout(() => {
+        loadActivities();
+      }, 1000);
+    },
+    // When going offline
+    () => {
+      showOfflineStatus('errorMessage', true);
+    }
+  );
+
+  // Store original handleRefresh for offline-aware handling
+  const originalHandleRefresh = window.handleRefresh || handleRefresh;
+
+  // Override handleRefresh with offline check
+  window.handleRefresh = async function() {
+    if (isOffline()) {
+      showError('errorMessage', new Error('Cannot refresh while offline'), null, { action: 'refresh activities' }, 3000);
+      return;
+    }
+    return originalHandleRefresh.call(this);
+  };
 }
 
 // Export functions for testing
