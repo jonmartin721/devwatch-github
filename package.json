@@ -1,7 +1,7 @@
 {
-  "name": "github-notifications-chrome",
+  "name": "github-devwatch-chrome",
   "version": "1.0.0",
-  "description": "Chrome extension for GitHub notifications",
+  "description": "Chrome extension for GitHub Devwatch",
   "type": "module",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",

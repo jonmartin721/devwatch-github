@@ -1,4 +1,4 @@
-# GitHub Notifications for Chrome
+# GitHub Devwatch for Chrome
 
 A Chrome extension that helps developers stay on top of GitHub activity across multiple repositories.
 
@@ -35,7 +35,7 @@ cd github-notifications-chrome
 
 1. **Create a GitHub Personal Access Token**
    - Go to https://github.com/settings/tokens/new
-   - Give it a descriptive name (e.g., "GitHub Notifications Extension")
+   - Give it a descriptive name (e.g., "GitHub Devwatch Extension")
    - Select scopes:
      - `repo` (for private repositories)
      - OR `public_repo` (for public repositories only)
