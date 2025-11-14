@@ -1,6 +1,7 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos } from './shared/storage-helpers.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getToken } from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/utils.js';
+import { safelyOpenUrl } from './shared/security.js';
 
 const ALARM_NAME = 'checkGitHub';
 const DEFAULT_INTERVAL = 15;
@@ -42,19 +43,26 @@ if (typeof chrome !== 'undefined' && chrome.alarms) {
 
 if (typeof chrome !== 'undefined' && chrome.notifications) {
   // Handle notification clicks
-  chrome.notifications.onClicked.addListener((notificationId) => {
+  chrome.notifications.onClicked.addListener(async (notificationId) => {
     const url = notificationId.startsWith('http') ? notificationId : null;
     if (url) {
-      chrome.tabs.create({ url });
-      chrome.notifications.clear(notificationId);
+      // Validate URL before opening to prevent malicious URLs
+      const opened = await safelyOpenUrl(url);
+      if (opened) {
+        chrome.notifications.clear(notificationId);
+      } else {
+        console.error('Failed to open notification URL - validation failed:', url);
+      }
     }
   });
 }
 
 async function checkGitHubActivity() {
   try {
-    const { githubToken, watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await getSyncItems([
-      'githubToken',
+    // Get token from secure local storage
+    const githubToken = await getToken();
+
+    const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await getSyncItems([
       'watchedRepos',
       'lastCheck',
       'filters',

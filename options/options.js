@@ -1,7 +1,8 @@
 import { applyTheme, showStatusMessage } from '../shared/utils.js';
-import { getSyncItem } from '../shared/storage-helpers.js';
+import { getSyncItem, getToken, setToken, clearToken as clearStoredToken } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STAR_ICON, createSvg, getMuteIcon } from '../shared/icons.js';
+import { escapeHtml } from '../shared/sanitize.js';
 
 const state = {
   watchedRepos: [],
@@ -95,7 +96,8 @@ async function clearToken() {
   document.getElementById('repoInput').disabled = true;
   document.getElementById('addRepoBtn').disabled = true;
 
-  await chrome.storage.sync.set({ githubToken: '' });
+  // Clear token from secure storage
+  await clearStoredToken();
   showMessage('Token cleared', 'success');
 }
 
@@ -147,8 +149,10 @@ async function validateToken(token) {
 
 async function loadSettings() {
   try {
+    // Get token from secure local storage (with automatic migration)
+    const githubToken = await getToken();
+
     const settings = await chrome.storage.sync.get([
-      'githubToken',
       'watchedRepos',
       'mutedRepos',
       'checkInterval',
@@ -158,19 +162,19 @@ async function loadSettings() {
       'theme'
     ]);
 
-    if (settings.githubToken) {
-      document.getElementById('githubToken').value = settings.githubToken;
+    if (githubToken) {
+      document.getElementById('githubToken').value = githubToken;
       document.getElementById('clearTokenBtn').style.display = 'block';
       // Validate existing token
-      validateToken(settings.githubToken);
+      validateToken(githubToken);
     }
 
     state.watchedRepos = settings.watchedRepos || [];
     state.mutedRepos = settings.mutedRepos || [];
 
     // Migrate old string format to new object format
-    if (settings.githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
-      await migrateRepoFormat(settings.githubToken);
+    if (githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
+      await migrateRepoFormat(githubToken);
     }
 
     renderRepoList();
@@ -542,17 +546,18 @@ function renderRepoList() {
     // Handle both old string format and new object format
     if (typeof repo === 'string') {
       const isMuted = state.mutedRepos.includes(repo);
+      const sanitizedRepo = escapeHtml(repo);
       return `
         <li class="repo-item ${isMuted ? 'muted' : ''}">
           <div class="repo-content">
-            <div class="repo-name">${repo}</div>
+            <div class="repo-name">${sanitizedRepo}</div>
             <div class="repo-description">Legacy format - remove and re-add to see details</div>
           </div>
           <div class="repo-actions">
-            <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${repo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
+            <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedRepo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
               ${getMuteIcon(isMuted)}
             </button>
-            <button class="danger" data-repo="${repo}">Remove</button>
+            <button class="danger" data-repo="${sanitizedRepo}">Remove</button>
           </div>
         </li>
       `;
@@ -561,23 +566,29 @@ function renderRepoList() {
     const { fullName, description, language, stars, updatedAt, latestRelease } = repo;
     const isMuted = state.mutedRepos.includes(fullName);
 
+    // Sanitize all user-generated content to prevent XSS
+    const sanitizedFullName = escapeHtml(fullName);
+    const sanitizedDescription = escapeHtml(description || '');
+    const sanitizedLanguage = escapeHtml(language || '');
+    const sanitizedReleaseVersion = latestRelease ? escapeHtml(latestRelease.version) : '';
+
     return `
       <li class="repo-item ${isMuted ? 'muted' : ''}">
         <div class="repo-content">
-          <div class="repo-name">${fullName}</div>
-          <div class="repo-description">${description}</div>
+          <div class="repo-name">${sanitizedFullName}</div>
+          <div class="repo-description">${sanitizedDescription}</div>
           <div class="repo-meta">
             <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(stars)}</span>
-            ${language ? `<span class="meta-item">${language}</span>` : ''}
-            ${latestRelease ? `<span class="meta-item">Latest: ${latestRelease.version}</span>` : ''}
+            ${sanitizedLanguage ? `<span class="meta-item">${sanitizedLanguage}</span>` : ''}
+            ${latestRelease ? `<span class="meta-item">Latest: ${sanitizedReleaseVersion}</span>` : ''}
             <span class="meta-item">Updated ${formatDateLocal(updatedAt)}</span>
           </div>
         </div>
         <div class="repo-actions">
-          <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${fullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
+          <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedFullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
             ${getMuteIcon(isMuted)}
           </button>
-          <button class="danger" data-repo="${fullName}">Remove</button>
+          <button class="danger" data-repo="${sanitizedFullName}">Remove</button>
         </div>
       </li>
     `;
@@ -640,8 +651,11 @@ async function saveSettings() {
   const theme = document.getElementById('theme').value;
 
   try {
+    // Save token to secure local storage
+    await setToken(token);
+
+    // Save other settings to sync storage
     await chrome.storage.sync.set({
-      githubToken: token,
       watchedRepos: state.watchedRepos,
       mutedRepos: state.mutedRepos,
       checkInterval: interval,

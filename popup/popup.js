@@ -1,6 +1,8 @@
 import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
 import { getSyncItem } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
+import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
+import { safelyOpenUrl } from '../shared/security.js';
 
 let currentFilter = 'all';
 let allActivities = [];
@@ -285,11 +287,16 @@ function renderActivities() {
 
   list.querySelectorAll('.activity-item').forEach(item => {
     const content = item.querySelector('.activity-content');
-    content.addEventListener('click', () => {
+    content.addEventListener('click', async () => {
       const id = item.dataset.id;
       const url = item.dataset.url;
       markAsRead(id);
-      chrome.tabs.create({ url });
+
+      // Validate URL before opening to prevent javascript: and data: URLs
+      const opened = await safelyOpenUrl(url);
+      if (!opened) {
+        console.error('Failed to open URL - validation failed:', url);
+      }
     });
 
     item.querySelectorAll('.action-btn').forEach(btn => {
@@ -352,17 +359,24 @@ function toggleArchive() {
 function renderActivityItem(activity) {
   const isRead = readItems.includes(activity.id);
 
+  // Sanitize all user-generated content to prevent XSS
+  const sanitizedTitle = escapeHtml(activity.title);
+  const sanitizedAuthor = escapeHtml(activity.author);
+  const sanitizedRepo = escapeHtml(activity.repo);
+  const sanitizedType = escapeHtml(activity.type);
+  const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar);
+
   return `
-    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${activity.id}" data-url="${activity.url}">
-      <img src="${activity.authorAvatar}" class="activity-avatar" alt="${activity.author}">
+    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${escapeHtml(activity.id)}" data-url="${escapeHtml(activity.url)}">
+      <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
       <div class="activity-content">
         <div class="activity-header">
-          <span class="activity-type ${activity.type}">${activity.type}</span>
-          <span class="activity-repo">${activity.repo}</span>
+          <span class="activity-type ${sanitizedType}">${sanitizedType}</span>
+          <span class="activity-repo">${sanitizedRepo}</span>
         </div>
-        <div class="activity-title">${activity.title}</div>
+        <div class="activity-title">${sanitizedTitle}</div>
         <div class="activity-meta">
-          by ${activity.author} • ${formatDate(activity.createdAt)}
+          by ${sanitizedAuthor} • ${formatDate(activity.createdAt)}
         </div>
       </div>
       <div class="activity-actions">
