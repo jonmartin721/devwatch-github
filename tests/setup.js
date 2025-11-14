@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import '@testing-library/jest-dom';
 
 // Mock Chrome APIs globally
@@ -55,8 +56,7 @@ Object.defineProperty(navigator, 'onLine', {
   value: true
 });
 
-// Setup DOM reset for each test
+// Setup mocks reset for each test (but not DOM since tests set up their own)
 beforeEach(() => {
-  document.body.innerHTML = '';
   jest.clearAllMocks();
 });

@@ -49,9 +49,11 @@ Object.defineProperty(window, 'matchMedia', {
 import {
   updateDarkModeIcon,
   groupByTime,
-  updateRateLimit,
-  showError
+  updateRateLimit
 } from '../popup/popup.js';
+
+// Import error handling utilities
+import { showError } from '../shared/error-handler.js';
 
 // Import applyTheme from shared utilities
 import { applyTheme } from '../shared/utils.js';
@@ -175,24 +177,24 @@ describe('Error Display', () => {
       timestamp: Date.now()
     };
 
-    showError(error);
+    showError('errorMessage', error);
 
     const errorMsg = document.getElementById('errorMessage');
     expect(errorMsg.style.display).toBe('block');
-    expect(errorMsg.textContent).toContain('Invalid GitHub token');
-    expect(errorMsg.textContent).toContain('facebook/react');
+    expect(errorMsg.textContent).toContain('Authentication Error');
+    expect(errorMsg.textContent).toContain('invalid');
   });
 
-  test('hides old errors', () => {
+  test('displays all errors when shown', () => {
     const error = {
-      message: 'Old error',
-      timestamp: Date.now() - 120000 // 2 minutes ago
+      message: 'Old error'
     };
 
-    showError(error);
+    showError('errorMessage', error);
 
     const errorMsg = document.getElementById('errorMessage');
-    expect(errorMsg.style.display).toBe('none');
+    expect(errorMsg.style.display).toBe('block');
+    expect(errorMsg.textContent).toContain('Unexpected Error');
   });
 });
 
