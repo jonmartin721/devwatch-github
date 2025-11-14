@@ -16,8 +16,5 @@ export default {
   },
   transform: {},
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  extensionsToTreatAsEsm: ['.js'],
-  moduleNameMapping: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
-  }
+  extensionsToTreatAsEsm: ['.js']
 };
