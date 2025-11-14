@@ -78,3 +78,4 @@ export function toggleElementVisibility(showElement, hideElement) {
   if (showElement) showElement.style.display = 'block';
   if (hideElement) hideElement.style.display = 'none';
 }
+

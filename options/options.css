@@ -873,6 +873,7 @@ input:checked + .slider:before {
   animation: slideIn 0.3s ease-out;
 }
 
+
 @keyframes slideIn {
   from {
     opacity: 0;
