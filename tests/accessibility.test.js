@@ -108,10 +108,6 @@ describe('Accessibility Features', () => {
         ctrlKey: false,
         metaKey: false
       };
-
-      const mockClickEvent = {
-        preventDefault: jest.fn()
-      };
     });
 
     it('should handle refresh shortcut (R key)', () => {
