@@ -825,7 +825,8 @@ async function fetchReposFromGitHub(type, token) {
   }
 
   // Fetch all pages
-  while (true) {
+  let hasMorePages = true;
+  while (hasMorePages) {
     const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}per_page=${perPage}&page=${page}`, {
       headers
     });
@@ -841,7 +842,10 @@ async function fetchReposFromGitHub(type, token) {
     }
 
     const repos = await response.json();
-    if (repos.length === 0) break;
+    if (repos.length === 0) {
+      hasMorePages = false;
+      break;
+    }
 
     // Transform to our format
     const transformed = repos.map(repo => ({
@@ -858,10 +862,10 @@ async function fetchReposFromGitHub(type, token) {
     // Check if there are more pages
     const linkHeader = response.headers.get('Link');
     if (!linkHeader || !linkHeader.includes('rel="next"')) {
-      break;
+      hasMorePages = false;
+    } else {
+      page++;
     }
-
-    page++;
   }
 
   return allRepos;
