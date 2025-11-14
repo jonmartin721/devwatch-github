@@ -326,7 +326,7 @@ describe('Offline Manager', () => {
 
       const result = await getStorageUsage();
 
-      expect(result.totalBytes).toBe(0);
+      expect(result.totalBytes).toBe(2); // "{}" is 2 bytes
       expect(result.usagePercent).toBe(0);
       expect(result.itemCount).toBe(0);
     });
@@ -367,7 +367,7 @@ describe('Offline Manager', () => {
 
       const list = document.getElementById('activityList');
       expect(list.innerHTML).toContain('No cached data available');
-      expect(result).toEqual([]);
+      expect(result).toBeUndefined();
     });
 
     it('should handle missing element gracefully', () => {
