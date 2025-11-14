@@ -97,3 +97,49 @@ export function getExcludedRepos(mutedRepos = [], snoozedRepos = []) {
     ...activeSnoozedRepos
   ]);
 }
+
+/**
+ * Get GitHub token from local storage (with migration from sync storage)
+ * For security, tokens are stored in local storage (not synced across devices)
+ * @returns {Promise<string|null>} Token or null
+ */
+export async function getToken() {
+  // First check local storage
+  const localToken = await getLocalItem('githubToken');
+  if (localToken) {
+    return localToken;
+  }
+
+  // Migration: Check sync storage for existing tokens
+  const syncToken = await getSyncItem('githubToken');
+  if (syncToken) {
+    // Migrate to local storage
+    await setLocalItem('githubToken', syncToken);
+    // Clear from sync storage for security
+    await setSyncItem('githubToken', '');
+    return syncToken;
+  }
+
+  return null;
+}
+
+/**
+ * Set GitHub token in local storage
+ * For security, tokens are stored in local storage (not synced across devices)
+ * @param {string} token - GitHub token to store
+ * @returns {Promise<void>}
+ */
+export async function setToken(token) {
+  await setLocalItem('githubToken', token);
+  // Ensure no token in sync storage
+  await setSyncItem('githubToken', '');
+}
+
+/**
+ * Clear GitHub token from both local and sync storage
+ * @returns {Promise<void>}
+ */
+export async function clearToken() {
+  await setLocalItem('githubToken', '');
+  await setSyncItem('githubToken', '');
+}
