@@ -11,15 +11,15 @@
     <header>
       <h1>GitHub Activity</h1>
       <div class="header-actions">
-        <button id="darkModeBtn" class="icon-btn" title="Change theme (Light / Dark / System)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="moon-icon">
+        <button id="darkModeBtn" class="icon-btn" aria-label="Toggle theme (Light / Dark / System)" tabindex="0">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="moon-icon" aria-hidden="true">
             <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
           </svg>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sun-icon" style="display: none;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="sun-icon" style="display: none;" aria-hidden="true">
             <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
           </svg>
         </button>
-        <button id="refreshBtn" class="icon-btn" title="Check now">
+        <button id="refreshBtn" class="icon-btn" aria-label="Check for new activity now" tabindex="0">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="refresh-icon">
             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
@@ -29,24 +29,24 @@
     </header>
 
     <div class="toolbar">
-      <div class="filters">
-        <button class="filter-btn active" data-type="all">All</button>
-        <button class="filter-btn" data-type="pr">PRs</button>
-        <button class="filter-btn" data-type="issue">Issues</button>
-        <button class="filter-btn" data-type="release">Releases</button>
+      <div class="filters" role="tablist" aria-label="Filter activities by type">
+        <button class="filter-btn active" data-type="all" role="tab" aria-selected="true" aria-controls="activityList" tabindex="0">All</button>
+        <button class="filter-btn" data-type="pr" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">PRs</button>
+        <button class="filter-btn" data-type="issue" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Issues</button>
+        <button class="filter-btn" data-type="release" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Releases</button>
       </div>
       <div class="toolbar-actions">
-        <button id="searchBtn" class="toolbar-btn" title="Search">
+        <button id="searchBtn" class="toolbar-btn" aria-label="Search activities" tabindex="0">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.5 4.5 0 1 0-8.999.001A4.5 4.5 0 0 0 11.5 7Z"/>
           </svg>
         </button>
-        <button id="focusBtn" class="toolbar-btn" title="Focus mode (only your activity)">
+        <button id="focusBtn" class="toolbar-btn" aria-label="Toggle focus mode for your activity" tabindex="0">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm0-1.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13ZM8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm0-1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
           </svg>
         </button>
-        <button id="archiveBtn" class="toolbar-btn" title="Show archive">
+        <button id="archiveBtn" class="toolbar-btn" aria-label="Toggle archive view" tabindex="0">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 14.25 6H1.75A1.75 1.75 0 0 1 0 4.25Zm1.75-.25a.25.25 0 0 0-.25.25v1.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25v-1.5a.25.25 0 0 0-.25-.25ZM2 7.5h12a.5.5 0 0 1 .5.5v6.25a1.75 1.75 0 0 1-1.75 1.75H3.25a1.75 1.75 0 0 1-1.75-1.75V8a.5.5 0 0 1 .5-.5Zm10.5 2a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0 0 1h4a.5.5 0 0 0 .5-.5Z"/>
           </svg>
@@ -54,22 +54,22 @@
       </div>
     </div>
 
-    <div id="searchBox" class="search-box" style="display: none;">
-      <input type="text" id="searchInput" placeholder="Search activities...">
+    <div id="searchBox" class="search-box" style="display: none;" role="search" aria-label="Search activities">
+      <input type="text" id="searchInput" placeholder="Search activities..." aria-label="Search through GitHub activities" autocomplete="off">
     </div>
 
-    <div id="activityList" class="activity-list">
+    <div id="activityList" class="activity-list" role="main" aria-label="GitHub activities" aria-live="polite">
       <div class="empty-state">
         <p>No recent activity</p>
         <small>Check your settings to add repositories</small>
       </div>
     </div>
 
-    <footer>
-      <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <footer role="contentinfo">
+      <div id="errorMessage" class="error-message" role="alert" aria-live="assertive" style="display: none;"></div>
       <div class="footer-content">
-        <a href="#" id="settingsLink">Settings</a>
-        <span id="rateLimitInfo" class="rate-limit-info"></span>
+        <a href="#" id="settingsLink" aria-label="Open extension settings">Settings</a>
+        <span id="rateLimitInfo" class="rate-limit-info" aria-label="GitHub API rate limit status"></span>
       </div>
     </footer>
   </div>
