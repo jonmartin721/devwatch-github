@@ -29,6 +29,11 @@ function setupEventListeners() {
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
 
+  // Import repos buttons
+  document.getElementById('importWatchedBtn').addEventListener('click', () => openImportModal('watched'));
+  document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred'));
+  document.getElementById('importParticipatingBtn').addEventListener('click', () => openImportModal('participating'));
+
   document.getElementById('repoInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       addRepo();
@@ -145,6 +150,26 @@ function setupEventListeners() {
       showMessage('Notification settings updated', 'success');
     });
   });
+
+  // Import modal event listeners
+  document.getElementById('closeImportModal').addEventListener('click', closeImportModal);
+  document.getElementById('cancelImportBtn').addEventListener('click', closeImportModal);
+  document.getElementById('confirmImportBtn').addEventListener('click', importSelectedRepos);
+
+  document.getElementById('selectAllImport').addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.import-repo-checkbox:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = e.target.checked);
+    updateSelectedCount();
+  });
+
+  document.getElementById('importRepoSearch').addEventListener('input', filterImportRepos);
+
+  // Close modal when clicking outside
+  document.getElementById('importModal').addEventListener('click', (e) => {
+    if (e.target.id === 'importModal') {
+      closeImportModal();
+    }
+  });
 }
 
 async function clearToken() {
@@ -160,6 +185,9 @@ async function clearToken() {
   // Disable repo input when token is cleared
   document.getElementById('repoInput').disabled = true;
   document.getElementById('addRepoBtn').disabled = true;
+
+  // Hide import section when token is cleared
+  document.getElementById('importReposSection').style.display = 'none';
 
   // Clear token from secure storage
   await clearStoredToken();
@@ -184,6 +212,9 @@ async function validateToken(token) {
       document.getElementById('repoInput').disabled = false;
       document.getElementById('addRepoBtn').disabled = false;
       document.getElementById('repoHelpText').textContent = 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)';
+
+      // Show import section when token is valid
+      document.getElementById('importReposSection').style.display = 'block';
     } else if (response.status === 401) {
       statusEl.textContent = '✗ Invalid token';
       statusEl.className = 'token-status invalid';
@@ -192,6 +223,9 @@ async function validateToken(token) {
       // Disable repo input when token is invalid
       document.getElementById('repoInput').disabled = true;
       document.getElementById('addRepoBtn').disabled = true;
+
+      // Hide import section when token is invalid
+      document.getElementById('importReposSection').style.display = 'none';
     } else {
       statusEl.textContent = `✗ Error (${response.status})`;
       statusEl.className = 'token-status invalid';
@@ -200,6 +234,9 @@ async function validateToken(token) {
       // Disable repo input on error
       document.getElementById('repoInput').disabled = true;
       document.getElementById('addRepoBtn').disabled = true;
+
+      // Hide import section on error
+      document.getElementById('importReposSection').style.display = 'none';
     }
   } catch (error) {
     statusEl.textContent = '✗ Network error';
@@ -209,6 +246,9 @@ async function validateToken(token) {
     // Disable repo input on network error
     document.getElementById('repoInput').disabled = true;
     document.getElementById('addRepoBtn').disabled = true;
+
+    // Hide import section on network error
+    document.getElementById('importReposSection').style.display = 'none';
   }
 }
 
@@ -706,6 +746,226 @@ function showMessage(text, type) {
 function showRepoMessage(text, type) {
   showStatusMessage('repoStatusMessage', text, type);
 }
+
+// Import repositories functionality
+let importModalState = {
+  type: null, // 'watched', 'starred', 'participating'
+  repos: [],
+  filteredRepos: []
+};
+
+async function openImportModal(type) {
+  const token = await getToken();
+  if (!token) {
+    showRepoMessage('Please add a GitHub token first', 'error');
+    return;
+  }
+
+  importModalState.type = type;
+  const modal = document.getElementById('importModal');
+  const title = document.getElementById('importModalTitle');
+
+  // Set title based on type
+  const titles = {
+    watched: 'Import Watched Repositories',
+    starred: 'Import Starred Repositories',
+    participating: 'Import Participating Repositories'
+  };
+  title.textContent = titles[type] || 'Import Repositories';
+
+  // Show modal and loading state
+  modal.classList.add('show');
+  document.getElementById('importLoadingState').style.display = 'flex';
+  document.getElementById('importReposList').style.display = 'none';
+  document.getElementById('importErrorState').style.display = 'none';
+
+  try {
+    // Fetch repos from GitHub
+    const repos = await fetchReposFromGitHub(type, token);
+
+    // Filter out already added repos
+    const alreadyAdded = new Set(
+      state.watchedRepos.map(r => (typeof r === 'string' ? r : r.fullName).toLowerCase())
+    );
+
+    importModalState.repos = repos.map(repo => ({
+      ...repo,
+      isAdded: alreadyAdded.has(repo.fullName.toLowerCase())
+    }));
+
+    importModalState.filteredRepos = [...importModalState.repos];
+
+    // Show repos list
+    document.getElementById('importLoadingState').style.display = 'none';
+    document.getElementById('importReposList').style.display = 'block';
+    renderImportReposList();
+  } catch (error) {
+    document.getElementById('importLoadingState').style.display = 'none';
+    document.getElementById('importErrorState').style.display = 'block';
+    document.getElementById('importErrorMessage').textContent = error.message || 'Failed to fetch repositories';
+  }
+}
+
+async function fetchReposFromGitHub(type, token) {
+  const headers = createHeaders(token);
+  let allRepos = [];
+  let page = 1;
+  const perPage = 100;
+
+  // Determine API endpoint based on type
+  const endpoints = {
+    watched: 'https://api.github.com/user/subscriptions',
+    starred: 'https://api.github.com/user/starred',
+    participating: 'https://api.github.com/user/repos?affiliation=collaborator,organization_member&sort=pushed'
+  };
+
+  const url = endpoints[type];
+  if (!url) {
+    throw new Error(`Invalid import type: ${type}`);
+  }
+
+  // Fetch all pages
+  while (true) {
+    const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}per_page=${perPage}&page=${page}`, {
+      headers
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid GitHub token');
+      } else if (response.status === 403) {
+        throw new Error('Rate limit exceeded or insufficient permissions');
+      } else {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+    }
+
+    const repos = await response.json();
+    if (repos.length === 0) break;
+
+    // Transform to our format
+    const transformed = repos.map(repo => ({
+      fullName: repo.full_name,
+      description: repo.description || 'No description provided',
+      language: repo.language || 'Unknown',
+      stars: repo.stargazers_count || 0,
+      forks: repo.forks_count || 0,
+      updatedAt: repo.updated_at || repo.pushed_at
+    }));
+
+    allRepos.push(...transformed);
+
+    // Check if there are more pages
+    const linkHeader = response.headers.get('Link');
+    if (!linkHeader || !linkHeader.includes('rel="next"')) {
+      break;
+    }
+
+    page++;
+  }
+
+  return allRepos;
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+  document.getElementById('importRepoSearch').value = '';
+  importModalState = { type: null, repos: [], filteredRepos: [] };
+}
+
+function renderImportReposList() {
+  const container = document.getElementById('importReposContainer');
+  const countEl = document.getElementById('importRepoCount');
+
+  countEl.textContent = importModalState.filteredRepos.length;
+
+  if (importModalState.filteredRepos.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">No repositories found</p>';
+    return;
+  }
+
+  container.innerHTML = importModalState.filteredRepos.map(repo => {
+    const checkboxId = `import-${repo.fullName.replace(/\//g, '-')}`;
+    const isDisabled = repo.isAdded;
+
+    return `
+      <div class="import-repo-item">
+        <input type="checkbox"
+               class="import-repo-checkbox"
+               id="${checkboxId}"
+               data-repo='${JSON.stringify(repo)}'
+               ${isDisabled ? 'disabled' : ''}
+               onchange="updateSelectedCount()">
+        <div class="import-repo-info">
+          <div class="import-repo-name">${escapeHtml(repo.fullName)}</div>
+          <div class="import-repo-description">${escapeHtml(repo.description)}</div>
+          <div class="import-repo-meta">
+            ${repo.language !== 'Unknown' ? `<span class="import-repo-meta-item">${escapeHtml(repo.language)}</span>` : ''}
+            <span class="import-repo-meta-item">⭐ ${formatNumber(repo.stars)}</span>
+            <span class="import-repo-meta-item">Updated ${formatDateLocal(repo.updatedAt)}</span>
+          </div>
+        </div>
+        ${isDisabled ? '<span class="import-repo-already-added">Already added</span>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  updateSelectedCount();
+}
+
+function filterImportRepos() {
+  const query = document.getElementById('importRepoSearch').value.toLowerCase();
+
+  if (!query) {
+    importModalState.filteredRepos = [...importModalState.repos];
+  } else {
+    importModalState.filteredRepos = importModalState.repos.filter(repo => {
+      return repo.fullName.toLowerCase().includes(query) ||
+             repo.description.toLowerCase().includes(query) ||
+             repo.language.toLowerCase().includes(query);
+    });
+  }
+
+  renderImportReposList();
+}
+
+function updateSelectedCount() {
+  const checkboxes = document.querySelectorAll('.import-repo-checkbox:checked:not(:disabled)');
+  const count = checkboxes.length;
+  document.getElementById('selectedCount').textContent = count;
+  document.getElementById('confirmImportBtn').disabled = count === 0;
+}
+
+async function importSelectedRepos() {
+  const checkboxes = document.querySelectorAll('.import-repo-checkbox:checked:not(:disabled)');
+  const reposToImport = Array.from(checkboxes).map(cb => JSON.parse(cb.dataset.repo));
+
+  if (reposToImport.length === 0) {
+    return;
+  }
+
+  // Add addedAt timestamp to each repo
+  const reposWithTimestamp = reposToImport.map(repo => ({
+    ...repo,
+    addedAt: new Date().toISOString()
+  }));
+
+  // Add to watched repos
+  state.watchedRepos.push(...reposWithTimestamp);
+
+  // Save to storage
+  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+
+  // Re-render repo list
+  renderRepoList();
+
+  // Close modal and show success message
+  closeImportModal();
+  showRepoMessage(`Successfully imported ${reposToImport.length} ${reposToImport.length === 1 ? 'repository' : 'repositories'}`, 'success');
+}
+
+// Make updateSelectedCount available globally for inline event handlers
+window.updateSelectedCount = updateSelectedCount;
 
 // Export functions for testing
 if (typeof module !== 'undefined' && module.exports) {

@@ -554,6 +554,281 @@
       75% { transform: translateX(5px); }
     }
 
+    /* Import Repos Section */
+    .import-repos-section {
+      margin: 16px 0;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+
+    .import-repos-section .help-text {
+      margin-bottom: 12px;
+    }
+
+    .import-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .import-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border: 1px solid var(--border-color-dark);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .import-btn:hover {
+      background: var(--bg-secondary);
+      border-color: var(--link-color);
+    }
+
+    .import-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .import-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.2s;
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .close-modal:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .import-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .import-loading .spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--link-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .import-loading p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .import-error {
+      padding: 20px;
+      text-align: center;
+      color: var(--error-text);
+    }
+
+    .import-search {
+      margin-bottom: 16px;
+    }
+
+    .import-select-all {
+      margin-bottom: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+    }
+
+    .import-select-all label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .import-select-all input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+
+    .import-repos-container {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .import-repo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+
+    .import-repo-item:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--link-color);
+    }
+
+    .import-repo-item input[type="checkbox"] {
+      width: auto;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .import-repo-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .import-repo-name {
+      font-weight: 600;
+      color: var(--link-color);
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .import-repo-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .import-repo-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .import-repo-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .import-repo-already-added {
+      padding: 4px 8px;
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
     .checkbox-group {
       margin-top: 16px;
     }
@@ -733,8 +1008,8 @@
           </div>
           <span id="tokenStatus" class="token-status"></span>
           <p class="help-text">
-            Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
-            with <code>repo</code> scope for private repos or <code>public_repo</code> for public only.
+            <a href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitHub%20Notifications%20Extension" target="_blank">Create a token with recommended permissions</a> or
+            manually create one with <code>repo</code> (or <code>public_repo</code> for public repos only) and <code>read:user</code> scopes.
           </p>
         </div>
     </div>
@@ -751,6 +1026,31 @@
         <button id="addRepoBtn" class="primary" disabled>Add</button>
       </div>
       <div id="repoError" class="repo-error"></div>
+
+      <div class="import-repos-section" id="importReposSection" style="display: none;">
+        <p class="help-text">Quick import repositories from your GitHub account:</p>
+        <div class="import-buttons">
+          <button id="importWatchedBtn" class="import-btn">
+            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            Import Watched
+          </button>
+          <button id="importStarredBtn" class="import-btn">
+            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+            </svg>
+            Import Starred
+          </button>
+          <button id="importParticipatingBtn" class="import-btn">
+            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            Import Participating
+          </button>
+        </div>
+      </div>
 
       <div class="repo-search-container" id="repoSearchContainer" style="display: none;">
         <input type="text" id="repoSearch" placeholder="Search repositories...">
@@ -975,6 +1275,41 @@
   <!-- Toast notifications (fixed position) -->
   <div id="statusMessage" class="status-message"></div>
   <div id="repoStatusMessage" class="status-message"></div>
+
+  <!-- Import Repos Modal -->
+  <div id="importModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="importModalTitle">Import Repositories</h3>
+        <button id="closeImportModal" class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="importLoadingState" class="import-loading">
+          <div class="spinner"></div>
+          <p>Fetching repositories from GitHub...</p>
+        </div>
+        <div id="importReposList" class="import-repos-list" style="display: none;">
+          <div class="import-search">
+            <input type="text" id="importRepoSearch" placeholder="Search repositories...">
+          </div>
+          <div class="import-select-all">
+            <label>
+              <input type="checkbox" id="selectAllImport">
+              <span>Select all (<span id="importRepoCount">0</span>)</span>
+            </label>
+          </div>
+          <div id="importReposContainer" class="import-repos-container"></div>
+        </div>
+        <div id="importErrorState" class="import-error" style="display: none;">
+          <p id="importErrorMessage"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelImportBtn">Cancel</button>
+        <button id="confirmImportBtn" class="primary" disabled>Import Selected (<span id="selectedCount">0</span>)</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="options.js"></script>
 </body>
