@@ -218,6 +218,189 @@
       background: var(--danger-hover);
     }
 
+    /* Chip Group Styles */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      position: relative;
+    }
+
+    .chip input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .chip label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg-tertiary);
+      border: 2px solid transparent;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .chip label:hover {
+      background: var(--bg-secondary);
+      transform: translateY(-1px);
+    }
+
+    .chip input[type="radio"]:checked + label {
+      background: var(--link-color);
+      color: white;
+      border-color: var(--link-color);
+      box-shadow: 0 2px 8px rgba(3, 102, 214, 0.3);
+    }
+
+    .chip input[type="radio"]:focus + label {
+      outline: 2px solid var(--link-color);
+      outline-offset: 2px;
+    }
+
+    .chip-icon {
+      width: 18px;
+      height: 18px;
+      opacity: 0.7;
+    }
+
+    .chip input[type="radio"]:checked + label .chip-icon {
+      opacity: 1;
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-item:hover {
+      background: var(--bg-secondary);
+    }
+
+    .toggle-label-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .toggle-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .toggle-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .toggle-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .toggle-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* iOS-style Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: 0.3s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked + .slider {
+      background-color: #10b981;
+    }
+
+    body.dark-mode input:checked + .slider {
+      background-color: #059669;
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .subsection {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .subsection-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
     .repo-list {
       list-style: none;
       margin-top: 16px;
@@ -584,89 +767,213 @@
 
     <div class="section" id="filters">
       <h2>Activity Filters</h2>
-      <p class="help-text">Choose which types of activity to monitor</p>
+      <p class="help-text">Choose which types of activity to show in your feed</p>
 
-      <div class="checkbox-group">
-        <div class="checkbox-item">
-          <input type="checkbox" id="filterPrs" checked>
-          <label for="filterPrs">Pull Requests</label>
+      <div class="toggle-list">
+        <div class="toggle-item">
+          <div class="toggle-label-group">
+            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+            </svg>
+            <div class="toggle-text">
+              <div class="toggle-title">Pull Requests</div>
+              <div class="toggle-description">Show new and updated PRs</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="filterPrs" checked>
+            <span class="slider"></span>
+          </label>
         </div>
-        <div class="checkbox-item">
-          <input type="checkbox" id="filterIssues" checked>
-          <label for="filterIssues">Issues</label>
+
+        <div class="toggle-item">
+          <div class="toggle-label-group">
+            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="toggle-text">
+              <div class="toggle-title">Issues</div>
+              <div class="toggle-description">Show new and updated issues</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="filterIssues" checked>
+            <span class="slider"></span>
+          </label>
         </div>
-        <div class="checkbox-item">
-          <input type="checkbox" id="filterReleases" checked>
-          <label for="filterReleases">Releases</label>
+
+        <div class="toggle-item">
+          <div class="toggle-label-group">
+            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <div class="toggle-text">
+              <div class="toggle-title">Releases</div>
+              <div class="toggle-description">Show new version releases</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="filterReleases" checked>
+            <span class="slider"></span>
+          </label>
         </div>
       </div>
     </div>
 
     <div class="section" id="notifications">
       <h2>Notifications</h2>
-      <p class="help-text">Control browser notifications</p>
+      <p class="help-text">Control browser notifications for new activity</p>
 
-      <div class="checkbox-group">
-        <div class="checkbox-item">
-          <input type="checkbox" id="enableNotifications" checked>
-          <label for="enableNotifications">Enable browser notifications</label>
+      <div class="toggle-list">
+        <div class="toggle-item">
+          <div class="toggle-label-group">
+            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <div class="toggle-text">
+              <div class="toggle-title">Enable Notifications</div>
+              <div class="toggle-description">Send browser notifications for new activity</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="enableNotifications" checked>
+            <span class="slider"></span>
+          </label>
         </div>
-        <div class="checkbox-item">
-          <input type="checkbox" id="notifyPrs" checked>
-          <label for="notifyPrs">Notify for Pull Requests</label>
-        </div>
-        <div class="checkbox-item">
-          <input type="checkbox" id="notifyIssues" checked>
-          <label for="notifyIssues">Notify for Issues</label>
-        </div>
-        <div class="checkbox-item">
-          <input type="checkbox" id="notifyReleases" checked>
-          <label for="notifyReleases">Notify for Releases</label>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Notify me about</div>
+        <div class="toggle-list">
+          <div class="toggle-item">
+            <div class="toggle-label-group">
+              <div class="toggle-text">
+                <div class="toggle-title">Pull Requests</div>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notifyPrs" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-item">
+            <div class="toggle-label-group">
+              <div class="toggle-text">
+                <div class="toggle-title">Issues</div>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notifyIssues" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-item">
+            <div class="toggle-label-group">
+              <div class="toggle-text">
+                <div class="toggle-title">Releases</div>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notifyReleases" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" id="appearance">
       <h2>Appearance</h2>
-      <div class="form-row">
-        <label for="theme">Theme</label>
-        <select id="theme">
-          <option value="system">System (auto)</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-        <p class="help-text" style="margin-top: 8px;">Choose your preferred color scheme. System follows your OS preference.</p>
+      <p class="help-text">Choose your preferred color scheme</p>
+
+      <div class="chip-group">
+        <div class="chip">
+          <input type="radio" name="theme" id="theme-system" value="system" checked>
+          <label for="theme-system">
+            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            System
+          </label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="theme" id="theme-light" value="light">
+          <label for="theme-light">
+            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            Light
+          </label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="theme" id="theme-dark" value="dark">
+          <label for="theme-dark">
+            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+            Dark
+          </label>
+        </div>
       </div>
     </div>
 
     <div class="section" id="interval">
       <h2>Check Interval</h2>
-      <div class="form-row">
-        <label for="checkInterval">How often to check for updates</label>
-        <select id="checkInterval">
-          <option value="5">Every 5 minutes</option>
-          <option value="15" selected>Every 15 minutes</option>
-          <option value="30">Every 30 minutes</option>
-          <option value="60">Every hour</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label for="snoozeHours">Snooze duration (hours)</label>
-        <select id="snoozeHours">
-          <option value="1" selected>1 hour</option>
-          <option value="2">2 hours</option>
-          <option value="4">4 hours</option>
-          <option value="8">8 hours</option>
-          <option value="24">24 hours</option>
-        </select>
-        <p class="help-text" style="margin-top: 8px;">How long to snooze repositories when you snooze them from the popup</p>
+      <p class="help-text">How often to check for new GitHub activity</p>
+
+      <div class="chip-group">
+        <div class="chip">
+          <input type="radio" name="checkInterval" id="interval-5" value="5">
+          <label for="interval-5">5 min</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="checkInterval" id="interval-15" value="15" checked>
+          <label for="interval-15">15 min</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="checkInterval" id="interval-30" value="30">
+          <label for="interval-30">30 min</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="checkInterval" id="interval-60" value="60">
+          <label for="interval-60">1 hour</label>
+        </div>
       </div>
     </div>
 
-    <button id="saveBtn" class="primary">Save Settings</button>
+    <div class="section" id="snooze">
+      <h2>Snooze Duration</h2>
+      <p class="help-text">How long to silence notifications when you snooze a repository</p>
+
+      <div class="chip-group">
+        <div class="chip">
+          <input type="radio" name="snoozeHours" id="snooze-1" value="1" checked>
+          <label for="snooze-1">1 hour</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="snoozeHours" id="snooze-2" value="2">
+          <label for="snooze-2">2 hours</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="snoozeHours" id="snooze-4" value="4">
+          <label for="snooze-4">4 hours</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="snoozeHours" id="snooze-8" value="8">
+          <label for="snooze-8">8 hours</label>
+        </div>
+        <div class="chip">
+          <input type="radio" name="snoozeHours" id="snooze-24" value="24">
+          <label for="snooze-24">24 hours</label>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Toast notifications (fixed position) -->
+  <div id="statusMessage" class="status-message"></div>
   <div id="repoStatusMessage" class="status-message"></div>
 
   <script type="module" src="options.js"></script>
