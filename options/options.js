@@ -26,7 +26,6 @@ async function loadDarkMode() {
 }
 
 function setupEventListeners() {
-  document.getElementById('saveBtn').addEventListener('click', saveSettings);
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
 
@@ -60,7 +59,7 @@ function setupEventListeners() {
     }
   });
 
-  // Validate token on input
+  // Validate and auto-save token on input
   let tokenValidationTimeout;
   document.getElementById('githubToken').addEventListener('input', (e) => {
     clearTimeout(tokenValidationTimeout);
@@ -76,9 +75,75 @@ function setupEventListeners() {
     document.getElementById('tokenStatus').textContent = 'Checking...';
     document.getElementById('tokenStatus').className = 'token-status checking';
 
-    tokenValidationTimeout = setTimeout(() => {
-      validateToken(token);
+    tokenValidationTimeout = setTimeout(async () => {
+      await validateToken(token);
+      // Auto-save token after validation
+      if (token) {
+        await setToken(token);
+      }
     }, 500);
+  });
+
+  // Auto-save theme changes
+  document.querySelectorAll('input[name="theme"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      const theme = e.target.value;
+      await chrome.storage.sync.set({ theme });
+      applyTheme(theme);
+      showMessage('Theme updated', 'success');
+    });
+  });
+
+  // Auto-save check interval changes
+  document.querySelectorAll('input[name="checkInterval"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      const interval = parseInt(e.target.value);
+      await chrome.storage.sync.set({ checkInterval: interval });
+
+      // Update alarm with new interval
+      chrome.runtime.sendMessage({
+        action: 'updateInterval',
+        interval: interval
+      });
+
+      showMessage('Check interval updated', 'success');
+    });
+  });
+
+  // Auto-save snooze duration changes
+  document.querySelectorAll('input[name="snoozeHours"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      const snoozeHours = parseInt(e.target.value);
+      await chrome.storage.sync.set({ snoozeHours });
+      showMessage('Snooze duration updated', 'success');
+    });
+  });
+
+  // Auto-save filter changes
+  ['filterPrs', 'filterIssues', 'filterReleases'].forEach(id => {
+    document.getElementById(id).addEventListener('change', async () => {
+      const filters = {
+        prs: document.getElementById('filterPrs').checked,
+        issues: document.getElementById('filterIssues').checked,
+        releases: document.getElementById('filterReleases').checked
+      };
+      await chrome.storage.sync.set({ filters });
+      showMessage('Filters updated', 'success');
+    });
+  });
+
+  // Auto-save notification changes
+  ['enableNotifications', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
+    document.getElementById(id).addEventListener('change', async () => {
+      const notifications = {
+        enabled: document.getElementById('enableNotifications').checked,
+        prs: document.getElementById('notifyPrs').checked,
+        issues: document.getElementById('notifyIssues').checked,
+        releases: document.getElementById('notifyReleases').checked
+      };
+      await chrome.storage.sync.set({ notifications });
+      showMessage('Notification settings updated', 'success');
+    });
   });
 }
 
@@ -180,11 +245,17 @@ async function loadSettings() {
     renderRepoList();
 
     if (settings.checkInterval) {
-      document.getElementById('checkInterval').value = settings.checkInterval;
+      const intervalRadio = document.getElementById(`interval-${settings.checkInterval}`);
+      if (intervalRadio) {
+        intervalRadio.checked = true;
+      }
     }
 
     if (settings.snoozeHours) {
-      document.getElementById('snoozeHours').value = settings.snoozeHours;
+      const snoozeRadio = document.getElementById(`snooze-${settings.snoozeHours}`);
+      if (snoozeRadio) {
+        snoozeRadio.checked = true;
+      }
     }
 
     if (settings.filters) {
@@ -201,7 +272,10 @@ async function loadSettings() {
     }
 
     if (settings.theme) {
-      document.getElementById('theme').value = settings.theme;
+      const themeRadio = document.getElementById(`theme-${settings.theme}`);
+      if (themeRadio) {
+        themeRadio.checked = true;
+      }
     }
   } catch (error) {
     showMessage('Error loading settings', 'error');
@@ -623,61 +697,6 @@ async function toggleMuteRepo(repoFullName, mute) {
   await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
   renderRepoList();
   showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
-}
-
-async function saveSettings() {
-  const token = document.getElementById('githubToken').value.trim();
-  const interval = parseInt(document.getElementById('checkInterval').value);
-  const snoozeHours = parseInt(document.getElementById('snoozeHours').value);
-
-  if (!token) {
-    showMessage('GitHub token is required', 'error');
-    return;
-  }
-
-  const filters = {
-    prs: document.getElementById('filterPrs').checked,
-    issues: document.getElementById('filterIssues').checked,
-    releases: document.getElementById('filterReleases').checked
-  };
-
-  const notifications = {
-    enabled: document.getElementById('enableNotifications').checked,
-    prs: document.getElementById('notifyPrs').checked,
-    issues: document.getElementById('notifyIssues').checked,
-    releases: document.getElementById('notifyReleases').checked
-  };
-
-  const theme = document.getElementById('theme').value;
-
-  try {
-    // Save token to secure local storage
-    await setToken(token);
-
-    // Save other settings to sync storage
-    await chrome.storage.sync.set({
-      watchedRepos: state.watchedRepos,
-      mutedRepos: state.mutedRepos,
-      checkInterval: interval,
-      snoozeHours: snoozeHours,
-      filters: filters,
-      notifications: notifications,
-      theme: theme
-    });
-
-    // Apply theme immediately
-    applyTheme(theme);
-
-    // Update alarm with new interval
-    chrome.runtime.sendMessage({
-      action: 'updateInterval',
-      interval: interval
-    });
-
-    showMessage('Settings saved', 'success');
-  } catch (error) {
-    showMessage('Error saving settings', 'error');
-  }
 }
 
 function showMessage(text, type) {
