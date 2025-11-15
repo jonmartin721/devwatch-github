@@ -21,23 +21,65 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // Background
-        ctx.fillStyle = '#0366d6';
-        ctx.fillRect(0, 0, size, size);
+        // Clear background
+        ctx.clearRect(0, 0, size, size);
 
-        // Bell icon (simplified)
-        ctx.fillStyle = '#ffffff';
-        const scale = size / 48;
+        const scale = size / 128;
 
+        // Terminal window
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(24 * scale, 32 * scale, 80 * scale, 64 * scale);
+
+        // Terminal header
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(24 * scale, 32 * scale, 80 * scale, 16 * scale);
+
+        // Window controls
+        ctx.fillStyle = '#ef4444';
         ctx.beginPath();
-        // Bell body
-        ctx.arc(size/2, size/2.2, size/3.5, Math.PI * 0.8, Math.PI * 2.2);
-        ctx.lineTo(size/2, size/1.8);
+        ctx.arc(32 * scale, 40 * scale, 2 * scale, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bell clapper
+        ctx.fillStyle = '#f59e0b';
         ctx.beginPath();
-        ctx.arc(size/2, size/1.6, size/12, 0, Math.PI * 2);
+        ctx.arc(40 * scale, 40 * scale, 2 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(48 * scale, 40 * scale, 2 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Terminal content lines
+        ctx.fillStyle = '#10b981';
+
+        if (size >= 32) {
+          ctx.fillRect(32 * scale, 56 * scale, 32 * scale, 2 * scale);
+          ctx.fillRect(32 * scale, 64 * scale, 48 * scale, 2 * scale);
+          ctx.fillRect(32 * scale, 72 * scale, 24 * scale, 2 * scale);
+          ctx.fillRect(32 * scale, 80 * scale, 40 * scale, 2 * scale);
+
+          // Cursor
+          ctx.fillRect(76 * scale, 80 * scale, 8 * scale, 2 * scale);
+
+          // Terminal prompt
+          ctx.font = `${8 * scale}px monospace`;
+          ctx.fillText('$', 32 * scale, 92 * scale);
+        } else {
+          // Simplified for small sizes
+          ctx.fillRect(30 * scale, 55 * scale, 40 * scale, 2 * scale);
+          ctx.fillRect(30 * scale, 65 * scale, 50 * scale, 2 * scale);
+        }
+
+        // Notification dot on terminal
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(96 * scale, 40 * scale, 14 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(96 * scale, 40 * scale, 7 * scale, 0, Math.PI * 2);
         ctx.fill();
 
         const img = document.createElement('img');

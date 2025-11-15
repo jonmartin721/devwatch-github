@@ -236,16 +236,10 @@ async function updateBadge() {
 function showNotifications(activities, notificationSettings = {}) {
   // Default to enabled if not specified
   const settings = {
-    enabled: notificationSettings.enabled !== false,
     prs: notificationSettings.prs !== false,
     issues: notificationSettings.issues !== false,
     releases: notificationSettings.releases !== false
   };
-
-  // Return early if notifications are disabled
-  if (!settings.enabled) {
-    return;
-  }
 
   // Filter activities based on notification preferences
   const filteredActivities = activities.filter(activity => {
