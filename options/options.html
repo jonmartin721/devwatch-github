@@ -18,14 +18,15 @@
       <ul class="nav-links">
         <li><a href="#token">GitHub Token</a></li>
         <li><a href="#repositories">Repositories</a></li>
-        <li><a href="#filters">Activity Filters</a></li>
-        <li><a href="#notifications">Notifications</a></li>
+        <li><a href="#filters">Activity Filters & Notifications</a></li>
         <li><a href="#appearance">Appearance</a></li>
         <li><a href="#interval">Check Interval</a></li>
+        <li><a href="#snooze">Snooze Duration</a></li>
       </ul>
     </nav>
 
     <div id="statusMessage" class="status-message"></div>
+    <div id="repoStatusMessage" class="status-message"></div>
 
     <section class="section" id="token">
       <h2>GitHub Personal Access Token</h2>
@@ -43,6 +44,31 @@
         </div>
     </section>
 
+    <div class="import-repos-section" id="importReposSection" style="display: none;">
+      <p class="help-text">Quick import repositories from your GitHub account:</p>
+      <div class="import-buttons">
+        <button id="importWatchedBtn" class="import-btn">
+          <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          Import Watched
+        </button>
+        <button id="importStarredBtn" class="import-btn">
+          <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+          </svg>
+          Import Starred
+        </button>
+        <button id="importParticipatingBtn" class="import-btn">
+          <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          Import Participating
+        </button>
+      </div>
+    </div>
+
     <section class="section" id="repositories">
       <h2>Watched Repositories</h2>
       <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
@@ -56,31 +82,6 @@
       </div>
       <p id="repo-help" class="help-text">Enter repository name in format owner/repo, just repo name, or full GitHub URL</p>
       <div id="repoError" class="repo-error"></div>
-
-      <div class="import-repos-section" id="importReposSection" style="display: none;">
-        <p class="help-text">Quick import repositories from your GitHub account:</p>
-        <div class="import-buttons">
-          <button id="importWatchedBtn" class="import-btn">
-            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            </svg>
-            Import Watched
-          </button>
-          <button id="importStarredBtn" class="import-btn">
-            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-            </svg>
-            Import Starred
-          </button>
-          <button id="importParticipatingBtn" class="import-btn">
-            <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
-            Import Participating
-          </button>
-        </div>
-      </div>
 
       <div class="repo-search-container" id="repoSearchContainer" style="display: none;">
         <input type="text" id="repoSearch" placeholder="Search repositories...">
@@ -96,124 +97,101 @@
     </section>
 
     <section class="section" id="filters">
-      <h2>Activity Filters</h2>
-      <p class="help-text">Choose which types of activity to show in your feed</p>
+      <h2>Activity Filters & Notifications</h2>
+      <p class="help-text">Choose which types of activity to show and get notified about</p>
 
-      <div class="toggle-list">
-        <div class="toggle-item">
-          <div class="toggle-label-group">
-            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="activity-cards">
+        <div class="activity-card">
+          <div class="card-header">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
             </svg>
-            <div class="toggle-text">
-              <div class="toggle-title">Pull Requests</div>
-              <div class="toggle-description">Show new and updated PRs</div>
+            <div class="activity-info">
+              <h3>Pull Requests</h3>
+              <p>Show new and updated PRs</p>
             </div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="filterPrs" checked>
-            <span class="slider"></span>
-          </label>
+          <div class="card-controls">
+            <div class="control-section">
+              <label class="control-label">Show in feed</label>
+              <label class="activity-toggle">
+                <input type="checkbox" id="filterPrs" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="control-section">
+              <label class="control-label">Notifications</label>
+              <label class="activity-toggle notification-toggle">
+                <input type="checkbox" id="notifyPrs" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
-        <div class="toggle-item">
-          <div class="toggle-label-group">
-            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="activity-card">
+          <div class="card-header">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <div class="toggle-text">
-              <div class="toggle-title">Issues</div>
-              <div class="toggle-description">Show new and updated issues</div>
+            <div class="activity-info">
+              <h3>Issues</h3>
+              <p>Show new and updated issues</p>
             </div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="filterIssues" checked>
-            <span class="slider"></span>
-          </label>
+          <div class="card-controls">
+            <div class="control-section">
+              <label class="control-label">Show in feed</label>
+              <label class="activity-toggle">
+                <input type="checkbox" id="filterIssues" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="control-section">
+              <label class="control-label">Notifications</label>
+              <label class="activity-toggle notification-toggle">
+                <input type="checkbox" id="notifyIssues" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
-        <div class="toggle-item">
-          <div class="toggle-label-group">
-            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="activity-card">
+          <div class="card-header">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
-            <div class="toggle-text">
-              <div class="toggle-title">Releases</div>
-              <div class="toggle-description">Show new version releases</div>
+            <div class="activity-info">
+              <h3>Releases</h3>
+              <p>Show new version releases</p>
             </div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="filterReleases" checked>
-            <span class="slider"></span>
-          </label>
+          <div class="card-controls">
+            <div class="control-section">
+              <label class="control-label">Show in feed</label>
+              <label class="activity-toggle">
+                <input type="checkbox" id="filterReleases" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="control-section">
+              <label class="control-label">Notifications</label>
+              <label class="activity-toggle notification-toggle">
+                <input type="checkbox" id="notifyReleases" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="filters-help">
+        <p class="help-text">💡 <strong>Activity Filters:</strong> Enable categories to show them in your activity feed<br>💡 <strong>Notifications:</strong> Enable browser notifications (requires the category to be enabled first)</p>
       </div>
     </section>
 
-    <section class="section" id="notifications">
-      <h2>Notifications</h2>
-      <p class="help-text">Control browser notifications for new activity</p>
-
-      <div class="toggle-list">
-        <div class="toggle-item">
-          <div class="toggle-label-group">
-            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
-            <div class="toggle-text">
-              <div class="toggle-title">Enable Notifications</div>
-              <div class="toggle-description">Send browser notifications for new activity</div>
-            </div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="enableNotifications" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-title">Notify me about</div>
-        <div class="toggle-list">
-          <div class="toggle-item">
-            <div class="toggle-label-group">
-              <div class="toggle-text">
-                <div class="toggle-title">Pull Requests</div>
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyPrs" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-item">
-            <div class="toggle-label-group">
-              <div class="toggle-text">
-                <div class="toggle-title">Issues</div>
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyIssues" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-item">
-            <div class="toggle-label-group">
-              <div class="toggle-text">
-                <div class="toggle-title">Releases</div>
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyReleases" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </section>
-
+    
     <section class="section" id="appearance">
       <h2>Appearance</h2>
       <p class="help-text">Choose your preferred color scheme</p>
@@ -301,10 +279,6 @@
       </div>
     </section>
   </div>
-
-  <!-- Toast notifications (fixed position) -->
-  <div id="statusMessage" class="status-message"></div>
-  <div id="repoStatusMessage" class="status-message"></div>
 
   <!-- Import Repos Modal -->
   <div id="importModal" class="modal">

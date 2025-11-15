@@ -13,16 +13,22 @@ const state = {
 };
 
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    loadDarkMode();
-    loadSettings();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadSettings();
     setupEventListeners();
+    setupThemeListener();
   });
 }
 
-async function loadDarkMode() {
-  const theme = await getSyncItem('theme', 'system');
-  applyTheme(theme);
+function setupThemeListener() {
+  // Listen for system theme changes
+  const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  darkModeQuery.addEventListener('change', async () => {
+    const theme = await getSyncItem('theme', 'system');
+    if (theme === 'system') {
+      applyTheme(theme);
+    }
+  });
 }
 
 function setupEventListeners() {
@@ -124,30 +130,50 @@ function setupEventListeners() {
     });
   });
 
-  // Auto-save filter changes
-  ['filterPrs', 'filterIssues', 'filterReleases'].forEach(id => {
-    document.getElementById(id).addEventListener('change', async () => {
+  // Auto-save filter and notification changes
+  ['filterPrs', 'filterIssues', 'filterReleases', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
+    document.getElementById(id).addEventListener('change', async (e) => {
+      const target = e.target;
+
+      // Handle notification toggle logic
+      if (target.id.startsWith('notify')) {
+        const category = target.id.replace('notify', '').toLowerCase();
+        const filterId = `filter${category.charAt(0).toUpperCase() + category.slice(1)}`;
+        const filterToggle = document.getElementById(filterId);
+
+        // If trying to enable notifications but category is disabled, disable the notification
+        if (target.checked && !filterToggle.checked) {
+          target.checked = false;
+          showMessage(`Enable "Show in feed" for ${category} first`, 'error');
+          return;
+        }
+      }
+
+      // Handle filter toggle logic - disable notifications if filter is disabled
+      if (target.id.startsWith('filter')) {
+        const category = target.id.replace('filter', '').toLowerCase();
+        const notifyId = `notify${category.charAt(0).toUpperCase() + category.slice(1)}`;
+        const notifyToggle = document.getElementById(notifyId);
+
+        // If disabling filter, also disable notifications
+        if (!target.checked && notifyToggle.checked) {
+          notifyToggle.checked = false;
+        }
+      }
+
       const filters = {
         prs: document.getElementById('filterPrs').checked,
         issues: document.getElementById('filterIssues').checked,
         releases: document.getElementById('filterReleases').checked
       };
-      await chrome.storage.sync.set({ filters });
-      showMessage('Filters updated', 'success');
-    });
-  });
-
-  // Auto-save notification changes
-  ['enableNotifications', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
-    document.getElementById(id).addEventListener('change', async () => {
       const notifications = {
-        enabled: document.getElementById('enableNotifications').checked,
         prs: document.getElementById('notifyPrs').checked,
         issues: document.getElementById('notifyIssues').checked,
         releases: document.getElementById('notifyReleases').checked
       };
-      await chrome.storage.sync.set({ notifications });
-      showMessage('Notification settings updated', 'success');
+      await chrome.storage.sync.set({ filters, notifications });
+      updateNotificationToggleStates();
+      showMessage('Settings updated', 'success');
     });
   });
 
@@ -168,6 +194,35 @@ function setupEventListeners() {
   document.getElementById('importModal').addEventListener('click', (e) => {
     if (e.target.id === 'importModal') {
       closeImportModal();
+    }
+  });
+}
+
+function updateNotificationToggleStates() {
+  // Update notification toggle states based on filter states
+  const categories = ['prs', 'issues', 'releases'];
+
+  categories.forEach(category => {
+    const filterId = `filter${category.charAt(0).toUpperCase() + category.slice(1)}`;
+    const notifyId = `notify${category.charAt(0).toUpperCase() + category.slice(1)}`;
+    const filterToggle = document.getElementById(filterId);
+    const notifyToggle = document.getElementById(notifyId);
+    const notifyToggleLabel = notifyToggle.closest('.notification-toggle');
+
+    if (filterToggle && notifyToggle && notifyToggleLabel) {
+      if (filterToggle.checked) {
+        // Category is enabled, notification toggle is active
+        notifyToggleLabel.classList.remove('disabled');
+        notifyToggle.disabled = false;
+      } else {
+        // Category is disabled, notification toggle is disabled
+        notifyToggleLabel.classList.add('disabled');
+        notifyToggle.disabled = true;
+        // Make sure notification is also unchecked when disabled
+        if (notifyToggle.checked) {
+          notifyToggle.checked = false;
+        }
+      }
     }
   });
 }
@@ -267,6 +322,10 @@ async function loadSettings() {
       'theme'
     ]);
 
+    // Load and apply theme first
+    const theme = settings.theme || 'system';
+    applyTheme(theme);
+
     if (githubToken) {
       document.getElementById('githubToken').value = githubToken;
       document.getElementById('clearTokenBtn').style.display = 'block';
@@ -305,18 +364,19 @@ async function loadSettings() {
     }
 
     if (settings.notifications) {
-      document.getElementById('enableNotifications').checked = settings.notifications.enabled !== false;
       document.getElementById('notifyPrs').checked = settings.notifications.prs !== false;
       document.getElementById('notifyIssues').checked = settings.notifications.issues !== false;
       document.getElementById('notifyReleases').checked = settings.notifications.releases !== false;
     }
 
-    if (settings.theme) {
-      const themeRadio = document.getElementById(`theme-${settings.theme}`);
-      if (themeRadio) {
-        themeRadio.checked = true;
-      }
+    // Set theme radio button
+    const themeRadio = document.getElementById(`theme-${theme}`);
+    if (themeRadio) {
+      themeRadio.checked = true;
     }
+
+    // Update notification toggle states after loading settings
+    updateNotificationToggleStates();
   } catch (error) {
     showMessage('Error loading settings', 'error');
   }
