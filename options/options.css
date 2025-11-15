@@ -175,6 +175,16 @@ select:focus {
   text-decoration: underline;
 }
 
+.info-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  color: var(--link-color);
+  flex-shrink: 0;
+}
+
 button {
   padding: 8px 16px;
   border: 1px solid var(--border-color-dark);
@@ -1064,4 +1074,48 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .repo-item.muted:hover {
   opacity: 0.7;
+}
+
+/* Import/Export Buttons */
+.import-export-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.import-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+}
+
+.import-export-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--link-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.import-export-btn:active {
+  transform: translateY(0);
+}
+
+.ie-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+body.dark-mode .import-export-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }

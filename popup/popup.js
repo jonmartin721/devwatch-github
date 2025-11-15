@@ -3,7 +3,7 @@ import { getSyncItem } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
 import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
 import { safelyOpenUrl } from '../shared/security.js';
-import { showError, clearError, showSuccess } from '../shared/error-handler.js';
+import { showError, clearError } from '../shared/error-handler.js';
 import {
   isOffline,
   showOfflineStatus,
@@ -104,7 +104,6 @@ async function handleRefresh() {
     clearError('errorMessage');
     await chrome.runtime.sendMessage({ action: 'checkNow' });
     await loadActivities();
-    showSuccess('errorMessage', 'Activities refreshed successfully');
   } catch (error) {
     showError('errorMessage', error, null, { action: 'refresh activities' }, 5000);
   } finally {
@@ -549,26 +548,9 @@ async function snoozeRepo(repo) {
 
     // Reload activities to reflect the snooze
     await loadActivities();
-
-    // Show confirmation
-    showSnoozeMessage(repo, snoozeHours);
   } catch (error) {
     showError('errorMessage', error, null, { action: 'snooze repository', repo }, 3000);
   }
-}
-
-function showSnoozeMessage(repo, hours) {
-  const errorMsg = document.getElementById('errorMessage');
-  errorMsg.textContent = `${repo} snoozed for ${hours} hour${hours > 1 ? 's' : ''}`;
-  errorMsg.style.display = 'block';
-  errorMsg.style.background = 'var(--success-bg)';
-  errorMsg.style.color = 'var(--success-text)';
-
-  setTimeout(() => {
-    errorMsg.style.display = 'none';
-    errorMsg.style.background = '';
-    errorMsg.style.color = '';
-  }, 3000);
 }
 
 async function toggleReadState(id) {
@@ -732,7 +714,6 @@ function setupOfflineHandlers() {
     // When coming back online
     () => {
       showOfflineStatus('errorMessage', false);
-      showSuccess('errorMessage', 'Connection restored! Loading fresh data...');
       setTimeout(() => {
         loadActivities();
       }, 1000);

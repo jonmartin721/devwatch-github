@@ -39,6 +39,14 @@ function setupEventListeners() {
   document.getElementById('importWatchedBtn').addEventListener('click', () => openImportModal('watched'));
   document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred'));
   document.getElementById('importParticipatingBtn').addEventListener('click', () => openImportModal('participating'));
+  document.getElementById('importMineBtn').addEventListener('click', () => openImportModal('mine'));
+
+  // Import/Export settings buttons
+  document.getElementById('importBtn').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+  document.getElementById('importFileInput').addEventListener('change', handleImportFile);
+  document.getElementById('exportBtn').addEventListener('click', exportSettings);
 
   document.getElementById('repoInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -829,8 +837,10 @@ async function openImportModal(type) {
   const titles = {
     watched: 'Import Watched Repositories',
     starred: 'Import Starred Repositories',
-    participating: 'Import Participating Repositories'
+    participating: 'Import Participating Repositories',
+    mine: 'Import My Repositories'
   };
+
   title.textContent = titles[type] || 'Import Repositories';
 
   // Show modal and loading state
@@ -876,7 +886,8 @@ async function fetchReposFromGitHub(type, token) {
   const endpoints = {
     watched: 'https://api.github.com/user/subscriptions',
     starred: 'https://api.github.com/user/starred',
-    participating: 'https://api.github.com/user/repos?affiliation=collaborator,organization_member&sort=pushed'
+    participating: 'https://api.github.com/user/repos?affiliation=collaborator,organization_member&sort=pushed',
+    mine: 'https://api.github.com/user/repos?type=all&sort=updated'
   };
 
   const url = endpoints[type];
@@ -1028,6 +1039,113 @@ async function importSelectedRepos() {
   showRepoMessage(`Successfully imported ${reposToImport.length} ${reposToImport.length === 1 ? 'repository' : 'repositories'}`, 'success');
 }
 
+// Export settings to JSON file
+async function exportSettings() {
+  try {
+    // Get all settings from storage
+    const syncData = await chrome.storage.sync.get(null);
+
+    // Create export object with all settings except the token
+    const exportData = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      settings: {
+        watchedRepos: syncData.watchedRepos || [],
+        mutedRepos: syncData.mutedRepos || [],
+        filters: syncData.filters || { prs: true, issues: true, releases: true },
+        notifications: syncData.notifications || { prs: true, issues: true, releases: true },
+        theme: syncData.theme || 'system',
+        checkInterval: syncData.checkInterval || 15,
+        snoozeHours: syncData.snoozeHours || 1,
+        snoozedRepos: syncData.snoozedRepos || []
+      }
+    };
+
+    // Convert to JSON string
+    const jsonString = JSON.stringify(exportData, null, 2);
+
+    // Create blob and download
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `github-devwatch-settings-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showMessage('Settings exported successfully', 'success');
+  } catch (error) {
+    console.error('Export error:', error);
+    showMessage('Failed to export settings', 'error');
+  }
+}
+
+// Handle import file selection
+async function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const importData = JSON.parse(text);
+
+    // Validate import data structure
+    if (!importData.settings) {
+      throw new Error('Invalid settings file format');
+    }
+
+    // Confirm import with user
+    const confirmed = confirm(
+      'This will replace your current settings (except GitHub token). Continue?'
+    );
+
+    if (!confirmed) {
+      event.target.value = ''; // Reset file input
+      return;
+    }
+
+    // Import settings to storage
+    const settings = importData.settings;
+    await chrome.storage.sync.set({
+      watchedRepos: settings.watchedRepos || [],
+      mutedRepos: settings.mutedRepos || [],
+      filters: settings.filters || { prs: true, issues: true, releases: true },
+      notifications: settings.notifications || { prs: true, issues: true, releases: true },
+      theme: settings.theme || 'system',
+      checkInterval: settings.checkInterval || 15,
+      snoozeHours: settings.snoozeHours || 1,
+      snoozedRepos: settings.snoozedRepos || []
+    });
+
+    // Update interval alarm if needed
+    if (settings.checkInterval) {
+      chrome.runtime.sendMessage({
+        action: 'updateInterval',
+        interval: settings.checkInterval
+      });
+    }
+
+    // Reload settings to update UI
+    await loadSettings();
+
+    showMessage('Settings imported successfully! Reloading page...', 'success');
+
+    // Reload page after short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+
+  } catch (error) {
+    console.error('Import error:', error);
+    showMessage('Failed to import settings. Please check the file format.', 'error');
+  } finally {
+    // Reset file input
+    event.target.value = '';
+  }
+}
+
 // Make updateSelectedCount available globally for inline event handlers
 window.updateSelectedCount = updateSelectedCount;
 
@@ -1045,7 +1163,9 @@ if (typeof module !== 'undefined' && module.exports) {
     renderRepoList,
     migrateRepoFormat,
     formatNumber,
-    formatDate: formatDateLocal  // Export local version for tests
+    formatDate: formatDateLocal,  // Export local version for tests
+    exportSettings,
+    handleImportFile
   };
 }
 
@@ -1062,5 +1182,7 @@ export {
   renderRepoList,
   migrateRepoFormat,
   formatNumber,
-  formatDateLocal as formatDate  // Export local version for tests
+  formatDateLocal as formatDate,  // Export local version for tests
+  exportSettings,
+  handleImportFile
 };
