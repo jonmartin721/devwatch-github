@@ -12,6 +12,7 @@ zip -r dist/github-devwatch.zip \
   background.js \
   popup/ \
   options/ \
+  shared/ \
   icons/ \
   -x "*.DS_Store" \
   -x "**/.git*"

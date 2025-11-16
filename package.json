@@ -18,7 +18,7 @@
     "github",
     "notifications"
   ],
-  "author": "",
+  "author": "Jonathan Martin",
   "license": "MIT",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

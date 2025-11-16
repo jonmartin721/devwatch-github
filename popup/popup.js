@@ -18,7 +18,6 @@ let allActivities = [];
 let readItems = [];
 let showArchive = false;
 let searchQuery = '';
-let focusMode = false;
 let collapsedRepos = new Set();
 
 if (typeof document !== 'undefined') {
@@ -40,7 +39,6 @@ function setupEventListeners() {
 
   // Toolbar buttons
   document.getElementById('searchBtn').addEventListener('click', toggleSearch);
-  document.getElementById('focusBtn').addEventListener('click', toggleFocus);
   document.getElementById('archiveBtn').addEventListener('click', toggleArchive);
 
   // Search input
@@ -262,11 +260,6 @@ function renderActivities() {
     );
   }
 
-  // Filter by focus mode (only user's own activity)
-  // TODO: Implement proper focus filtering based on GitHub username
-  // For now, focus mode is a placeholder that doesn't filter
-  // Future: Store and compare against user's GitHub username
-
   if (filtered.length === 0) {
     let emptyMessage = 'No activity';
     if (!showArchive) emptyMessage = 'No unread activity';
@@ -407,13 +400,6 @@ function toggleSearch() {
     searchInput.value = '';
     renderActivities();
   }
-}
-
-function toggleFocus() {
-  const focusBtn = document.getElementById('focusBtn');
-  focusMode = !focusMode;
-  focusBtn.classList.toggle('active', focusMode);
-  renderActivities();
 }
 
 function toggleArchive() {
@@ -634,13 +620,6 @@ function setupKeyboardNavigation() {
           toggleSearch();
         }
         break;
-      case 'f':
-      case 'F':
-        if (!e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-          toggleFocus();
-        }
-        break;
       case 'a':
       case 'A':
         if (!e.ctrlKey && !e.metaKey) {
@@ -756,7 +735,6 @@ if (typeof module !== 'undefined' && module.exports) {
     handleMarkAllRead,
     handleCollapseAll,
     toggleSearch,
-    toggleFocus,
     toggleArchive
   };
 }
@@ -779,6 +757,5 @@ export {
   handleMarkAllRead,
   handleCollapseAll,
   toggleSearch,
-  toggleFocus,
   toggleArchive
 };

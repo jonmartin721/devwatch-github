@@ -2,6 +2,7 @@
 
 A Chrome extension that helps developers stay on top of GitHub activity across multiple repositories.
 
+
 ## Features
 
 - **Multi-repo monitoring** - Watch unlimited repositories for new activity
@@ -17,13 +18,13 @@ A Chrome extension that helps developers stay on top of GitHub activity across m
 
 1. Clone this repository
 ```bash
-git clone https://github.com/yourusername/github-notifications-chrome.git
-cd github-notifications-chrome
+git clone https://github.com/jonmartin721/devwatch-github.git
+cd devwatch-github
 ```
 
-2. Generate extension icons (choose one method):
-   - Open `generate-icons.html` in your browser and download the generated icons to the `icons/` folder
-   - Or if you have ImageMagick: `cd icons && bash create_simple_icons.sh`
+2. Generate extension icons:
+   - If you have ImageMagick: `cd icons && bash create_simple_icons.sh`
+   - Icons are required for the extension to load properly
 
 3. Load the extension in Chrome:
    - Open Chrome and go to `chrome://extensions/`
@@ -54,18 +55,24 @@ cd github-notifications-chrome
    - Click the extension icon to view recent activity
    - Click any activity item to open it in GitHub
 
+
 ## Usage
 
 ### Popup Interface
 - **All/PRs/Issues/Releases tabs** - Filter activity by type
 - **Refresh button** - Manually check for new activity
+- **Search** - Filter activities by keyword
+- **Archive** - View previously read activities
 - **Activity items** - Click to open in GitHub
 
 ### Settings Page
 - **GitHub Token** - Your personal access token
-- **Watched Repositories** - Add/remove repositories
+- **Watched Repositories** - Add/remove repositories, import from GitHub
 - **Activity Filters** - Choose what to monitor
 - **Check Interval** - How often to check for updates
+- **Notifications** - Toggle browser notifications
+- **Theme** - Choose dark, light, or system theme
+- **Backup/Restore** - Export and import your settings
 
 ## Privacy & Security
 
@@ -86,7 +93,7 @@ If you're watching many repositories with frequent checks, be mindful of GitHub'
 
 ### Project Structure
 ```
-/github-notifications-chrome
+/devwatch-github
   /icons                  # Extension icons
   /popup                  # Popup interface
     popup.html
@@ -95,6 +102,7 @@ If you're watching many repositories with frequent checks, be mindful of GitHub'
   /options                # Settings page
     options.html
     options.js
+  /shared                 # Shared utilities
   background.js           # Service worker
   manifest.json           # Extension manifest
 ```
@@ -112,12 +120,34 @@ npm test
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome! Please feel free to submit issues or pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Documentation
+
+- [Privacy Policy](PRIVACY.md) - How we handle your data
+- [Changelog](CHANGELOG.md) - Version history and release notes
+- [License](LICENSE) - MIT License
+
+## Roadmap
+
+Future features being considered:
+- Comment notifications
+- Mention tracking
+- Multiple GitHub account support
+- Custom notification filters
+- Internationalization (i18n) support
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025 Jonathan Martin
 
 ## Acknowledgments
 
 Built with Chrome Extension Manifest V3 and GitHub's REST API.
+
+## Support
+
+- Report issues: [GitHub Issues](https://github.com/jonmartin721/devwatch-github/issues)
+- View source: [GitHub Repository](https://github.com/jonmartin721/devwatch-github)
