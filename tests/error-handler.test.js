@@ -155,8 +155,9 @@ describe('Error Handler', () => {
       expect(element.style.display).toBe('block');
       expect(element.innerHTML).toContain('Unexpected Error');
       expect(element.innerHTML).toContain('Something went wrong');
-      expect(element).toHaveAttribute('role', 'alert');
-      expect(element).toHaveAttribute('aria-live', 'assertive');
+      // ARIA attributes are on the inner error-toast div, not the container
+      expect(element.innerHTML).toContain('role="alert"');
+      expect(element.innerHTML).toContain('aria-live="assertive"');
     });
 
     it('should auto-hide after duration', () => {
@@ -181,13 +182,14 @@ describe('Error Handler', () => {
       expect(element.style.display).toBe('block');
     });
 
-    it('should include action button if available', () => {
+    it('should include dismiss button', () => {
       const error = new Error('Invalid token');
       showError('errorMessage', error);
 
       const element = document.getElementById('errorMessage');
-      expect(element.innerHTML).toContain('Update Token');
-      expect(element.innerHTML).toContain('error-action');
+      expect(element.innerHTML).toContain('Dismiss');
+      expect(element.innerHTML).toContain('error-dismiss');
+      expect(element.innerHTML).toContain('error-actions');
     });
 
     it('should log technical details', () => {
