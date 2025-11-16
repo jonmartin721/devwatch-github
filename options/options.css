@@ -1510,15 +1510,6 @@ body.dark-mode select:focus-visible {
   outline-offset: 2px;
 }
 
-.snooze-expired {
-  opacity: 0.6;
-  font-style: italic;
-}
-
-.snooze-expired .snoozed-repo-name {
-  color: var(--text-secondary);
-  text-decoration: line-through;
-}
 
 .snooze-expiry-warning {
   color: #f0ad4e;
