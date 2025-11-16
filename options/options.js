@@ -1,5 +1,5 @@
 import { applyTheme, showStatusMessage } from '../shared/utils.js';
-import { getSyncItem, getToken, setToken, clearToken as clearStoredToken } from '../shared/storage-helpers.js';
+import { getSyncItem, getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STAR_ICON, LINK_ICON, BELL_ICON, BELL_SLASH_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
 import { escapeHtml } from '../shared/sanitize.js';
@@ -763,7 +763,38 @@ async function removeRepo(repoFullName) {
 
   // Auto-save
   await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+
+  // Clean up notifications and activities for the removed repository
+  await cleanupRepoNotifications(repoFullName);
+
   showRepoMessage('Repository removed', 'success');
+}
+
+async function cleanupRepoNotifications(repoFullName) {
+  try {
+    // Get current activities and read items from local storage
+    const { activities = [], readItems = [] } = await getLocalItems(['activities', 'readItems']);
+
+    // Filter out activities for the removed repository
+    const updatedActivities = activities.filter(activity => activity.repo !== repoFullName);
+
+    // Filter out read items for activities from the removed repository
+    const removedActivityIds = activities
+      .filter(activity => activity.repo === repoFullName)
+      .map(activity => activity.id);
+
+    const updatedReadItems = readItems.filter(id => !removedActivityIds.includes(id));
+
+    // Save the filtered data back to local storage
+    await setLocalItem('activities', updatedActivities);
+    await setLocalItem('readItems', updatedReadItems);
+
+    console.log(`[DevWatch] Cleaned up ${removedActivityIds.length} notifications for removed repository: ${repoFullName}`);
+  } catch (error) {
+    console.error(`[DevWatch] Error cleaning up notifications for ${repoFullName}:`, error);
+    // Don't show an error message to the user since this is cleanup logic
+    // The repo removal was successful even if cleanup failed
+  }
 }
 
 function getFilteredRepos() {
@@ -1431,6 +1462,7 @@ if (typeof module !== 'undefined' && module.exports) {
     fetchGitHubRepoFromNpm,
     validateRepo,
     removeRepo,
+    cleanupRepoNotifications,
     toggleMuteRepo,
     getFilteredRepos,
     renderRepoList,
@@ -1608,6 +1640,7 @@ export {
   fetchGitHubRepoFromNpm,
   validateRepo,
   removeRepo,
+  cleanupRepoNotifications,
   toggleMuteRepo,
   getFilteredRepos,
   renderRepoList,

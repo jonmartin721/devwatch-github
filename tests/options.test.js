@@ -6,6 +6,10 @@ global.chrome = {
     sync: {
       get: jest.fn((keys, callback) => callback({ githubToken: null })),
       set: jest.fn((items, callback) => callback && callback())
+    },
+    local: {
+      get: jest.fn((keys, callback) => callback({})),
+      set: jest.fn((items, callback) => callback && callback())
     }
   }
 };
@@ -17,6 +21,7 @@ global.fetch = jest.fn();
 import {
   fetchGitHubRepoFromNpm,
   validateRepo,
+  cleanupRepoNotifications,
   formatNumber,
   formatDate
 } from '../options/options.js';
@@ -498,6 +503,108 @@ describe('Options Page - Repository Management', () => {
       const newRepo = 'angular/angular';
       const isDuplicate = watchedRepos.some(r => r.fullName === newRepo);
       expect(isDuplicate).toBe(false);
+    });
+  });
+
+  describe('Notification Cleanup', () => {
+    test('cleans up activities and read items for removed repository', async () => {
+      const mockActivities = [
+        { id: '1', repo: 'facebook/react', title: 'PR #1: Fix bug' },
+        { id: '2', repo: 'vuejs/vue', title: 'Issue #2: Feature request' },
+        { id: '3', repo: 'facebook/react', title: 'Release v18.0.0' },
+        { id: '4', repo: 'angular/angular', title: 'PR #4: Update docs' }
+      ];
+
+      const mockReadItems = ['1', '3']; // Read items from facebook/react repo
+
+      // Mock chrome.storage.local.get to return the mock data
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
+        if (keys.includes('activities') && keys.includes('readItems')) {
+          callback({ activities: mockActivities, readItems: mockReadItems });
+        } else if (keys.includes('activities')) {
+          callback({ activities: mockActivities });
+        } else if (keys.includes('readItems')) {
+          callback({ readItems: mockReadItems });
+        } else {
+          callback({});
+        }
+      });
+
+      await cleanupRepoNotifications('facebook/react');
+
+      // Verify that chrome.storage.local.set was called with filtered data
+      expect(chrome.storage.local.set).toHaveBeenCalledTimes(2);
+
+      // First call should update activities (remove facebook/react activities)
+      const firstCall = chrome.storage.local.set.mock.calls[0][0];
+      expect(firstCall).toHaveProperty('activities');
+      expect(firstCall.activities).toHaveLength(2); // Only 2 activities should remain
+      expect(firstCall.activities.map(a => a.repo)).toEqual(
+        expect.arrayContaining(['vuejs/vue', 'angular/angular'])
+      );
+      expect(firstCall.activities.map(a => a.repo)).not.toContain('facebook/react');
+
+      // Second call should update readItems (remove read items from facebook/react)
+      const secondCall = chrome.storage.local.set.mock.calls[1][0];
+      expect(secondCall).toHaveProperty('readItems');
+      expect(secondCall.readItems).toEqual([]); // All read items should be removed
+    });
+
+    test('handles empty storage gracefully', async () => {
+      // Mock empty storage
+      chrome.storage.local.get.mockImplementation((keys, callback) => callback({}));
+
+      await cleanupRepoNotifications('nonexistent/repo');
+
+      // Should still call storage.set twice even with empty data
+      expect(chrome.storage.local.set).toHaveBeenCalledTimes(2);
+
+      // Both calls should have empty arrays
+      const firstCall = chrome.storage.local.set.mock.calls[0][0];
+      const secondCall = chrome.storage.local.set.mock.calls[1][0];
+
+      expect(firstCall.activities).toEqual([]);
+      expect(secondCall.readItems).toEqual([]);
+    });
+
+    test('handles storage errors gracefully', async () => {
+      // Mock storage error
+      chrome.storage.local.get.mockImplementation(() => {
+        throw new Error('Storage error');
+      });
+
+      // Should not throw an error
+      await expect(cleanupRepoNotifications('test/repo')).resolves.toBeUndefined();
+    });
+
+    test('does not affect other repositories when removing one', async () => {
+      const mockActivities = [
+        { id: '1', repo: 'repo1/test', title: 'PR #1' },
+        { id: '2', repo: 'repo2/test', title: 'Issue #2' },
+        { id: '3', repo: 'repo3/test', title: 'Release v1.0' }
+      ];
+
+      const mockReadItems = ['1', '2'];
+
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
+        if (keys.includes('activities') && keys.includes('readItems')) {
+          callback({ activities: mockActivities, readItems: mockReadItems });
+        } else {
+          callback({});
+        }
+      });
+
+      await cleanupRepoNotifications('repo2/test');
+
+      const firstCall = chrome.storage.local.set.mock.calls[0][0];
+      expect(firstCall.activities).toHaveLength(2);
+      expect(firstCall.activities.map(a => a.repo)).toEqual(
+        expect.arrayContaining(['repo1/test', 'repo3/test'])
+      );
+      expect(firstCall.activities.map(a => a.repo)).not.toContain('repo2/test');
+
+      const secondCall = chrome.storage.local.set.mock.calls[1][0];
+      expect(secondCall.readItems).toEqual(['1']); // Only item from repo2 should be removed
     });
   });
 });
