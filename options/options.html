@@ -310,7 +310,7 @@
 
     <section class="section" id="snooze">
       <h2>Snooze Duration</h2>
-      <p class="help-text">How long to silence notifications when you snooze a repository</p>
+      <p class="help-text">How long to silence notifications when you snooze a repository. Snoozed repositories will appear below for management.</p>
 
       <div class="chip-group">
         <div class="chip">
@@ -332,6 +332,16 @@
         <div class="chip">
           <input type="radio" name="snoozeHours" id="snooze-24" value="24">
           <label for="snooze-24">24 hours</label>
+        </div>
+      </div>
+
+      <div class="current-snoozes">
+        <h3>Currently Snoozed</h3>
+        <div id="snoozedReposList" class="snoozed-repos-list">
+          <div class="empty-snoozes" id="emptySnoozes">
+            <p>No repositories are currently snoozed</p>
+            <small>Snooze repositories from the popup to see them here</small>
+          </div>
         </div>
       </div>
     </section>

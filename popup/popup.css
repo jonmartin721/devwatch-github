@@ -62,6 +62,26 @@ header {
   gap: 10px;
 }
 
+.header-refresh-btn {
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.header-refresh-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.header-refresh-btn:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 2px;
+}
+
 .last-updated {
   font-size: 12px;
   color: var(--text-secondary);
@@ -146,7 +166,7 @@ h1 {
   color: var(--text-primary);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   transition: all 0.2s;
 }
 
@@ -277,12 +297,22 @@ h1 {
   position: sticky;
   top: 0;
   z-index: 10;
+  cursor: pointer;
+}
+
+.repo-group-header:hover {
+  background: var(--bg-hover);
 }
 
 .repo-group-header.pinned {
   border-left: 3px solid #f59e0b;
-  background: rgba(245, 158, 11, 0.05);
+  background: var(--bg-secondary);
   padding-left: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.repo-group-header.pinned:hover {
+  background: var(--bg-hover);
 }
 
 .repo-group-title {

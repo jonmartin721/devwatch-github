@@ -349,6 +349,19 @@ function renderActivities() {
   document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
   document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
 
+  // Header click listeners for expand/collapse
+  list.querySelectorAll('.repo-group-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      // Don't trigger if clicking on buttons
+      if (e.target.closest('.repo-snooze-btn')) {
+        return;
+      }
+
+      const repo = header.dataset.repo;
+      toggleRepoCollapse(repo);
+    });
+  });
+
   // Collapse button listeners
   list.querySelectorAll('.repo-collapse-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {

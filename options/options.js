@@ -1,7 +1,7 @@
 import { applyTheme, showStatusMessage } from '../shared/utils.js';
 import { getSyncItem, getToken, setToken, clearToken as clearStoredToken } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
-import { STAR_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
+import { STAR_ICON, LINK_ICON, BELL_ICON, BELL_SLASH_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
 import { escapeHtml } from '../shared/sanitize.js';
 
 const state = {
@@ -445,6 +445,8 @@ async function loadSettings() {
       'theme'
     ]);
 
+    const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
+
     // Load and apply theme first
     const theme = settings.theme || 'system';
     applyTheme(theme);
@@ -501,6 +503,9 @@ async function loadSettings() {
 
     // Update notification toggle states after loading settings
     updateNotificationToggleStates();
+
+    // Load and display current snoozes
+    renderSnoozedRepos(snoozeSettings.snoozedRepos || []);
   } catch (error) {
     showMessage('Error loading settings', 'error');
   }
@@ -867,7 +872,12 @@ function renderRepoList() {
       return `
         <li class="repo-item ${isMuted ? 'muted' : ''} ${isPinned ? 'pinned' : ''}">
           <div class="repo-content">
-            <div class="repo-name">${sanitizedRepo}</div>
+            <div class="repo-name">
+              ${sanitizedRepo}
+              <button class="link-btn inline-link" data-repo="${sanitizedRepo}" title="Open repository on GitHub">
+                ${createSvg(LINK_ICON, 14, 14)}
+              </button>
+            </div>
             <div class="repo-description">Legacy format - remove and re-add to see details</div>
           </div>
           <div class="repo-actions">
@@ -896,7 +906,12 @@ function renderRepoList() {
     return `
       <li class="repo-item ${isMuted ? 'muted' : ''} ${isPinned ? 'pinned' : ''}">
         <div class="repo-content">
-          <div class="repo-name">${sanitizedFullName}</div>
+          <div class="repo-name">
+            ${sanitizedFullName}
+            <button class="link-btn inline-link" data-repo="${sanitizedFullName}" title="Open repository on GitHub">
+              ${createSvg(LINK_ICON, 14, 14)}
+            </button>
+          </div>
           <div class="repo-description">${sanitizedDescription}</div>
           <div class="repo-meta">
             <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(stars)}</span>
@@ -939,6 +954,14 @@ function renderRepoList() {
   list.querySelectorAll('button.danger').forEach(btn => {
     btn.addEventListener('click', () => {
       removeRepo(btn.dataset.repo);
+    });
+  });
+
+  list.querySelectorAll('.link-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      window.open(`https://github.com/${repo}`, '_blank');
     });
   });
 }
@@ -1418,6 +1441,164 @@ if (typeof module !== 'undefined' && module.exports) {
     handleImportFile
   };
 }
+
+// Snooze management functions
+function renderSnoozedRepos(snoozedRepos) {
+  const container = document.getElementById('snoozedReposList');
+  const emptyState = document.getElementById('emptySnoozes');
+
+  // Filter out expired snoozes
+  const now = Date.now();
+  const activeSnoozes = snoozedRepos.filter(snooze => snooze.expiresAt > now);
+  const expiredSnoozes = snoozedRepos.filter(snooze => snooze.expiresAt <= now);
+
+  if (activeSnoozes.length === 0 && expiredSnoozes.length === 0) {
+    container.innerHTML = `
+      <div class="empty-snoozes" id="emptySnoozes">
+        <p>No repositories are currently snoozed</p>
+        <small>Snooze repositories from the popup to see them here</small>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  // Render active snoozes
+  if (activeSnoozes.length > 0) {
+    activeSnoozes.forEach(snooze => {
+      const timeRemaining = formatTimeRemaining(snooze.expiresAt - now);
+      const isExpiringSoon = (snooze.expiresAt - now) < 60 * 60 * 1000; // Less than 1 hour
+
+      html += `
+        <div class="snoozed-repo-item">
+          <div class="snoozed-repo-info">
+            <div class="snoozed-repo-name">${escapeHtml(snooze.repo)}</div>
+            <div class="snoozed-repo-time">
+              ${isExpiringSoon ? '<span class="snooze-expiry-warning">⚠️ </span>' : ''}
+              Snoozed until ${new Date(snooze.expiresAt).toLocaleString()} (${timeRemaining})
+            </div>
+          </div>
+          <div class="snoozed-repo-actions">
+            <button class="unsnooze-btn" data-repo="${escapeHtml(snooze.repo)}"
+                    aria-label="Unsnooze ${escapeHtml(snooze.repo)} repository">
+              Unsnooze
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // Render expired snoozes (for cleanup)
+  if (expiredSnoozes.length > 0) {
+    html += `
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Expired Snoozes</h4>
+    `;
+
+    expiredSnoozes.forEach(snooze => {
+      html += `
+        <div class="snoozed-repo-item snooze-expired">
+          <div class="snoozed-repo-info">
+            <div class="snoozed-repo-name">${escapeHtml(snooze.repo)}</div>
+            <div class="snoozed-repo-time">
+              Expired ${new Date(snooze.expiresAt).toLocaleString()}
+            </div>
+          </div>
+          <div class="snoozed-repo-actions">
+            <button class="unsnooze-btn cleanup-expired" data-repo="${escapeHtml(snooze.repo)}"
+                    aria-label="Remove expired snooze for ${escapeHtml(snooze.repo)}">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Add event listeners to the new buttons
+  container.querySelectorAll('.unsnooze-btn:not(.cleanup-expired)').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = e.target.dataset.repo;
+      unsnoozeRepo(repo);
+    });
+  });
+
+  container.querySelectorAll('.unsnooze-btn.cleanup-expired').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = e.target.dataset.repo;
+      cleanupExpiredSnooze(repo);
+    });
+  });
+}
+
+function formatTimeRemaining(milliseconds) {
+  const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+  const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return `${days}d ${remainingHours}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m`;
+  } else {
+    return 'Less than 1m';
+  }
+}
+
+async function unsnoozeRepo(repo) {
+  try {
+    const settings = await chrome.storage.sync.get(['snoozedRepos']);
+    let snoozedRepos = settings.snoozedRepos || [];
+
+    // Remove the snooze for this repo
+    snoozedRepos = snoozedRepos.filter(snooze => snooze.repo !== repo);
+
+    await chrome.storage.sync.set({ snoozedRepos });
+
+    // Re-render the snoozed repos list
+    renderSnoozedRepos(snoozedRepos);
+
+    showStatusMessage(`${repo} has been unsnoozed`, 'success');
+  } catch (error) {
+    showStatusMessage(`Error unsnoozing ${repo}: ${error.message}`, 'error');
+  }
+}
+
+async function cleanupExpiredSnooze(repo) {
+  try {
+    const settings = await chrome.storage.sync.get(['snoozedRepos']);
+    let snoozedRepos = settings.snoozedRepos || [];
+
+    // Remove the expired snooze for this repo
+    snoozedRepos = snoozedRepos.filter(snooze => snooze.repo !== repo);
+
+    await chrome.storage.sync.set({ snoozedRepos });
+
+    // Re-render the snoozed repos list
+    renderSnoozedRepos(snoozedRepos);
+
+    showStatusMessage(`Expired snooze for ${repo} has been removed`, 'success');
+  } catch (error) {
+    showStatusMessage(`Error removing expired snooze: ${error.message}`, 'error');
+  }
+}
+
+// Auto-refresh snoozed repos list every minute
+setInterval(async () => {
+  const settings = await chrome.storage.sync.get(['snoozedRepos']);
+  renderSnoozedRepos(settings.snoozedRepos || []);
+}, 60000);
 
 // ES6 exports for tests
 export {
