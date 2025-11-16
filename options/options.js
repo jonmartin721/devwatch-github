@@ -369,7 +369,6 @@ async function clearToken() {
 
   // Clear token from secure storage
   await clearStoredToken();
-  showMessage('Token cleared', 'success');
 }
 
 async function validateToken(token) {
