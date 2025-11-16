@@ -55,10 +55,25 @@ function setupEventListeners() {
   });
 
   // Search functionality
-  document.getElementById('repoSearch').addEventListener('input', (e) => {
+  const repoSearchInput = document.getElementById('repoSearch');
+  const repoSearchClear = document.getElementById('repoSearchClear');
+
+  repoSearchInput.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.toLowerCase();
     state.currentPage = 1; // Reset to first page when searching
     renderRepoList();
+
+    // Show/hide clear button
+    repoSearchClear.style.display = e.target.value ? 'flex' : 'none';
+  });
+
+  repoSearchClear.addEventListener('click', () => {
+    repoSearchInput.value = '';
+    state.searchQuery = '';
+    state.currentPage = 1;
+    renderRepoList();
+    repoSearchClear.style.display = 'none';
+    repoSearchInput.focus();
   });
 
   // Pagination controls
@@ -202,7 +217,21 @@ function setupEventListeners() {
     updateSelectedCount();
   });
 
-  document.getElementById('importRepoSearch').addEventListener('input', filterImportRepos);
+  const importSearchInput = document.getElementById('importRepoSearch');
+  const importSearchClear = document.getElementById('importSearchClear');
+
+  importSearchInput.addEventListener('input', (e) => {
+    filterImportRepos();
+    // Show/hide clear button
+    importSearchClear.style.display = e.target.value ? 'flex' : 'none';
+  });
+
+  importSearchClear.addEventListener('click', () => {
+    importSearchInput.value = '';
+    filterImportRepos();
+    importSearchClear.style.display = 'none';
+    importSearchInput.focus();
+  });
 
   // Close modal when clicking outside
   document.getElementById('importModal').addEventListener('click', (e) => {

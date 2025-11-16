@@ -2,7 +2,6 @@
 
 A Chrome extension that helps developers stay on top of GitHub activity across multiple repositories.
 
-
 ## Features
 
 - **Multi-repo monitoring** - Watch unlimited repositories for new activity
@@ -54,7 +53,6 @@ cd devwatch-github
    - The extension will now check for activity at your chosen interval
    - Click the extension icon to view recent activity
    - Click any activity item to open it in GitHub
-
 
 ## Usage
 

@@ -32,9 +32,11 @@ if (typeof document !== 'undefined') {
 function setupEventListeners() {
   document.getElementById('refreshBtn').addEventListener('click', handleRefresh);
   document.getElementById('darkModeBtn').addEventListener('click', toggleDarkMode);
-  document.getElementById('settingsLink').addEventListener('click', (e) => {
-    e.preventDefault();
+  document.getElementById('settingsLink').addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
+  });
+  document.getElementById('helpBtn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://github.com/jonmartin721/devwatch-github#readme' });
   });
 
   // Toolbar buttons
@@ -185,6 +187,7 @@ async function loadActivities() {
 
     renderActivities();
     updateRateLimit(data.rateLimit);
+    updateLastUpdated();
     if (data.lastError) {
       showStoredError(data.lastError);
     }
@@ -192,6 +195,12 @@ async function loadActivities() {
     list.innerHTML = '<div class="empty-state"><p>Unable to load activities</p></div>';
     showError('errorMessage', error, null, { action: 'load activities' }, 0);
   }
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent = `Updated ${timeString}`;
 }
 
 function updateRateLimit(rateLimit) {
