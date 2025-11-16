@@ -70,13 +70,14 @@ async function checkGitHubActivity() {
     // Get token from secure local storage
     const githubToken = await getToken();
 
-    const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos } = await getSyncItems([
+    const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
       'watchedRepos',
       'lastCheck',
       'filters',
       'notifications',
       'mutedRepos',
-      'snoozedRepos'
+      'snoozedRepos',
+      'unmutedRepos'
     ]);
 
     console.log('[DevWatch] Token present:', !!githubToken);
@@ -94,6 +95,9 @@ async function checkGitHubActivity() {
 
     // Clean up expired snoozes
     const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos || []);
+
+    // Clean up old unmuted entries
+    const activeUnmutedRepos = await cleanupOldUnmutedEntries(unmutedRepos || []);
 
     // Get list of repos to exclude (muted + snoozed)
     const excludedRepos = getExcludedRepos(mutedRepos || [], activeSnoozedRepos);
@@ -119,6 +123,16 @@ async function checkGitHubActivity() {
         const addedDate = new Date(repo.addedAt);
         if (addedDate > globalLastCheck) {
           checkDate = addedDate;
+        }
+      }
+
+      // Use repo's unmutedAt timestamp if it exists and is newer than current checkDate
+      // This prevents showing old notifications for newly unmuted repos
+      const unmutedRepo = activeUnmutedRepos.find(u => u.repo === repoName);
+      if (unmutedRepo && unmutedRepo.unmutedAt) {
+        const unmutedDate = new Date(unmutedRepo.unmutedAt);
+        if (unmutedDate > checkDate) {
+          checkDate = unmutedDate;
         }
       }
 
@@ -226,6 +240,23 @@ async function cleanExpiredSnoozes(snoozedRepos) {
   }
 
   return activeSnoozes;
+}
+
+async function cleanupOldUnmutedEntries(unmutedRepos) {
+  if (!unmutedRepos || unmutedRepos.length === 0) {
+    return unmutedRepos;
+  }
+
+  // Remove entries older than 30 days to prevent storage bloat
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const recentEntries = unmutedRepos.filter(u => new Date(u.unmutedAt).getTime() > thirtyDaysAgo);
+
+  // Update storage if we removed old entries
+  if (recentEntries.length !== unmutedRepos.length) {
+    await chrome.storage.sync.set({ unmutedRepos: recentEntries });
+  }
+
+  return recentEntries;
 }
 
 async function storeActivities(newActivities) {
@@ -372,7 +403,8 @@ if (typeof module !== 'undefined' && module.exports) {
     storeActivities,
     updateBadge,
     showNotifications,
-    cleanExpiredSnoozes
+    cleanExpiredSnoozes,
+    cleanupOldUnmutedEntries
   };
 }
 
@@ -384,5 +416,6 @@ export {
   storeActivities,
   updateBadge,
   showNotifications,
-  cleanExpiredSnoozes
+  cleanExpiredSnoozes,
+  cleanupOldUnmutedEntries
 };

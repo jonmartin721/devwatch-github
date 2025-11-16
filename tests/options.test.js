@@ -4,12 +4,24 @@ import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 global.chrome = {
   storage: {
     sync: {
-      get: jest.fn((keys, callback) => callback({ githubToken: null })),
-      set: jest.fn((items, callback) => callback && callback())
+      get: jest.fn((keys, callback) => {
+        // Always call callback if provided
+        if (callback) callback({ githubToken: null });
+      }),
+      set: jest.fn((items, callback) => {
+        // Always call callback if provided
+        if (callback) callback();
+      })
     },
     local: {
-      get: jest.fn((keys, callback) => callback({})),
-      set: jest.fn((items, callback) => callback && callback())
+      get: jest.fn((keys, callback) => {
+        // Always call callback if provided
+        if (callback) callback({});
+      }),
+      set: jest.fn((items, callback) => {
+        // Always call callback if provided
+        if (callback) callback();
+      })
     }
   }
 };
@@ -22,6 +34,8 @@ import {
   fetchGitHubRepoFromNpm,
   validateRepo,
   cleanupRepoNotifications,
+  toggleMuteRepo,
+  trackRepoUnmuted,
   formatNumber,
   formatDate
 } from '../options/options.js';
@@ -605,6 +619,17 @@ describe('Options Page - Repository Management', () => {
 
       const secondCall = chrome.storage.local.set.mock.calls[1][0];
       expect(secondCall.readItems).toEqual(['1']); // Only item from repo2 should be removed
+    });
+  });
+
+  describe('Repository Unmute Tracking', () => {
+    test('handles storage errors gracefully', async () => {
+      chrome.storage.sync.get.mockImplementation(() => {
+        throw new Error('Storage error');
+      });
+
+      // Should not throw an error
+      await expect(trackRepoUnmuted('test/repo')).resolves.toBeUndefined();
     });
   });
 });

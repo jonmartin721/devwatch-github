@@ -53,7 +53,8 @@ global.fetch = jest.fn();
 import {
   fetchRepoActivity,
   storeActivities,
-  updateBadge
+  updateBadge,
+  cleanupOldUnmutedEntries
 } from '../background.js';
 
 describe('Background Service Worker', () => {
@@ -427,6 +428,59 @@ describe('Background Service Worker', () => {
       };
       const repoName = typeof repo === 'string' ? repo : repo.fullName;
       expect(repoName).toBe('facebook/react');
+    });
+  });
+
+  describe('Unmuted Repository Cleanup', () => {
+    test('removes old unmuted entries (> 30 days)', async () => {
+      const thirtyOneDaysAgo = new Date(Date.now() - (31 * 24 * 60 * 60 * 1000));
+      const twentyNineDaysAgo = new Date(Date.now() - (29 * 24 * 60 * 60 * 1000));
+
+      const oldUnmutedRepos = [
+        { repo: 'old/repo1', unmutedAt: thirtyOneDaysAgo.toISOString() },
+        { repo: 'old/repo2', unmutedAt: thirtyOneDaysAgo.toISOString() },
+        { repo: 'recent/repo', unmutedAt: twentyNineDaysAgo.toISOString() }
+      ];
+
+      const result = await cleanupOldUnmutedEntries(oldUnmutedRepos);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].repo).toBe('recent/repo');
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        unmutedRepos: [{ repo: 'recent/repo', unmutedAt: twentyNineDaysAgo.toISOString() }]
+      });
+    });
+
+    test('keeps recent unmuted entries (< 30 days)', async () => {
+      const tenDaysAgo = new Date(Date.now() - (10 * 24 * 60 * 60 * 1000));
+      const oneDayAgo = new Date(Date.now() - (1 * 24 * 60 * 60 * 1000));
+
+      const recentUnmutedRepos = [
+        { repo: 'recent/repo1', unmutedAt: tenDaysAgo.toISOString() },
+        { repo: 'recent/repo2', unmutedAt: oneDayAgo.toISOString() }
+      ];
+
+      const result = await cleanupOldUnmutedEntries(recentUnmutedRepos);
+
+      expect(result).toHaveLength(2);
+      expect(result).toEqual(recentUnmutedRepos);
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    });
+
+    test('handles empty unmuted repos array', async () => {
+      const result = await cleanupOldUnmutedEntries([]);
+
+      expect(result).toEqual([]);
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    });
+
+    test('handles null/undefined unmuted repos', async () => {
+      const result1 = await cleanupOldUnmutedEntries(null);
+      const result2 = await cleanupOldUnmutedEntries(undefined);
+
+      expect(result1).toBeNull();
+      expect(result2).toBeUndefined();
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
     });
   });
 });

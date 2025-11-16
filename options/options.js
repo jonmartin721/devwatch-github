@@ -1004,12 +1004,41 @@ async function toggleMuteRepo(repoFullName, mute) {
     }
   } else {
     state.mutedRepos = state.mutedRepos.filter(r => r !== repoFullName);
+    // Track when the repository was unmuted to prevent showing old notifications
+    await trackRepoUnmuted(repoFullName);
   }
 
   // Auto-save and re-render
   await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
   renderRepoList();
   showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
+}
+
+async function trackRepoUnmuted(repoFullName) {
+  try {
+    const settings = await chrome.storage.sync.get(['unmutedRepos']);
+    let unmutedRepos = settings.unmutedRepos || [];
+
+    // Remove any existing entry for this repo (in case it was unmuted before)
+    unmutedRepos = unmutedRepos.filter(r => r.repo !== repoFullName);
+
+    // Add new entry with current timestamp
+    unmutedRepos.push({
+      repo: repoFullName,
+      unmutedAt: new Date().toISOString()
+    });
+
+    // Keep only the last 100 unmuted entries to prevent storage bloat
+    if (unmutedRepos.length > 100) {
+      unmutedRepos = unmutedRepos.slice(-100);
+    }
+
+    await chrome.storage.sync.set({ unmutedRepos });
+    console.log(`[DevWatch] Tracked unmute timestamp for ${repoFullName}`);
+  } catch (error) {
+    console.error(`[DevWatch] Error tracking unmute for ${repoFullName}:`, error);
+    // Don't show error to user - this is enhancement functionality
+  }
 }
 
 async function togglePinRepo(repoFullName, pin) {
@@ -1464,6 +1493,7 @@ if (typeof module !== 'undefined' && module.exports) {
     removeRepo,
     cleanupRepoNotifications,
     toggleMuteRepo,
+    trackRepoUnmuted,
     getFilteredRepos,
     renderRepoList,
     migrateRepoFormat,
@@ -1642,6 +1672,7 @@ export {
   removeRepo,
   cleanupRepoNotifications,
   toggleMuteRepo,
+  trackRepoUnmuted,
   getFilteredRepos,
   renderRepoList,
   migrateRepoFormat,
