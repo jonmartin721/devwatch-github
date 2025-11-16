@@ -569,7 +569,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   margin-bottom: 12px;
 }
 
+.repo-search-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .search-input-wrapper {
+  flex: 1;
   position: relative;
   display: flex;
   align-items: center;
@@ -604,8 +611,41 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   transform: scale(0.95);
 }
 
-.repo-search-container input {
-  width: 100%;
+.hide-pinned-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color-dark);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.hide-pinned-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--link-color);
+  color: var(--link-color);
+}
+
+.hide-pinned-btn.active {
+  background: var(--link-color);
+  color: white;
+  border-color: var(--link-color);
+}
+
+.hide-pinned-btn.active:hover {
+  opacity: 0.9;
+}
+
+.hide-pinned-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .pagination-controls {
@@ -1063,6 +1103,36 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   flex-shrink: 0;
 }
 
+.pin-btn {
+  background: none;
+  border: 1px solid var(--border-color-dark);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.pin-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--link-color);
+  color: var(--link-color);
+}
+
+.pin-btn.pinned {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.pin-btn.pinned:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+
 .mute-btn {
   background: none;
   border: 1px solid var(--border-color-dark);
@@ -1098,6 +1168,11 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .repo-item.muted:hover {
   opacity: 0.7;
+}
+
+.repo-item.pinned {
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
 }
 
 /* Import/Export Buttons */

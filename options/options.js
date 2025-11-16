@@ -1,15 +1,17 @@
 import { applyTheme, showStatusMessage } from '../shared/utils.js';
 import { getSyncItem, getToken, setToken, clearToken as clearStoredToken } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
-import { STAR_ICON, createSvg, getMuteIcon } from '../shared/icons.js';
+import { STAR_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
 import { escapeHtml } from '../shared/sanitize.js';
 
 const state = {
   watchedRepos: [],
   mutedRepos: [],
+  pinnedRepos: [],
   currentPage: 1,
   reposPerPage: 10,
-  searchQuery: ''
+  searchQuery: '',
+  hidePinnedRepos: false
 };
 
 if (typeof document !== 'undefined') {
@@ -74,6 +76,28 @@ function setupEventListeners() {
     renderRepoList();
     repoSearchClear.style.display = 'none';
     repoSearchInput.focus();
+  });
+
+  // Hide/show pinned repos button
+  const hidePinnedBtn = document.getElementById('hidePinnedBtn');
+  hidePinnedBtn.addEventListener('click', () => {
+    state.hidePinnedRepos = !state.hidePinnedRepos;
+    state.currentPage = 1; // Reset to first page
+    renderRepoList();
+
+    // Update button text and title
+    const btnText = hidePinnedBtn.querySelector('span');
+    if (state.hidePinnedRepos) {
+      btnText.textContent = 'Show pinned';
+      hidePinnedBtn.title = 'Show pinned repositories';
+      hidePinnedBtn.setAttribute('aria-label', 'Show pinned repositories');
+      hidePinnedBtn.classList.add('active');
+    } else {
+      btnText.textContent = 'Hide pinned';
+      hidePinnedBtn.title = 'Hide pinned repositories';
+      hidePinnedBtn.setAttribute('aria-label', 'Hide pinned repositories');
+      hidePinnedBtn.classList.remove('active');
+    }
   });
 
   // Pagination controls
@@ -358,6 +382,7 @@ async function loadSettings() {
     const settings = await chrome.storage.sync.get([
       'watchedRepos',
       'mutedRepos',
+      'pinnedRepos',
       'checkInterval',
       'snoozeHours',
       'filters',
@@ -378,6 +403,7 @@ async function loadSettings() {
 
     state.watchedRepos = settings.watchedRepos || [];
     state.mutedRepos = settings.mutedRepos || [];
+    state.pinnedRepos = settings.pinnedRepos || [];
 
     // Migrate old string format to new object format
     if (githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
@@ -681,11 +707,22 @@ async function removeRepo(repoFullName) {
 }
 
 function getFilteredRepos() {
-  if (!state.searchQuery) {
-    return state.watchedRepos;
+  let repos = state.watchedRepos;
+
+  // Filter out pinned repos if hide pinned is enabled
+  if (state.hidePinnedRepos) {
+    repos = repos.filter(repo => {
+      const fullName = typeof repo === 'string' ? repo : repo.fullName;
+      return !state.pinnedRepos.includes(fullName);
+    });
   }
 
-  return state.watchedRepos.filter(repo => {
+  // Apply search filter
+  if (!state.searchQuery) {
+    return repos;
+  }
+
+  return repos.filter(repo => {
     const fullName = typeof repo === 'string' ? repo : repo.fullName;
     const description = typeof repo === 'string' ? '' : repo.description;
     const language = typeof repo === 'string' ? '' : repo.language;
@@ -743,11 +780,23 @@ function renderRepoList() {
     return;
   }
 
+  // Sort repos: pinned repos first, then others
+  const sortedRepos = [...filteredRepos].sort((a, b) => {
+    const aFullName = typeof a === 'string' ? a : a.fullName;
+    const bFullName = typeof b === 'string' ? b : b.fullName;
+    const aIsPinned = state.pinnedRepos.includes(aFullName);
+    const bIsPinned = state.pinnedRepos.includes(bFullName);
+
+    if (aIsPinned && !bIsPinned) return -1;
+    if (!aIsPinned && bIsPinned) return 1;
+    return 0;
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(filteredRepos.length / state.reposPerPage);
+  const totalPages = Math.ceil(sortedRepos.length / state.reposPerPage);
   const startIndex = (state.currentPage - 1) * state.reposPerPage;
   const endIndex = startIndex + state.reposPerPage;
-  const reposToDisplay = filteredRepos.slice(startIndex, endIndex);
+  const reposToDisplay = sortedRepos.slice(startIndex, endIndex);
 
   // Show/hide pagination based on number of repos
   if (filteredRepos.length > state.reposPerPage) {
@@ -763,14 +812,18 @@ function renderRepoList() {
     // Handle both old string format and new object format
     if (typeof repo === 'string') {
       const isMuted = state.mutedRepos.includes(repo);
+      const isPinned = state.pinnedRepos.includes(repo);
       const sanitizedRepo = escapeHtml(repo);
       return `
-        <li class="repo-item ${isMuted ? 'muted' : ''}">
+        <li class="repo-item ${isMuted ? 'muted' : ''} ${isPinned ? 'pinned' : ''}">
           <div class="repo-content">
             <div class="repo-name">${sanitizedRepo}</div>
             <div class="repo-description">Legacy format - remove and re-add to see details</div>
           </div>
           <div class="repo-actions">
+            <button class="pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${sanitizedRepo}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}">
+              ${getPinIcon(isPinned)}
+            </button>
             <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedRepo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
               ${getMuteIcon(isMuted)}
             </button>
@@ -782,6 +835,7 @@ function renderRepoList() {
 
     const { fullName, description, language, stars, updatedAt, latestRelease } = repo;
     const isMuted = state.mutedRepos.includes(fullName);
+    const isPinned = state.pinnedRepos.includes(fullName);
 
     // Sanitize all user-generated content to prevent XSS
     const sanitizedFullName = escapeHtml(fullName);
@@ -790,7 +844,7 @@ function renderRepoList() {
     const sanitizedReleaseVersion = latestRelease ? escapeHtml(latestRelease.version) : '';
 
     return `
-      <li class="repo-item ${isMuted ? 'muted' : ''}">
+      <li class="repo-item ${isMuted ? 'muted' : ''} ${isPinned ? 'pinned' : ''}">
         <div class="repo-content">
           <div class="repo-name">${sanitizedFullName}</div>
           <div class="repo-description">${sanitizedDescription}</div>
@@ -802,6 +856,9 @@ function renderRepoList() {
           </div>
         </div>
         <div class="repo-actions">
+          <button class="pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${sanitizedFullName}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}">
+            ${getPinIcon(isPinned)}
+          </button>
           <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedFullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
             ${getMuteIcon(isMuted)}
           </button>
@@ -810,6 +867,15 @@ function renderRepoList() {
       </li>
     `;
   }).join('');
+
+  list.querySelectorAll('.pin-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      const isPinned = state.pinnedRepos.includes(repo);
+      togglePinRepo(repo, !isPinned);
+    });
+  });
 
   list.querySelectorAll('.mute-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -840,6 +906,21 @@ async function toggleMuteRepo(repoFullName, mute) {
   await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
   renderRepoList();
   showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
+}
+
+async function togglePinRepo(repoFullName, pin) {
+  if (pin) {
+    if (!state.pinnedRepos.includes(repoFullName)) {
+      state.pinnedRepos.push(repoFullName);
+    }
+  } else {
+    state.pinnedRepos = state.pinnedRepos.filter(r => r !== repoFullName);
+  }
+
+  // Auto-save and re-render
+  await chrome.storage.sync.set({ pinnedRepos: state.pinnedRepos });
+  renderRepoList();
+  showRepoMessage(pin ? 'Repository pinned' : 'Repository unpinned', 'success');
 }
 
 function showMessage(text, type) {
@@ -1100,6 +1181,7 @@ async function exportSettings() {
       settings: {
         watchedRepos: syncData.watchedRepos || [],
         mutedRepos: syncData.mutedRepos || [],
+        pinnedRepos: syncData.pinnedRepos || [],
         filters: syncData.filters || { prs: true, issues: true, releases: true },
         notifications: syncData.notifications || { prs: true, issues: true, releases: true },
         theme: syncData.theme || 'system',
@@ -1159,6 +1241,7 @@ async function handleImportFile(event) {
     await chrome.storage.sync.set({
       watchedRepos: settings.watchedRepos || [],
       mutedRepos: settings.mutedRepos || [],
+      pinnedRepos: settings.pinnedRepos || [],
       filters: settings.filters || { prs: true, issues: true, releases: true },
       notifications: settings.notifications || { prs: true, issues: true, releases: true },
       theme: settings.theme || 'system',

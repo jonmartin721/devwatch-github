@@ -107,6 +107,24 @@ h1 {
   }
 }
 
+@keyframes refresh-complete {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    background: var(--link-color);
+    color: white;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.footer-btn.refresh-complete {
+  animation: refresh-complete 0.4s ease-out;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -259,6 +277,12 @@ h1 {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.repo-group-header.pinned {
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+  padding-left: 15px;
 }
 
 .repo-group-title {

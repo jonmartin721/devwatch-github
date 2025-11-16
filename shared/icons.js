@@ -33,6 +33,16 @@ export const CHECK_ICON = '<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.
 export const STAR_ICON = '<path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/>';
 
 /**
+ * Pin icon (unpinned state)
+ */
+export const PIN_ICON = '<path d="M4.456.734a1.75 1.75 0 0 1 2.826.504l.613 1.327a3.081 3.081 0 0 0 2.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.749.749 0 1 1-1.06 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 0 0-1.707-2.084l-1.327-.613a1.75 1.75 0 0 1-.504-2.826L4.456.734Zm1.548 1.067L2.28 5.525a.25.25 0 0 0 .072.404l1.328.613A4.582 4.582 0 0 1 6.219 9.1l.584 2.454a.25.25 0 0 0 .42.119l5.413-5.413a.25.25 0 0 0-.119-.42L9.963 5.256a4.581 4.581 0 0 1-2.557-2.54l-.613-1.327a.25.25 0 0 0-.404-.072Z"/>';
+
+/**
+ * Pin filled icon (pinned state)
+ */
+export const PIN_FILLED_ICON = '<path d="M4.456.734a1.75 1.75 0 0 1 2.826.504l.613 1.327a3.081 3.081 0 0 0 2.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.749.749 0 1 1-1.06 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 0 0-1.707-2.084l-1.327-.613a1.75 1.75 0 0 1-.504-2.826L4.456.734Z"/>';
+
+/**
  * Helper to create a complete SVG element
  * @param {string} path - SVG path data
  * @param {number} width - Width in pixels (default: 16)
@@ -52,4 +62,13 @@ export function createSvg(path, width = 16, height = 16, className = '') {
  */
 export function getMuteIcon(isMuted) {
   return createSvg(isMuted ? EYE_SLASH_ICON : EYE_ICON, 16, 16);
+}
+
+/**
+ * Get pin button icon based on state
+ * @param {boolean} isPinned - Whether the item is pinned
+ * @returns {string} SVG element string
+ */
+export function getPinIcon(isPinned) {
+  return createSvg(isPinned ? PIN_FILLED_ICON : PIN_ICON, 16, 16);
 }

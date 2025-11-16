@@ -19,6 +19,7 @@ let readItems = [];
 let showArchive = false;
 let searchQuery = '';
 let collapsedRepos = new Set();
+let pinnedRepos = [];
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -109,6 +110,12 @@ async function handleRefresh() {
   } finally {
     btn.disabled = false;
     btn.classList.remove('spinning');
+
+    // Add completion animation
+    btn.classList.add('refresh-complete');
+    setTimeout(() => {
+      btn.classList.remove('refresh-complete');
+    }, 400);
   }
 }
 
@@ -166,10 +173,11 @@ async function loadActivities() {
 
   try {
     const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError', 'collapsedRepos']);
-    const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+    const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos', 'pinnedRepos']);
 
     // Load collapsed state
     collapsedRepos = new Set(data.collapsedRepos || []);
+    pinnedRepos = settings.pinnedRepos || [];
 
     // Filter out muted and snoozed repos
     const mutedRepos = settings.mutedRepos || [];
@@ -307,9 +315,10 @@ function renderActivities() {
     const activities = grouped[repo];
     const repoUnreadCount = activities.filter(a => !readItems.includes(a.id)).length;
     const isCollapsed = collapsedRepos.has(repo);
+    const isPinned = pinnedRepos.includes(repo);
 
     htmlContent += `
-      <div class="repo-group-header" data-repo="${repo}">
+      <div class="repo-group-header ${isPinned ? 'pinned' : ''}" data-repo="${repo}">
         <div class="repo-group-title">
           <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}">
             ${createSvg(CHEVRON_DOWN_ICON, 12, 12, `chevron ${isCollapsed ? 'collapsed' : ''}`)}
@@ -489,10 +498,18 @@ function groupByRepo(activities) {
     groups[activity.repo].push(activity);
   });
 
-  // Sort repos by most recent activity
+  // Sort repos: pinned first, then by most recent activity
   const sortedGroups = {};
   Object.keys(groups)
     .sort((a, b) => {
+      const aIsPinned = pinnedRepos.includes(a);
+      const bIsPinned = pinnedRepos.includes(b);
+
+      // Pinned repos come first
+      if (aIsPinned && !bIsPinned) return -1;
+      if (!aIsPinned && bIsPinned) return 1;
+
+      // If both pinned or both not pinned, sort by most recent activity
       const latestA = new Date(groups[a][0].createdAt);
       const latestB = new Date(groups[b][0].createdAt);
       return latestB - latestA;

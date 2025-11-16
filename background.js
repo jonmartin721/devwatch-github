@@ -9,17 +9,23 @@ const DEFAULT_INTERVAL = 15;
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Setup alarm when extension is installed
   chrome.runtime.onInstalled.addListener(() => {
+    console.log('[DevWatch] Extension installed, setting up alarm and running initial check...');
     chrome.storage.sync.get(['checkInterval'], (result) => {
       const interval = result.checkInterval || DEFAULT_INTERVAL;
       setupAlarm(interval);
+      // Run an immediate check on install
+      checkGitHubActivity();
     });
   });
 
   // Setup alarm on startup
   chrome.runtime.onStartup.addListener(() => {
+    console.log('[DevWatch] Extension started, setting up alarm and running initial check...');
     chrome.storage.sync.get(['checkInterval'], (result) => {
       const interval = result.checkInterval || DEFAULT_INTERVAL;
       setupAlarm(interval);
+      // Run an immediate check on startup
+      checkGitHubActivity();
     });
   });
 }
@@ -59,6 +65,8 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
+    console.log('[DevWatch] Starting GitHub activity check...');
+
     // Get token from secure local storage
     const githubToken = await getToken();
 
@@ -71,7 +79,16 @@ async function checkGitHubActivity() {
       'snoozedRepos'
     ]);
 
-    if (!githubToken || !watchedRepos || watchedRepos.length === 0) {
+    console.log('[DevWatch] Token present:', !!githubToken);
+    console.log('[DevWatch] Watched repos:', watchedRepos?.length || 0);
+
+    if (!githubToken) {
+      console.warn('[DevWatch] No GitHub token found. Please add a token in settings.');
+      return;
+    }
+
+    if (!watchedRepos || watchedRepos.length === 0) {
+      console.warn('[DevWatch] No repositories being watched. Please add repos in settings.');
       return;
     }
 
@@ -91,6 +108,7 @@ async function checkGitHubActivity() {
 
       // Skip muted and snoozed repos
       if (excludedRepos.has(repoName)) {
+        console.log(`[DevWatch] Skipping ${repoName} (muted or snoozed)`);
         continue;
       }
 
@@ -104,9 +122,13 @@ async function checkGitHubActivity() {
         }
       }
 
+      console.log(`[DevWatch] Fetching activity for ${repoName} since ${checkDate.toISOString()}`);
       const activities = await fetchRepoActivity(repoName, githubToken, checkDate, enabledFilters);
+      console.log(`[DevWatch] Found ${activities.length} new activities in ${repoName}`);
       newActivities.push(...activities);
     }
+
+    console.log(`[DevWatch] Total new activities: ${newActivities.length}`);
 
     if (newActivities.length > 0) {
       await storeActivities(newActivities);
@@ -115,8 +137,9 @@ async function checkGitHubActivity() {
     }
 
     await chrome.storage.sync.set({ lastCheck: new Date().toISOString() });
+    console.log('[DevWatch] Check complete');
   } catch (error) {
-    console.error('Error checking GitHub:', error);
+    console.error('[DevWatch] Error checking GitHub:', error);
   }
 }
 
