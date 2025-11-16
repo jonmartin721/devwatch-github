@@ -37,6 +37,21 @@ function setupEventListeners() {
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
 
+  // Action button toggles
+  const toggleAddBtn = document.getElementById('toggleAddBtn');
+  const toggleSearchBtn = document.getElementById('toggleSearchBtn');
+  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
+
+  if (toggleAddBtn) {
+    toggleAddBtn.addEventListener('click', () => togglePanel('add'));
+  }
+  if (toggleSearchBtn) {
+    toggleSearchBtn.addEventListener('click', () => togglePanel('search'));
+  }
+  if (hidePinnedToggleBtn) {
+    hidePinnedToggleBtn.addEventListener('click', toggleHidePinned);
+  }
+
   // Import repos buttons
   document.getElementById('importWatchedBtn').addEventListener('click', () => openImportModal('watched'));
   document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred'));
@@ -78,26 +93,11 @@ function setupEventListeners() {
     repoSearchInput.focus();
   });
 
-  // Hide/show pinned repos button
-  const hidePinnedBtn = document.getElementById('hidePinnedBtn');
-  hidePinnedBtn.addEventListener('click', () => {
-    state.hidePinnedRepos = !state.hidePinnedRepos;
+  // Listen for custom hide pinned toggle event
+  document.addEventListener('hidePinnedToggle', (e) => {
+    state.hidePinnedRepos = e.detail.hidden;
     state.currentPage = 1; // Reset to first page
     renderRepoList();
-
-    // Update button text and title
-    const btnText = hidePinnedBtn.querySelector('span');
-    if (state.hidePinnedRepos) {
-      btnText.textContent = 'Show pinned';
-      hidePinnedBtn.title = 'Show pinned repositories';
-      hidePinnedBtn.setAttribute('aria-label', 'Show pinned repositories');
-      hidePinnedBtn.classList.add('active');
-    } else {
-      btnText.textContent = 'Hide pinned';
-      hidePinnedBtn.title = 'Hide pinned repositories';
-      hidePinnedBtn.setAttribute('aria-label', 'Hide pinned repositories');
-      hidePinnedBtn.classList.remove('active');
-    }
   });
 
   // Pagination controls
@@ -263,6 +263,61 @@ function setupEventListeners() {
       closeImportModal();
     }
   });
+}
+
+// Panel toggle functionality
+function togglePanel(type) {
+  const addPanel = document.getElementById('addRepoPanel');
+  const searchPanel = document.getElementById('searchRepoPanel');
+  const addBtn = document.getElementById('toggleAddBtn');
+  const searchBtn = document.getElementById('toggleSearchBtn');
+
+  const isAddVisible = addPanel.classList.contains('show');
+  const isSearchVisible = searchPanel.classList.contains('show');
+
+  // Clicked 'add'
+  if (type === 'add') {
+    if (isAddVisible) {
+      addPanel.classList.remove('show');
+      addBtn.classList.remove('active');
+    } else {
+      addPanel.classList.add('show');
+      addBtn.classList.add('active');
+      searchPanel.classList.remove('show');
+      searchBtn.classList.remove('active');
+      // Focus on input after animation
+      setTimeout(() => {
+        document.getElementById('repoInput').focus();
+      }, 300);
+    }
+  }
+  // Clicked 'search'
+  else if (type === 'search') {
+    if (isSearchVisible) {
+      searchPanel.classList.remove('show');
+      searchBtn.classList.remove('active');
+    } else {
+      searchPanel.classList.add('show');
+      searchBtn.classList.add('active');
+      addPanel.classList.remove('show');
+      addBtn.classList.remove('active');
+      // Focus on search input after animation
+      setTimeout(() => {
+        document.getElementById('repoSearch').focus();
+      }, 300);
+    }
+  }
+}
+
+function toggleHidePinned() {
+  const btn = document.getElementById('hidePinnedToggleBtn');
+  btn.classList.toggle('active');
+
+  // Trigger existing hide pinned functionality
+  const event = new CustomEvent('hidePinnedToggle', {
+    detail: { hidden: btn.classList.contains('active') }
+  });
+  document.dispatchEvent(event);
 }
 
 function updateNotificationToggleStates() {
@@ -759,18 +814,13 @@ function formatDateLocal(dateString) {
 
 function renderRepoList() {
   const list = document.getElementById('repoList');
-  const searchContainer = document.getElementById('repoSearchContainer');
   const paginationControls = document.getElementById('paginationControls');
 
   if (state.watchedRepos.length === 0) {
     list.innerHTML = '<p class="help-text">No repositories added yet</p>';
-    searchContainer.style.display = 'none';
     paginationControls.style.display = 'none';
     return;
   }
-
-  // Show search if we have repos
-  searchContainer.style.display = state.watchedRepos.length > 0 ? 'block' : 'none';
 
   const filteredRepos = getFilteredRepos();
 

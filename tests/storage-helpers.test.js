@@ -33,7 +33,7 @@ describe('Storage Helpers', () => {
             const result = {};
             const keyArray = Array.isArray(keys) ? keys : [keys];
             keyArray.forEach(key => {
-              if (mockSyncStorage.hasOwnProperty(key)) {
+              if (Object.prototype.hasOwnProperty.call(mockSyncStorage, key)) {
                 result[key] = mockSyncStorage[key];
               }
             });
@@ -49,7 +49,7 @@ describe('Storage Helpers', () => {
             const result = {};
             const keyArray = Array.isArray(keys) ? keys : [keys];
             keyArray.forEach(key => {
-              if (mockLocalStorage.hasOwnProperty(key)) {
+              if (Object.prototype.hasOwnProperty.call(mockLocalStorage, key)) {
                 result[key] = mockLocalStorage[key];
               }
             });

@@ -60,21 +60,19 @@ function setupEventListeners() {
   });
 
   // Load theme preference
-  getSyncItem('theme', 'system').then(theme => {
+  getSyncItem('theme', 'light').then(theme => {
     applyTheme(theme);
     updateDarkModeIcon();
   });
 }
 
 async function toggleDarkMode() {
-  // Cycle through: light -> dark -> system
-  const currentTheme = await getSyncItem('theme', 'system');
+  // Toggle between: light -> dark -> light
+  const currentTheme = await getSyncItem('theme', 'light');
   let newTheme;
 
   if (currentTheme === 'light') {
     newTheme = 'dark';
-  } else if (currentTheme === 'dark') {
-    newTheme = 'system';
   } else {
     newTheme = 'light';
   }

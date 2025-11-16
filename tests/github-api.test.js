@@ -107,9 +107,10 @@ describe('GitHub API Helpers', () => {
         statusText: 'Unauthorized'
       };
 
+      expect.assertions(2);
+
       try {
         handleApiResponse(mockResponse, 'owner/repo');
-        fail('Should have thrown error');
       } catch (error) {
         expect(error.response).toBe(mockResponse);
         expect(error.repo).toBe('owner/repo');

@@ -564,6 +564,81 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   margin-right: 2px;
 }
 
+/* Action Buttons Layout */
+.repo-action-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.action-buttons-left,
+.action-buttons-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: var(--input-bg);
+  border-color: var(--link-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.action-btn svg {
+  flex-shrink: 0;
+}
+
+.action-btn.active {
+  background: var(--link-color);
+  color: white;
+  border-color: var(--link-color);
+}
+
+.action-btn.active:hover {
+  background: var(--link-hover);
+  border-color: var(--link-hover);
+}
+
+/* Collapsible Panels */
+.repo-panel {
+  margin: 16px 0 24px 0;
+  overflow: hidden;
+  opacity: 0;
+  max-height: 0;
+  transition: all 0.2s ease-in-out; /* Simpler transition */
+}
+
+.repo-panel.show {
+  opacity: 1;
+  max-height: 150px; /* Reduced max-height to be closer to content size */
+}
+
 .repo-search-container {
   margin-top: 16px;
   margin-bottom: 12px;
@@ -696,7 +771,13 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .repo-validation-status.checking::after {
-  content: "⏳";
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='6' stroke='%23ccc' stroke-width='2' fill='none'/%3e%3ccircle cx='8' cy='8' r='6' stroke='%233366cc' stroke-width='2' fill='none' stroke-dasharray='40' stroke-dashoffset='0' transform='rotate(-90 8 8)'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 8 8' to='360 8 8' dur='1s' repeatCount='indefinite'/%3e%3canimate attributeName='stroke-dasharray' values='0 40;20 20;0 40' dur='1s' repeatCount='indefinite'/%3e%3c/circle%3e%3c/svg%3e");
+  background-size: contain;
+  background-repeat: no-repeat;
   animation: pulse 1s ease-in-out infinite;
 }
 
@@ -888,18 +969,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .import-loading .spinner {
-  border: 3px solid var(--border-color);
-  border-top: 3px solid var(--link-color);
-  border-radius: 50%;
   width: 40px;
   height: 40px;
-  animation: spin 1s linear infinite;
   margin-bottom: 16px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .import-loading p {

@@ -341,13 +341,18 @@ h1 {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
   transition: all 0.2s;
+}
+
+.repo-snooze-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .repo-snooze-btn:hover {

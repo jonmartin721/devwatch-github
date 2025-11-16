@@ -80,17 +80,48 @@
       <h2>Watched Repositories</h2>
       <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
 
-      <div class="add-repo-form" role="form" aria-label="Add new repository">
-        <div class="repo-input-wrapper">
-          <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, or GitHub URL" disabled aria-describedby="repo-help">
-          <span id="repoValidationStatus" class="repo-validation-status" aria-live="polite"></span>
+      <!-- Action Buttons Container -->
+      <div class="repo-action-buttons">
+        <div class="action-buttons-left">
+          <button id="toggleAddBtn" class="action-btn" aria-label="Toggle add repository form">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+            <span>Add</span>
+          </button>
+          <button id="toggleSearchBtn" class="action-btn" aria-label="Toggle search repositories">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            </svg>
+            <span>Search</span>
+          </button>
         </div>
-        <button id="addRepoBtn" class="primary" disabled aria-label="Add repository to watch list">Add</button>
+        <div class="action-buttons-right">
+          <button id="hidePinnedToggleBtn" class="action-btn" aria-label="Toggle hide pinned repositories">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+            </svg>
+            <span>Hide Pinned</span>
+          </button>
+        </div>
       </div>
-      <p id="repo-help" class="help-text">Enter repository name in format owner/repo, just repo name, or full GitHub URL</p>
-      <div id="repoError" class="repo-error"></div>
 
-      <div class="repo-search-container" id="repoSearchContainer" style="display: none;">
+      <!-- Add Repository Panel (Hidden by default) -->
+      <div class="repo-panel" id="addRepoPanel">
+        <div class="add-repo-form" role="form" aria-label="Add new repository">
+          <div class="repo-input-wrapper">
+            <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, or GitHub URL" disabled aria-describedby="repo-help">
+            <span id="repoValidationStatus" class="repo-validation-status" aria-live="polite"></span>
+          </div>
+          <button id="addRepoBtn" class="primary" disabled aria-label="Add repository to watch list">Add</button>
+        </div>
+        <p id="repo-help" class="help-text">Enter repository name in format owner/repo, just repo name, or full GitHub URL</p>
+        <div id="repoError" class="repo-error"></div>
+      </div>
+
+      <!-- Search Repository Panel (Hidden by default) -->
+      <div class="repo-panel" id="searchRepoPanel">
         <div class="repo-search-controls">
           <div class="search-input-wrapper">
             <input type="text" id="repoSearch" placeholder="Search repositories...">
@@ -100,13 +131,6 @@
               </svg>
             </button>
           </div>
-          <button id="hidePinnedBtn" class="hide-pinned-btn" title="Hide pinned repositories" aria-label="Hide pinned repositories">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-            </svg>
-            <span>Hide pinned</span>
-          </button>
         </div>
       </div>
 
@@ -350,7 +374,18 @@
       </div>
       <div class="modal-body">
         <div id="importLoadingState" class="import-loading">
-          <div class="spinner"></div>
+          <div class="spinner">
+            <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="20" cy="20" r="16" stroke="var(--border-color)" stroke-width="3" fill="none"/>
+              <circle cx="20" cy="20" r="16" stroke="var(--link-color)" stroke-width="3" fill="none"
+                      stroke-dasharray="100" stroke-dashoffset="0"
+                      transform="rotate(-90 20 20)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  from="0 20 20" to="360 20 20" dur="1s" repeatCount="indefinite"/>
+                <animate attributeName="stroke-dasharray" values="0 100;50 50;0 100" dur="1s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
           <p>Fetching repositories from GitHub...</p>
         </div>
         <div id="importReposList" class="import-repos-list" style="display: none;">
