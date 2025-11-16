@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Font Size Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .test-area {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 10px 0;
+      background: #f9f9f9;
+    }
+    .font-size-controls {
+      margin-bottom: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    button.active {
+      background-color: #007bff;
+      color: white;
+    }
+    #current-size {
+      font-weight: bold;
+      margin-top: 10px;
+      color: #007bff;
+    }
+    .sample-text {
+      margin: 10px 0;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Font Size Test</h1>
+
+  <div class="font-size-controls">
+    <button onclick="applyFontSize('small')">Small</button>
+    <button onclick="applyFontSize('medium')" class="active">Medium</button>
+    <button onclick="applyFontSize('large')">Large</button>
+    <button onclick="applyFontSize('xlarge')">Extra Large</button>
+  </div>
+
+  <div id="current-size">Current size: medium</div>
+
+  <div class="test-area">
+    <div class="sample-text">
+      <h2>Sample Text H2</h2>
+      <p>This is a sample paragraph with some text to test the font sizing.</p>
+      <ul>
+        <li>List item 1</li>
+        <li>List item 2</li>
+        <li>List item 3</li>
+      </ul>
+      <small>This is small text</small>
+      <strong>This is bold text</strong>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the applyFontSize function from utils
+    import { applyFontSize } from './shared/utils.js';
+
+    document.querySelectorAll('.font-size-controls button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        // Remove active class from all buttons
+        document.querySelectorAll('.font-size-controls button').forEach(b => b.classList.remove('active'));
+        // Add active class to clicked button
+        button.classList.add('active');
+
+        const fontSize = button.textContent.toLowerCase();
+        applyFontSize(fontSize);
+        document.getElementById('current-size').textContent = `Current size: ${fontSize}`;
+      });
+    });
+
+    // Show the current font size on load
+    document.getElementById('current-size').textContent = 'Current size: medium';
+  </script>
+</body>
+</html>

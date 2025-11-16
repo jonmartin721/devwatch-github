@@ -21,6 +21,13 @@
   --error-border: #f5c6cb;
   --danger-bg: #dc3545;
   --danger-hover: #c82333;
+
+  /* Font size variables */
+  --font-size-base: 15px;
+  --font-size-small: 13px;
+  --font-size-smaller: 12px;
+  --font-size-large: 17px;
+  --font-size-larger: 19px;
 }
 
 body.dark-mode {
@@ -44,6 +51,7 @@ body.dark-mode {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: var(--font-size-base);
   background: var(--bg-secondary);
   color: var(--text-primary);
   padding: 40px 20px;
@@ -59,7 +67,7 @@ body {
 }
 
 h1 {
-  font-size: 24px;
+  font-size: calc(var(--font-size-base) + 9px);
   margin-bottom: 8px;
   color: var(--text-primary);
 }
