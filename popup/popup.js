@@ -239,18 +239,24 @@ function updateRateLimit(rateLimit) {
 }
 
 function showStoredError(lastError) {
-  const errorMsg = document.getElementById('errorMessage');
   if (!lastError || Date.now() - lastError.timestamp > 60000) {
-    errorMsg.style.display = 'none';
+    clearError('errorMessage');
     return;
   }
 
-  errorMsg.textContent = `Error: ${lastError.message}${lastError.repo ? ` (${lastError.repo})` : ''}`;
-  errorMsg.style.display = 'block';
+  // Create a mock response object if we have status info
+  let mockResponse = null;
+  if (lastError.status) {
+    mockResponse = {
+      status: lastError.status,
+      statusText: lastError.statusText || ''
+    };
+  }
 
-  setTimeout(() => {
-    errorMsg.style.display = 'none';
-  }, 10000);
+  // Use the enhanced error notification system
+  const error = new Error(lastError.message);
+  const context = lastError.repo ? { repo: lastError.repo } : {};
+  showError('errorMessage', error, mockResponse, context, 10000);
 }
 
 function renderActivities() {

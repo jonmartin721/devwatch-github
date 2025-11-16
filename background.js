@@ -205,7 +205,10 @@ async function fetchRepoActivity(repo, token, since, filters) {
     await setLocalItem('lastError', {
       message: error.message,
       repo,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      // Store response status if available for better error handling
+      status: error.response?.status,
+      statusText: error.response?.statusText
     });
     throw error;
   }

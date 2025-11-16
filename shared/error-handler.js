@@ -171,24 +171,35 @@ export function showError(elementId, error, response = null, context = {}, durat
   if (!element) return;
 
   const userError = getUserFriendlyError(error, response, context);
+  const errorId = `error-${Date.now()}`;
 
+  // Create clickable toast-style error notification
   element.innerHTML = `
-    <div class="error-content">
-      <strong>${userError.title}</strong>
-      <p>${userError.message}</p>
-      ${userError.action ? `<button class="error-action" onclick="this.parentElement.parentElement.style.display='none'">${userError.action}</button>` : ''}
+    <div class="error-toast" id="${errorId}" role="alert" aria-live="assertive">
+      <div class="error-summary" onclick="document.getElementById('${errorId}-details').classList.toggle('visible')">
+        <span class="error-icon">⚠️</span>
+        <span class="error-brief">${userError.title}</span>
+        <span class="error-expand">›</span>
+      </div>
+      <div class="error-details" id="${errorId}-details">
+        <p>${userError.message}</p>
+        ${userError.technical ? `<small class="error-technical">Details: ${userError.technical}</small>` : ''}
+        <div class="error-actions">
+          <button class="error-dismiss" onclick="document.getElementById('${elementId}').style.display='none'">Dismiss</button>
+        </div>
+      </div>
     </div>
   `;
 
   element.style.display = 'block';
-  element.setAttribute('role', 'alert');
-  element.setAttribute('aria-live', 'assertive');
+  element.classList.add('toast-notification');
 
   // Auto-hide after duration if specified
   if (duration > 0) {
     setTimeout(() => {
       if (element.style.display !== 'none') {
         element.style.display = 'none';
+        element.classList.remove('toast-notification');
       }
     }, duration);
   }
@@ -211,6 +222,7 @@ export function clearError(elementId) {
   if (element) {
     element.style.display = 'none';
     element.innerHTML = '';
+    element.classList.remove('toast-notification');
     element.removeAttribute('role');
     element.removeAttribute('aria-live');
   }

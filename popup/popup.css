@@ -553,8 +553,8 @@ footer {
 }
 
 .footer-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .footer-btn:hover {
@@ -594,6 +594,134 @@ footer a:hover {
 body.dark-mode .error-message {
   background: #4b1e1e;
   color: #f8d7da;
+}
+
+/* Toast notification positioning in bottom right */
+.error-message.toast-notification {
+  position: fixed;
+  bottom: 70px;
+  right: 18px;
+  left: auto;
+  width: auto;
+  max-width: 380px;
+  margin: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Toast error styling */
+.error-toast {
+  background: var(--bg-primary);
+  border: 1px solid #dc3545;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.error-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.error-summary:hover {
+  background: var(--bg-hover);
+}
+
+.error-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.error-brief {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+  color: #dc3545;
+}
+
+body.dark-mode .error-brief {
+  color: #f8d7da;
+}
+
+.error-expand {
+  font-size: 20px;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.error-details.visible + .error-summary .error-expand {
+  transform: rotate(90deg);
+}
+
+.error-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.error-details.visible {
+  max-height: 300px;
+  padding: 12px;
+}
+
+.error-details p {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.error-technical {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: 'Monaco', 'Courier New', monospace;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  word-break: break-word;
+}
+
+.error-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.error-dismiss {
+  background: var(--link-color);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.error-dismiss:hover {
+  opacity: 0.9;
 }
 
 /* Enhanced error message styles */

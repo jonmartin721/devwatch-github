@@ -18,19 +18,25 @@ export function createHeaders(token) {
  * Handle GitHub API response errors
  * @param {Response} response - Fetch response object
  * @param {string} repo - Repository name for error context
- * @throws {Error} Descriptive error based on response status
+ * @throws {Error} Descriptive error based on response status with attached response
  */
 export function handleApiResponse(response, repo = '') {
   if (!response.ok) {
+    let error;
     if (response.status === 401) {
-      throw new Error('Invalid GitHub token');
+      error = new Error('Invalid GitHub token');
     } else if (response.status === 403) {
-      throw new Error('Rate limit exceeded');
+      error = new Error('Rate limit exceeded');
     } else if (response.status === 404) {
-      throw new Error(repo ? `Repository ${repo} not found` : 'Resource not found');
+      error = new Error(repo ? `Repository ${repo} not found` : 'Resource not found');
     } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      error = new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
+    // Attach response for detailed error handling
+    error.response = response;
+    error.repo = repo;
+    throw error;
   }
 }
 
@@ -42,40 +48,51 @@ export function handleApiResponse(response, repo = '') {
  * @returns {Object} Standardized activity object
  */
 export function mapActivity(item, type, repo) {
+  // Defensive null checks
+  if (!item) {
+    throw new Error('Invalid activity item: null or undefined');
+  }
+
   const baseActivity = {
     id: `${type}-${repo}-${item.number || item.id}`,
     type,
     repo,
     title: '',
-    url: item.html_url,
+    url: item.html_url || '',
     createdAt: '',
     author: '',
     authorAvatar: ''
   };
 
-  switch (type) {
-    case 'pr':
-    case 'issue':
-      return {
-        ...baseActivity,
-        title: item.title,
-        createdAt: item.created_at,
-        author: item.user.login,
-        authorAvatar: item.user.avatar_url,
-        number: item.number
-      };
+  try {
+    switch (type) {
+      case 'pr':
+      case 'issue':
+        return {
+          ...baseActivity,
+          title: item.title || 'Untitled',
+          createdAt: item.created_at || new Date().toISOString(),
+          author: item.user?.login || 'Unknown',
+          authorAvatar: item.user?.avatar_url || '',
+          number: item.number
+        };
 
-    case 'release':
-      return {
-        ...baseActivity,
-        title: item.name || item.tag_name,
-        createdAt: item.published_at,
-        author: item.author.login,
-        authorAvatar: item.author.avatar_url
-      };
+      case 'release':
+        return {
+          ...baseActivity,
+          title: item.name || item.tag_name || 'Untitled Release',
+          createdAt: item.published_at || new Date().toISOString(),
+          author: item.author?.login || 'Unknown',
+          authorAvatar: item.author?.avatar_url || ''
+        };
 
-    default:
-      return baseActivity;
+      default:
+        return baseActivity;
+    }
+  } catch (error) {
+    console.error('Error mapping activity:', error, item);
+    // Return base activity as fallback
+    return baseActivity;
   }
 }
 
