@@ -191,8 +191,14 @@ function setupEventListeners() {
   document.getElementById('confirmImportBtn').addEventListener('click', importSelectedRepos);
 
   document.getElementById('selectAllImport').addEventListener('change', (e) => {
-    const checkboxes = document.querySelectorAll('.import-repo-checkbox:not(:disabled)');
-    checkboxes.forEach(cb => cb.checked = e.target.checked);
+    const cards = document.querySelectorAll('.repo-item.import-variant:not(.already-added)');
+    cards.forEach(card => {
+      if (e.target.checked) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
     updateSelectedCount();
   });
 
@@ -959,31 +965,44 @@ function renderImportReposList() {
     return;
   }
 
-  container.innerHTML = importModalState.filteredRepos.map(repo => {
-    const checkboxId = `import-${repo.fullName.replace(/\//g, '-')}`;
+  // Sort repos: not-added first, already-added at bottom
+  const sortedRepos = [...importModalState.filteredRepos].sort((a, b) => {
+    if (a.isAdded && !b.isAdded) return 1;
+    if (!a.isAdded && b.isAdded) return -1;
+    return 0;
+  });
+
+  container.innerHTML = sortedRepos.map(repo => {
     const isDisabled = repo.isAdded;
 
+    // Sanitize all user-generated content to prevent XSS
+    const sanitizedFullName = escapeHtml(repo.fullName);
+    const sanitizedDescription = escapeHtml(repo.description || '');
+    const sanitizedLanguage = escapeHtml(repo.language || '');
+
     return `
-      <div class="import-repo-item">
-        <input type="checkbox"
-               class="import-repo-checkbox"
-               id="${checkboxId}"
-               data-repo='${JSON.stringify(repo)}'
-               ${isDisabled ? 'disabled' : ''}
-               onchange="updateSelectedCount()">
-        <div class="import-repo-info">
-          <div class="import-repo-name">${escapeHtml(repo.fullName)}</div>
-          <div class="import-repo-description">${escapeHtml(repo.description)}</div>
-          <div class="import-repo-meta">
-            ${repo.language !== 'Unknown' ? `<span class="import-repo-meta-item">${escapeHtml(repo.language)}</span>` : ''}
-            <span class="import-repo-meta-item">⭐ ${formatNumber(repo.stars)}</span>
-            <span class="import-repo-meta-item">Updated ${formatDateLocal(repo.updatedAt)}</span>
+      <li class="repo-item import-variant ${isDisabled ? 'already-added' : ''}" data-repo='${JSON.stringify(repo)}'>
+        <div class="repo-content">
+          <div class="repo-name">${sanitizedFullName}</div>
+          <div class="repo-description">${sanitizedDescription}</div>
+          <div class="repo-meta">
+            <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(repo.stars)}</span>
+            ${sanitizedLanguage && sanitizedLanguage !== 'Unknown' ? `<span class="meta-item">${sanitizedLanguage}</span>` : ''}
+            <span class="meta-item">Updated ${formatDateLocal(repo.updatedAt)}</span>
           </div>
         </div>
-        ${isDisabled ? '<span class="import-repo-already-added">Already added</span>' : ''}
-      </div>
+        ${isDisabled ? '<div class="repo-actions"><span class="already-added-badge">Already added</span></div>' : ''}
+      </li>
     `;
   }).join('');
+
+  // Add click handlers to make cards clickable
+  container.querySelectorAll('.repo-item.import-variant:not(.already-added)').forEach(card => {
+    card.addEventListener('click', () => {
+      card.classList.toggle('selected');
+      updateSelectedCount();
+    });
+  });
 
   updateSelectedCount();
 }
@@ -1005,15 +1024,15 @@ function filterImportRepos() {
 }
 
 function updateSelectedCount() {
-  const checkboxes = document.querySelectorAll('.import-repo-checkbox:checked:not(:disabled)');
-  const count = checkboxes.length;
+  const selectedCards = document.querySelectorAll('.repo-item.import-variant.selected:not(.already-added)');
+  const count = selectedCards.length;
   document.getElementById('selectedCount').textContent = count;
   document.getElementById('confirmImportBtn').disabled = count === 0;
 }
 
 async function importSelectedRepos() {
-  const checkboxes = document.querySelectorAll('.import-repo-checkbox:checked:not(:disabled)');
-  const reposToImport = Array.from(checkboxes).map(cb => JSON.parse(cb.dataset.repo));
+  const selectedCards = document.querySelectorAll('.repo-item.import-variant.selected:not(.already-added)');
+  const reposToImport = Array.from(selectedCards).map(card => JSON.parse(card.dataset.repo));
 
   if (reposToImport.length === 0) {
     return;
