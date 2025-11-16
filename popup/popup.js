@@ -124,7 +124,7 @@ async function loadActivities() {
 
   // Check offline status first
   if (isOffline()) {
-    list.innerHTML = '<div class="loading">Loading cached data...</div>';
+    list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading cached data...</div>';
     showOfflineStatus('errorMessage', true);
 
     try {
@@ -167,7 +167,7 @@ async function loadActivities() {
   }
 
   // Online mode - proceed normally
-  list.innerHTML = '<div class="loading">Loading...</div>';
+  list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading...</div>';
   showOfflineStatus('errorMessage', false);
   clearError('errorMessage');
 
@@ -326,14 +326,14 @@ function renderActivities() {
     htmlContent += `
       <div class="repo-group-header ${isPinned ? 'pinned' : ''}" data-repo="${repo}">
         <div class="repo-group-title">
-          <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+          <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${repo} activities">
             ${createSvg(CHEVRON_DOWN_ICON, 12, 12, `chevron ${isCollapsed ? 'collapsed' : ''}`)}
           </button>
           <span class="repo-group-name">${repo}</span>
         </div>
         <div class="repo-group-actions">
           ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
-          <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository">
+          <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository" aria-label="Snooze ${repo} repository">
             ${createSvg(SNOOZE_ICON, 14, 14)}
           </button>
         </div>
@@ -457,7 +457,7 @@ function renderActivityItem(activity) {
         </div>
       </div>
       <div class="activity-actions">
-        <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done">
+        <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
           ${createSvg(CHECK_ICON, 16, 16)}
         </button>
       </div>

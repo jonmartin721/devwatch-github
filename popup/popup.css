@@ -919,3 +919,46 @@ body.dark-mode .activity-type.release {
   background: #1c3d5a;
   color: #58a6ff;
 }
+
+/* Focus indicators for accessibility */
+.filter-btn:focus-visible,
+.toolbar-btn:focus-visible,
+.footer-btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 2px;
+}
+
+.search-box input:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+}
+
+body.dark-mode .search-box input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+
+.activity-content:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.action-btn:focus-visible,
+.repo-collapse-btn:focus-visible,
+.repo-snooze-btn:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 2px;
+}
+
+.text-btn:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.error-summary:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: -2px;
+}

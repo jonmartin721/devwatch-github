@@ -935,8 +935,45 @@ function showRepoMessage(text, type) {
 let importModalState = {
   type: null, // 'watched', 'starred', 'participating'
   repos: [],
-  filteredRepos: []
+  filteredRepos: [],
+  previousFocusElement: null
 };
+
+// Focus trap helpers for modal accessibility
+function getFocusableElements(container) {
+  const selector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  return Array.from(container.querySelectorAll(selector));
+}
+
+function handleModalFocusTrap(e) {
+  if (e.key !== 'Tab') return;
+
+  const modal = document.getElementById('importModal');
+  const focusableElements = getFocusableElements(modal);
+
+  if (focusableElements.length === 0) return;
+
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+
+  if (e.shiftKey) {
+    // Shift + Tab
+    if (document.activeElement === firstElement) {
+      e.preventDefault();
+      lastElement.focus();
+    }
+  } else {
+    // Tab
+    if (document.activeElement === lastElement) {
+      e.preventDefault();
+      firstElement.focus();
+    }
+  }
+}
+
+function setupModalFocusTrap(modal) {
+  modal.addEventListener('keydown', handleModalFocusTrap);
+}
 
 async function openImportModal(type) {
   const token = await getToken();
@@ -959,11 +996,23 @@ async function openImportModal(type) {
 
   title.textContent = titles[type] || 'Import Repositories';
 
+  // Store currently focused element for later restoration
+  importModalState.previousFocusElement = document.activeElement;
+
   // Show modal and loading state
   modal.classList.add('show');
   document.getElementById('importLoadingState').style.display = 'flex';
   document.getElementById('importReposList').style.display = 'none';
   document.getElementById('importErrorState').style.display = 'none';
+
+  // Set up focus trap
+  setupModalFocusTrap(modal);
+
+  // Focus the close button
+  setTimeout(() => {
+    const closeBtn = document.getElementById('closeImportModal');
+    if (closeBtn) closeBtn.focus();
+  }, 100);
 
   try {
     // Fetch repos from GitHub
@@ -1059,9 +1108,19 @@ async function fetchReposFromGitHub(type, token) {
 }
 
 function closeImportModal() {
-  document.getElementById('importModal').classList.remove('show');
+  const modal = document.getElementById('importModal');
+  modal.classList.remove('show');
   document.getElementById('importRepoSearch').value = '';
-  importModalState = { type: null, repos: [], filteredRepos: [] };
+
+  // Remove focus trap
+  modal.removeEventListener('keydown', handleModalFocusTrap);
+
+  // Restore focus to previously focused element
+  if (importModalState.previousFocusElement) {
+    importModalState.previousFocusElement.focus();
+  }
+
+  importModalState = { type: null, repos: [], filteredRepos: [], previousFocusElement: null };
 }
 
 function renderImportReposList() {
@@ -1091,7 +1150,7 @@ function renderImportReposList() {
     const sanitizedLanguage = escapeHtml(repo.language || '');
 
     return `
-      <li class="repo-item import-variant ${isDisabled ? 'already-added' : ''}" data-repo='${JSON.stringify(repo)}'>
+      <li class="repo-item import-variant ${isDisabled ? 'already-added' : ''}" ${!isDisabled ? 'tabindex="0"' : ''} data-repo='${JSON.stringify(repo)}'>
         <div class="repo-content">
           <div class="repo-name">${sanitizedFullName}</div>
           <div class="repo-description">${sanitizedDescription}</div>
@@ -1106,11 +1165,21 @@ function renderImportReposList() {
     `;
   }).join('');
 
-  // Add click handlers to make cards clickable
+  // Add click and keyboard handlers to make cards selectable
   container.querySelectorAll('.repo-item.import-variant:not(.already-added)').forEach(card => {
-    card.addEventListener('click', () => {
+    const toggleSelection = () => {
       card.classList.toggle('selected');
       updateSelectedCount();
+    };
+
+    card.addEventListener('click', toggleSelection);
+
+    // Add keyboard support for Enter and Space keys
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSelection();
+      }
     });
   });
 

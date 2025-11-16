@@ -342,11 +342,11 @@
   </div>
 
   <!-- Import Repos Modal -->
-  <div id="importModal" class="modal">
+  <div id="importModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="importModalTitle">Import Repositories</h3>
-        <button id="closeImportModal" class="close-modal">&times;</button>
+        <button id="closeImportModal" class="close-modal" aria-label="Close import modal">&times;</button>
       </div>
       <div class="modal-body">
         <div id="importLoadingState" class="import-loading">
