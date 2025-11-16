@@ -17,58 +17,6 @@ export function applyTheme(theme) {
   }
 }
 
-/**
- * Apply font size based on user preference
- * @param {string} fontSize - 'small', 'medium', 'large', or 'xlarge'
- */
-export function applyFontSize(fontSize) {
-  const root = document.documentElement;
-
-  // Remove any existing font size class
-  root.classList.remove('font-size-small', 'font-size-medium', 'font-size-large', 'font-size-xlarge');
-
-  // Add the new font size class
-  root.classList.add(`font-size-${fontSize}`);
-
-  // Set CSS variables for the font sizes
-  const fontSizes = {
-    small: {
-      base: '13px',
-      small: '11px',
-      smaller: '10px',
-      large: '15px',
-      larger: '17px'
-    },
-    medium: {
-      base: '15px',
-      small: '13px',
-      smaller: '12px',
-      large: '17px',
-      larger: '19px'
-    },
-    large: {
-      base: '17px',
-      small: '15px',
-      smaller: '14px',
-      large: '19px',
-      larger: '21px'
-    },
-    xlarge: {
-      base: '19px',
-      small: '17px',
-      smaller: '16px',
-      large: '21px',
-      larger: '23px'
-    }
-  };
-
-  const sizes = fontSizes[fontSize] || fontSizes.medium;
-  root.style.setProperty('--font-size-base', sizes.base);
-  root.style.setProperty('--font-size-small', sizes.small);
-  root.style.setProperty('--font-size-smaller', sizes.smaller);
-  root.style.setProperty('--font-size-large', sizes.large);
-  root.style.setProperty('--font-size-larger', sizes.larger);
-}
 
 /**
  * Format a date string into a human-readable relative time
