@@ -1,4 +1,4 @@
-import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
+import { applyTheme, applyFontSize, formatDate, toggleElementVisibility } from '../shared/utils.js';
 import { getSyncItem } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
 import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
@@ -63,6 +63,11 @@ function setupEventListeners() {
   getSyncItem('theme', 'light').then(theme => {
     applyTheme(theme);
     updateDarkModeIcon();
+  });
+
+  // Load font size preference
+  getSyncItem('fontSize', 'medium').then(fontSize => {
+    applyFontSize(fontSize);
   });
 }
 

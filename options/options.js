@@ -1,4 +1,4 @@
-import { applyTheme, showStatusMessage } from '../shared/utils.js';
+import { applyTheme, applyFontSize, showStatusMessage } from '../shared/utils.js';
 import { getSyncItem, getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STAR_ICON, LINK_ICON, BELL_ICON, BELL_SLASH_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
@@ -149,6 +149,16 @@ function setupEventListeners() {
       await chrome.storage.sync.set({ theme });
       applyTheme(theme);
       showMessage('Theme updated', 'success');
+    });
+  });
+
+  // Auto-save font size changes
+  document.querySelectorAll('input[name="fontSize"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      const fontSize = e.target.value;
+      await chrome.storage.sync.set({ fontSize });
+      applyFontSize(fontSize);
+      showMessage('Font size updated', 'success');
     });
   });
 
@@ -442,7 +452,8 @@ async function loadSettings() {
       'snoozeHours',
       'filters',
       'notifications',
-      'theme'
+      'theme',
+      'fontSize'
     ]);
 
     const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
@@ -450,6 +461,10 @@ async function loadSettings() {
     // Load and apply theme first
     const theme = settings.theme || 'system';
     applyTheme(theme);
+
+    // Load and apply font size
+    const fontSize = settings.fontSize || 'medium';
+    applyFontSize(fontSize);
 
     if (githubToken) {
       document.getElementById('githubToken').value = githubToken;
