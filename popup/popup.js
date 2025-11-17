@@ -24,6 +24,43 @@ let pinnedRepos = [];
 // Onboarding manager
 const onboardingManager = new OnboardingManager();
 
+/**
+ * Fetch GitHub repository from npm package
+ * @param {string} packageName - npm package name
+ * @returns {Promise<Object>} Result object with success flag and repo or error
+ */
+async function fetchGitHubRepoFromNpm(packageName) {
+  try {
+    const response = await fetch(`https://registry.npmjs.org/${packageName}`);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: `NPM package "${packageName}" not found` };
+      }
+      return { success: false, error: `Error fetching NPM package (${response.status})` };
+    }
+
+    const data = await response.json();
+
+    if (!data.repository) {
+      return { success: false, error: `Package "${packageName}" has no repository info` };
+    }
+
+    let repoUrl = typeof data.repository === 'string' ? data.repository : data.repository.url;
+
+    // Extract GitHub repo from URL
+    const githubMatch = repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
+    if (!githubMatch) {
+      return { success: false, error: `Package "${packageName}" is not hosted on GitHub` };
+    }
+
+    const repo = githubMatch[1].replace(/\.git$/, '');
+    return { success: true, repo };
+  } catch (error) {
+    return { success: false, error: 'Network error fetching NPM package' };
+  }
+}
+
 // Optimized DOM renderer
 let activityRenderer = null;
 
@@ -54,6 +91,14 @@ if (typeof document !== 'undefined') {
       if (await onboardingManager.isInOnboarding()) {
         await showOnboarding();
       } else {
+        // Show main UI elements when not in onboarding
+        const header = document.querySelector('header');
+        const toolbar = document.querySelector('.toolbar');
+        const activityList = document.getElementById('activityList');
+        if (header) header.style.display = 'flex';
+        if (toolbar) toolbar.style.display = 'flex';
+        if (activityList) activityList.style.display = 'block';
+        
         loadActivities();
       }
 
@@ -94,6 +139,7 @@ async function renderOnboardingStep() {
   const onboardingView = document.getElementById('onboardingView');
   const currentStep = await onboardingManager.getCurrentStep();
   const progress = await onboardingManager.getProgress();
+  console.log('Rendering onboarding step:', currentStep, 'Progress:', progress);
 
   let stepContent = '';
 
@@ -115,21 +161,27 @@ async function renderOnboardingStep() {
   // Render current step content
   switch (currentStep) {
     case 'welcome':
+      console.log('Rendering welcome step');
       stepContent += renderWelcomeStep();
       break;
     case 'token':
+      console.log('Rendering token step');
       stepContent += await renderTokenStep();
       break;
     case 'repos':
+      console.log('Rendering repos step');
       stepContent += await renderReposStep();
       break;
     case 'categories':
+      console.log('Rendering categories step');
       stepContent += await renderCategoriesStep();
       break;
     case 'complete':
+      console.log('Rendering complete step');
       stepContent += renderCompleteStep();
       break;
     default:
+      console.log('Unknown step:', currentStep);
       stepContent += '<p>Error: Unknown step</p>';
   }
 
@@ -204,6 +256,26 @@ function renderWelcomeStep() {
 async function renderTokenStep() {
   const tokenUrl = onboardingManager.getGitHubTokenUrl();
   const tokenData = await onboardingManager.getStepData('token');
+  console.log('Token step - retrieved data:', tokenData);
+
+  // Check if we already have a validated token
+  let statusHtml = '';
+  let buttonDisabled = '';
+  let buttonText = 'Validate';
+
+  if (tokenData && tokenData.validated && tokenData.username) {
+    statusHtml = `<div class="status-success">✓ Token is valid! Logged in as ${tokenData.username}</div>`;
+    buttonDisabled = 'disabled';
+    buttonText = 'Validated';
+    console.log('Token step - showing validated with username');
+  } else if (tokenData && tokenData.validated) {
+    statusHtml = '<div class="status-success">✓ Token is valid!</div>';
+    buttonDisabled = 'disabled';
+    buttonText = 'Validated';
+    console.log('Token step - showing validated without username');
+  } else {
+    console.log('Token step - not validated, showing validate button');
+  }
 
   return `
     <div class="onboarding-step token-step">
@@ -228,10 +300,10 @@ async function renderTokenStep() {
           autocomplete="off"
           value="${tokenData.token || ''}"
         >
-        <button id="validateTokenBtn" class="validate-btn">Validate</button>
+        <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
       </div>
 
-      <div id="tokenStatus" class="token-status"></div>
+      <div id="tokenStatus" class="token-status">${statusHtml}</div>
     </div>
 
     <p class="security-note">
@@ -244,25 +316,62 @@ async function renderTokenStep() {
 }
 
 async function renderReposStep() {
-  const popularRepos = await onboardingManager.getPopularRepos();
+  console.log('🔍 [DEBUG] renderReposStep() called');
+
+  console.log('🔍 [DEBUG] Checking for saved popular repos...');
+  const saved = await onboardingManager.getStepData('popularRepos');
+  console.log('🔍 [DEBUG] Saved repos data:', {
+    hasSaved: !!saved,
+    isArray: Array.isArray(saved),
+    length: Array.isArray(saved) ? saved.length : 0,
+    savedData: saved
+  });
+
+  const hasSavedRepos = Array.isArray(saved) && saved.length > 0;
+  console.log('🔍 [DEBUG] Has saved repos:', hasSavedRepos);
+
+  let popularRepos;
+  if (hasSavedRepos) {
+    popularRepos = saved;
+    console.log('🔍 [DEBUG] Using saved popular repos:', popularRepos.length);
+  } else {
+    console.log('🔍 [DEBUG] No saved repos, fetching fresh repos...');
+    popularRepos = await onboardingManager.getPopularRepos();
+  }
+
+  console.log('🔍 [DEBUG] Final popular repos for rendering:', {
+    isNull: popularRepos === null,
+    isUndefined: popularRepos === undefined,
+    isArray: Array.isArray(popularRepos),
+    length: Array.isArray(popularRepos) ? popularRepos.length : 0,
+    data: popularRepos
+  });
 
   return `
     <div class="onboarding-step repos-step">
       <h2>Add Repositories to Watch</h2>
-      <p>Choose repositories to monitor for new activity.</p>
 
       <div class="popular-repos">
         <h3>Popular repositories:</h3>
-        <div class="repo-suggestions">
-          ${popularRepos.map(repo => `
-            <div class="repo-suggestion" data-owner="${repo.owner}" data-name="${repo.name}">
-              <div class="repo-info">
-                <div class="repo-name">${repo.owner.login}/${repo.name}</div>
-                <div class="repo-desc">${repo.description || repo.language ? `${repo.language} project` : 'Popular repository'}</div>
+        <div class="repo-suggestions" id="repoSuggestions">
+          ${popularRepos && popularRepos.length > 0 ?
+            popularRepos.map(repo => `
+              <div class="repo-suggestion" data-owner="${repo.owner.login}" data-name="${repo.name}">
+                <div class="repo-info">
+                  <div class="repo-name">
+                    <span class="repo-owner">${repo.owner.login}</span>/<span class="repo-name-text">${repo.name}</span>
+                  </div>
+                  <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
+                  <div class="repo-meta">
+                    ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
+                    ${repo.stargazers_count ? `<span class="repo-stars"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
+                  </div>
+                </div>
+                <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
               </div>
-              <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">Add</button>
-            </div>
-          `).join('')}
+            `).join('') :
+            '<div class="repo-loading" id="repoLoading">Loading popular repositories...</div>'
+          }
         </div>
       </div>
 
@@ -272,7 +381,7 @@ async function renderReposStep() {
           <input
             type="text"
             id="manualRepoInput"
-            placeholder="owner/repository-name"
+            placeholder="owner/repo, github.com/owner/repo, or npm package name"
             class="repo-input"
           >
           <button id="addManualRepoBtn" class="add-btn">Add</button>
@@ -287,69 +396,85 @@ async function renderReposStep() {
 function renderCategoriesStep() {
   return `
     <div class="onboarding-step categories-step">
-      <h2>Choose Your Interests</h2>
-      <p>Select what types of activity you want to see in your feed and which should trigger notifications.</p>
+      <h2>Choose What to Track</h2>
+      <p class="step-subtitle">Select categories and notification preferences</p>
 
-      <div class="category-options">
-        <div class="category-item">
-          <div class="category-header">
-            <div class="category-info">
-              <div class="category-name">Pull Requests</div>
-              <div class="category-desc">New and updated PRs</div>
-            </div>
+      <div class="categories-list">
+        <div class="category-item" data-category="pullRequests">
+          <div class="category-icon pr-icon">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/>
+            </svg>
           </div>
-          <div class="category-toggles">
+          <div class="category-info">
+            <h3>Pull Requests</h3>
+            <p>New PRs and updates</p>
+          </div>
+          <div class="category-controls">
             <label class="toggle-label">
-              <input type="checkbox" id="pullRequests" checked>
-              <span class="toggle-text">Show in feed</span>
+              <span>Track</span>
+              <input type="checkbox" id="pullRequests" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
             </label>
             <label class="toggle-label">
-              <input type="checkbox" id="pullRequestsNotifications" checked>
-              <span class="toggle-text">Browser notifications</span>
+              <span>Notify</span>
+              <input type="checkbox" id="pullRequestsNotifications" class="toggle-checkbox">
+              <span class="toggle-switch"></span>
             </label>
           </div>
         </div>
 
-        <div class="category-item">
-          <div class="category-header">
-            <div class="category-info">
-              <div class="category-name">Issues</div>
-              <div class="category-desc">New issues and updates</div>
-            </div>
+        <div class="category-item" data-category="issues">
+          <div class="category-icon issues-icon">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
+              <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/>
+            </svg>
           </div>
-          <div class="category-toggles">
+          <div class="category-info">
+            <h3>Issues</h3>
+            <p>New issues and comments</p>
+          </div>
+          <div class="category-controls">
             <label class="toggle-label">
-              <input type="checkbox" id="issues" checked>
-              <span class="toggle-text">Show in feed</span>
+              <span>Track</span>
+              <input type="checkbox" id="issues" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
             </label>
             <label class="toggle-label">
-              <input type="checkbox" id="issuesNotifications" checked>
-              <span class="toggle-text">Browser notifications</span>
+              <span>Notify</span>
+              <input type="checkbox" id="issuesNotifications" class="toggle-checkbox">
+              <span class="toggle-switch"></span>
             </label>
           </div>
         </div>
 
-        <div class="category-item">
-          <div class="category-header">
-            <div class="category-info">
-              <div class="category-name">Releases</div>
-              <div class="category-desc">New version releases</div>
-            </div>
+        <div class="category-item" data-category="releases">
+          <div class="category-icon releases-icon">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1 3.5c0-.626.292-1.165.7-1.59.406-.422.956-.767 1.579-1.041C4.525.32 6.195 0 8 0c1.805 0 3.475.32 4.722.869.622.274 1.172.62 1.578 1.04.408.426.7.965.7 1.591v9c0 .626-.292 1.165-.7 1.59-.406.422-.956.767-1.579 1.041C11.476 15.68 9.806 16 8 16c-1.805 0-3.475-.32-4.721-.869-.623-.274-1.173-.62-1.579-1.04-.408-.426-.7-.965-.7-1.591Zm1.5 0c0 .133.058.318.282.551.227.237.591.483 1.101.707C4.898 5.205 6.353 5.5 8 5.5c1.646 0 3.101-.295 4.118-.742.508-.224.873-.471 1.1-.708.224-.232.282-.417.282-.55 0-.133-.058-.318-.282-.551-.227-.237-.591-.483-1.101-.707C11.102 1.795 9.647 1.5 8 1.5c-1.646 0-3.101.295-4.118.742-.508.224-.873.471-1.1.708-.224.232-.282.417-.282.55Zm0 4.5c0 .133.058.318.282.551.227.237.591.483 1.101.707C4.898 9.705 6.353 10 8 10c1.646 0 3.101-.295 4.118-.742.508-.224.873-.471 1.1-.708.224-.232.282-.417.282-.55V5.724c-.241.15-.503.286-.779.407C11.395 6.711 9.77 7 8 7c-1.771 0-3.395-.29-4.721-.869A6.31 6.31 0 0 1 2.5 5.724ZM2.282 12.551C2.058 12.318 2 12.133 2 12v-2.276c.241.15.503.286.779.407C4.105 10.711 5.73 11 7.5 11h1c1.771 0 3.395-.29 4.721-.869.276-.12.538-.257.779-.407V12c0 .133-.058.318-.282.551-.227.237-.591.483-1.101.707C11.602 13.705 10.147 14 8.5 14h-1c-1.646 0-3.101-.295-4.118-.742-.508-.224-.873-.471-1.1-.708Z"/>
+            </svg>
           </div>
-          <div class="category-toggles">
+          <div class="category-info">
+            <h3>Releases</h3>
+            <p>New version releases</p>
+          </div>
+          <div class="category-controls">
             <label class="toggle-label">
-              <input type="checkbox" id="releases" checked>
-              <span class="toggle-text">Show in feed</span>
+              <span>Track</span>
+              <input type="checkbox" id="releases" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
             </label>
             <label class="toggle-label">
-              <input type="checkbox" id="releasesNotifications" checked>
-              <span class="toggle-text">Browser notifications</span>
+              <span>Notify</span>
+              <input type="checkbox" id="releasesNotifications" class="toggle-checkbox">
+              <span class="toggle-switch"></span>
             </label>
           </div>
         </div>
       </div>
 
-      <p class="step-note">You can change these preferences anytime in settings.</p>
+      <p class="step-note">You can change these in settings anytime.</p>
     </div>
   `;
 }
@@ -524,9 +649,35 @@ function setupTokenStepListeners() {
       });
 
       if (response.ok) {
-        tokenStatus.innerHTML = '<div class="status-success">✓ Token is valid</div>';
-        await onboardingManager.saveStepData('token', { token, validated: true });
+        const userData = await response.json();
+        const username = userData.login;
+        const tokenData = { token, validated: true, username };
+        console.log('Token validation - saving data:', tokenData);
+        tokenStatus.innerHTML = `<div class="status-success">✓ Token is valid! Logged in as ${username}</div>`;
+        await onboardingManager.saveStepData('token', tokenData);
+        // Persist the token first so any calls which read chrome.storage.local
+        // can rely on the token being present. This reduces the chance of
+        // unauthenticated fetches or hitting rate limits when prefetching.
         await chrome.storage.local.set({ githubToken: token });
+        console.log('🔍 [DEBUG] Starting prefetch of popular repos after successful token validation...');
+        try {
+          const popular = await onboardingManager.getPopularRepos();
+          console.log('🔍 [DEBUG] Prefetch completed. Popular repos:', {
+            isArray: Array.isArray(popular),
+            length: Array.isArray(popular) ? popular.length : 0,
+            data: popular
+          });
+
+          if (Array.isArray(popular) && popular.length > 0) {
+            await onboardingManager.saveStepData('popularRepos', popular);
+            console.log('🔍 [DEBUG] Popular repos saved to step data');
+          } else {
+            console.warn('🔍 [DEBUG] No popular repos to save after prefetch');
+          }
+        } catch (prefetchError) {
+          console.error('🔍 [DEBUG] Failed to prefetch popular repos:', prefetchError);
+          console.error('🔍 [DEBUG] Prefetch error stack:', prefetchError.stack);
+        }
       } else {
         tokenStatus.innerHTML = '<div class="status-error">✗ Invalid token</div>';
       }
@@ -536,14 +687,51 @@ function setupTokenStepListeners() {
   });
 }
 
-function setupReposStepListeners() {
-  const addButtons = document.querySelectorAll('.add-repo-btn');
-  const manualInput = document.getElementById('manualRepoInput');
-  const addManualBtn = document.getElementById('addManualRepoBtn');
-  const repoStatus = document.getElementById('repoStatus');
+async function loadPopularRepos() {
+  const repoLoading = document.getElementById('repoLoading');
+  const repoSuggestions = document.getElementById('repoSuggestions');
 
-  // Add suggested repos
+  try {
+    console.log('🔍 [DEBUG] Loading popular repos dynamically...');
+    const popularRepos = await onboardingManager.getPopularRepos();
+
+    if (popularRepos && popularRepos.length > 0) {
+      // Success: render the repos
+      repoSuggestions.innerHTML = popularRepos.map(repo => `
+        <div class="repo-suggestion" data-owner="${repo.owner.login}" data-name="${repo.name}">
+          <div class="repo-info">
+            <div class="repo-name">
+              <span class="repo-owner">${repo.owner.login}</span>/<span class="repo-name-text">${repo.name}</span>
+            </div>
+            <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
+            <div class="repo-meta">
+              ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
+              ${repo.stargazers_count ? `<span class="repo-stars"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
+            </div>
+          </div>
+          <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
+        </div>
+      `).join('');
+
+      // Re-attach event listeners to new buttons
+      attachRepoButtonListeners();
+    } else {
+      // No repos found
+      repoLoading.innerHTML = 'No popular repositories available. Please add repositories manually below.';
+      repoLoading.className = 'repo-loading repo-error';
+    }
+  } catch (error) {
+    console.error('🔍 [DEBUG] Failed to load popular repos:', error);
+    repoLoading.innerHTML = 'Failed to load popular repositories. Please add repositories manually below.';
+    repoLoading.className = 'repo-loading repo-error';
+  }
+}
+
+function attachRepoButtonListeners() {
+  const addButtons = document.querySelectorAll('.add-repo-btn:not([data-listener-attached])');
+
   addButtons.forEach(btn => {
+    btn.dataset.listenerAttached = 'true';
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const repo = btn.dataset.repo;
@@ -559,20 +747,71 @@ function setupReposStepListeners() {
       }
     });
   });
+}
+
+function setupReposStepListeners() {
+  // Handle loading state for popular repos
+  const repoLoading = document.getElementById('repoLoading');
+
+  if (repoLoading && !document.querySelector('.repo-suggestion')) {
+    // We're in loading state, try to fetch repos
+    loadPopularRepos();
+  }
+
+  const manualInput = document.getElementById('manualRepoInput');
+  const addManualBtn = document.getElementById('addManualRepoBtn');
+  const repoStatus = document.getElementById('repoStatus');
+
+  // Attach listeners to all repo buttons (including ones added dynamically)
+  attachRepoButtonListeners();
 
   // Add manual repo
-  addManualBtn?.addEventListener('click', async () => {
-    const repo = manualInput.value.trim();
+  const addManualRepo = async () => {
+    let repo = manualInput.value.trim();
     if (!repo) return;
 
-    if (!repo.includes('/')) {
-      repoStatus.innerHTML = '<div class="status-error">Please use format: owner/repository</div>';
-      return;
-    }
+    repoStatus.innerHTML = '<div class="status-loading">Validating repository...</div>';
 
     try {
-      // Validate repo exists
-      const response = await fetch(`https://api.github.com/repos/${repo}`);
+      // Get token for API calls
+      const tokenResult = await chrome.storage.local.get(['githubToken']);
+      const githubToken = tokenResult.githubToken;
+
+      // Parse GitHub URL if provided
+      const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
+      if (urlMatch) {
+        repo = urlMatch[1].replace(/\.git$/, '');
+        manualInput.value = repo; // Update input to show parsed format
+      }
+      // Check if it might be an NPM package (no slash or scoped package)
+      else if (!repo.includes('/') || repo.startsWith('@')) {
+        const npmResult = await fetchGitHubRepoFromNpm(repo);
+        if (npmResult.success) {
+          repo = npmResult.repo;
+          manualInput.value = repo; // Update input to show GitHub repo
+        } else {
+          repoStatus.innerHTML = `<div class="status-error">${npmResult.error}</div>`;
+          return;
+        }
+      }
+
+      // Validate owner/repo format
+      if (!repo.includes('/') || repo.split('/').length !== 2 || !repo.split('/')[0] || !repo.split('/')[1]) {
+        repoStatus.innerHTML = '<div class="status-error">Invalid format. Use: owner/repo, GitHub URL, or npm package</div>';
+        return;
+      }
+
+      // Validate repo exists on GitHub
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+
+      if (githubToken) {
+        headers['Authorization'] = `token ${githubToken}`;
+      }
+
+      const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
+
       if (response.ok) {
         const result = await chrome.storage.sync.get(['repos']);
         const repos = result.repos || [];
@@ -583,16 +822,69 @@ function setupReposStepListeners() {
         manualInput.value = '';
         repoStatus.innerHTML = '<div class="status-success">✓ Repository added</div>';
       } else {
-        repoStatus.innerHTML = '<div class="status-error">Repository not found</div>';
+        if (response.status === 404) {
+          repoStatus.innerHTML = '<div class="status-error">Repository not found on GitHub</div>';
+        } else if (response.status === 403) {
+          repoStatus.innerHTML = '<div class="status-error">GitHub API rate limit exceeded. Try again later.</div>';
+        } else {
+          repoStatus.innerHTML = `<div class="status-error">Error validating repository (${response.status})</div>`;
+        }
       }
     } catch (error) {
-      repoStatus.innerHTML = '<div class="status-error">Error adding repository</div>';
+      console.error('Error adding repository:', error);
+      repoStatus.innerHTML = '<div class="status-error">Network error. Please check your connection.</div>';
+    }
+  };
+
+  // Add click listener to button
+  addManualBtn?.addEventListener('click', addManualRepo);
+
+  // Add Enter key listener to input
+  manualInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addManualRepo();
     }
   });
 }
 
 function setupCategoriesStepListeners() {
-  // Categories are handled in handleNextStep
+  (async () => {
+    const saved = await onboardingManager.getStepData('categories') || {};
+
+    // Populate saved values and set up dependency logic
+    ['pullRequests', 'issues', 'releases'].forEach(k => {
+      const trackCheckbox = document.getElementById(k);
+      const notifyCheckbox = document.getElementById(`${k}Notifications`);
+      const notifyLabel = notifyCheckbox?.closest('.toggle-label');
+
+      if (trackCheckbox && notifyCheckbox) {
+        // Set saved values (default: track=true, notify=false)
+        trackCheckbox.checked = saved[k] !== undefined ? saved[k] : true;
+        notifyCheckbox.checked = saved[`${k}Notifications`] !== undefined ? saved[`${k}Notifications`] : false;
+
+        // Initial state: disable notify if track is unchecked
+        if (!trackCheckbox.checked) {
+          notifyCheckbox.disabled = true;
+          notifyCheckbox.checked = false;
+          notifyLabel?.classList.add('disabled');
+        }
+
+        // Add event listener to track checkbox
+        trackCheckbox.addEventListener('change', () => {
+          if (!trackCheckbox.checked) {
+            // Disable and uncheck notify when track is disabled
+            notifyCheckbox.disabled = true;
+            notifyCheckbox.checked = false;
+            notifyLabel?.classList.add('disabled');
+          } else {
+            // Enable notify when track is enabled
+            notifyCheckbox.disabled = false;
+            notifyLabel?.classList.remove('disabled');
+          }
+        });
+      }
+    });
+  })();
 }
 
 async function handleNextStep() {
@@ -615,8 +907,23 @@ async function handleNextStep() {
         return; // Prevent navigation
       }
 
-      // Save token to onboarding data
-      await onboardingManager.saveStepData('token', { token });
+      // Preserve existing validation status when saving token data
+      // This ensures that if the token was previously validated, returning to
+      // the token step will still show the success message.
+      const existing = await onboardingManager.getStepData('token') || {};
+      await onboardingManager.saveStepData('token', { ...existing, token });
+      // If token was validated, prefetch popular repos so step 2 shows them quickly
+      const validated = existing.validated;
+      if (validated) {
+        try {
+          const popular = await onboardingManager.getPopularRepos();
+          if (Array.isArray(popular) && popular.length > 0) {
+            await onboardingManager.saveStepData('popularRepos', popular);
+          }
+        } catch (prefetchError) {
+          console.warn('Failed to prefetch popular repos in handleNextStep', prefetchError);
+        }
+      }
       break;
     }
     case 'categories': {
@@ -660,10 +967,10 @@ function exitOnboarding() {
   const header = document.querySelector('header');
 
   // Show main content and hide onboarding
-  onboardingView.style.display = 'none';
-  activityList.style.display = 'block';
-  toolbar.style.display = 'flex';
-  header.style.display = 'flex';
+  if (onboardingView) onboardingView.style.display = 'none';
+  if (activityList) activityList.style.display = 'block';
+  if (toolbar) toolbar.style.display = 'flex';
+  if (header) header.style.display = 'flex';
 
   // Hide footer skip button when exiting onboarding
   const footerSkipBtn = document.getElementById('footerSkipBtn');
@@ -676,8 +983,23 @@ function exitOnboarding() {
 }
 
 function setupEventListeners() {
+  console.log('🌙 Setting up event listeners...');
+
+  const darkModeBtn = document.getElementById('darkModeBtn');
+  console.log('🌙 Dark mode button found during setup:', !!darkModeBtn);
+
   document.getElementById('refreshBtn').addEventListener('click', handleRefresh);
-  document.getElementById('darkModeBtn').addEventListener('click', toggleDarkMode);
+
+  if (darkModeBtn) {
+    darkModeBtn.addEventListener('click', (e) => {
+      console.log('🌙 Dark mode button clicked!', e);
+      toggleDarkMode();
+    });
+    console.log('🌙 Dark mode click listener attached');
+  } else {
+    console.log('🌙 ERROR: Dark mode button not found during setup!');
+  }
+
   document.getElementById('settingsLink').addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
@@ -711,26 +1033,36 @@ function setupEventListeners() {
     });
   });
 
-  // Load theme preference
-  getSyncItem('theme', 'system').then(theme => {
+  // Load theme preference - detect system theme on first load
+  getSyncItem('theme', null).then(savedTheme => {
+    let theme = savedTheme;
+
+    // If no saved theme, detect system preference
+    if (theme === null) {
+      theme = window.matchMedia('(prefers-color-scheme: dark)') ? 'dark' : 'light';
+      // Save the detected system theme as the user's preference
+      chrome.storage.sync.set({ theme });
+    }
+
+    console.log('🌙 Initial theme from storage:', savedTheme, 'Using theme:', theme);
     applyTheme(theme);
-    updateDarkModeIcon();
+    // Add a small delay to ensure DOM is ready before updating icons
+    setTimeout(() => {
+      console.log('🌙 About to call updateDarkModeIcon() during init...');
+      updateDarkModeIcon();
+    }, 50);
   });
 
   }
 
 async function toggleDarkMode() {
-  // Toggle between: system -> light -> dark -> system
-  const currentTheme = await getSyncItem('theme', 'system');
-  let newTheme;
+  console.log('🌙 toggleDarkMode() called');
 
-  if (currentTheme === 'system') {
-    newTheme = 'light';
-  } else if (currentTheme === 'light') {
-    newTheme = 'dark';
-  } else {
-    newTheme = 'system';
-  }
+  // Toggle between light and dark
+  const currentTheme = await getSyncItem('theme', 'light');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+  console.log('🌙 Theme toggle:', currentTheme, '->', newTheme);
 
   chrome.storage.sync.set({ theme: newTheme });
   applyTheme(newTheme);
@@ -738,26 +1070,45 @@ async function toggleDarkMode() {
 }
 
 async function updateDarkModeIcon() {
+  console.log('🌙 updateDarkModeIcon() called');
+
   const btn = document.getElementById('darkModeBtn');
+  console.log('🌙 Button found:', !!btn);
   if (!btn) return; // Early return if button doesn't exist (test environment)
 
   const systemIcon = btn.querySelector('.system-icon');
   const moonIcon = btn.querySelector('.moon-icon');
   const sunIcon = btn.querySelector('.sun-icon');
+  console.log('🌙 Icons found - System:', !!systemIcon, 'Moon:', !!moonIcon, 'Sun:', !!sunIcon);
 
-  const currentTheme = await getSyncItem('theme', 'system');
+  const currentTheme = await getSyncItem('theme', 'light');
+  console.log('🌙 Current theme from storage:', currentTheme);
 
-  // Hide all icons first
-  if (systemIcon) systemIcon.style.display = 'none';
-  if (moonIcon) moonIcon.style.display = 'none';
-  if (sunIcon) sunIcon.style.display = 'none';
+  // Hide system icon (not currently used)
+  if (systemIcon) {
+    systemIcon.style.display = 'none';
+    systemIcon.style.visibility = 'hidden';
+  }
 
-  if (currentTheme === 'system') {
-    if (systemIcon) systemIcon.style.display = 'block';
-  } else if (currentTheme === 'dark') {
-    if (sunIcon) sunIcon.style.display = 'block';
+  // Show moon icon in light mode (to toggle to dark), sun icon in dark mode (to toggle to light)
+  if (moonIcon) {
+    const moonDisplay = currentTheme === 'dark' ? 'none' : 'block';
+    const moonVisibility = currentTheme === 'dark' ? 'hidden' : 'visible';
+    moonIcon.style.display = moonDisplay;
+    moonIcon.style.visibility = moonVisibility;
+    console.log('🌙 Moon icon set to display:', moonDisplay, 'visibility:', moonVisibility);
   } else {
-    if (moonIcon) moonIcon.style.display = 'block';
+    console.log('🌙 Moon icon not found!');
+  }
+
+  if (sunIcon) {
+    const sunDisplay = currentTheme === 'dark' ? 'block' : 'none';
+    const sunVisibility = currentTheme === 'dark' ? 'visible' : 'hidden';
+    sunIcon.style.display = sunDisplay;
+    sunIcon.style.visibility = sunVisibility;
+    console.log('🌙 Sun icon set to display:', sunDisplay, 'visibility:', sunVisibility);
+  } else {
+    console.log('🌙 Sun icon not found!');
   }
 }
 
@@ -1523,6 +1874,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderActivities,
     groupByTime,
     groupByRepo,
+    renderReposStep,
     toggleRepoCollapse,
     togglePinRepo,
     snoozeRepo,
@@ -1558,6 +1910,8 @@ export {
   markAsReadWithAnimation,
   handleMarkAllRead,
   handleCollapseAll,
+  renderReposStep,
+  handleNextStep,
   toggleSearch,
   toggleArchive
 };

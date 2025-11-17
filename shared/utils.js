@@ -7,14 +7,23 @@
  * @param {string} theme - 'light', 'dark', or 'system'
  */
 export function applyTheme(theme) {
+  console.log('🌙 applyTheme called with:', theme);
+  console.log('🌙 Body classes before:', document.body.className);
+
   if (theme === 'system') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.body.classList.toggle('dark-mode', prefersDark);
+    console.log('🌙 System preference dark:', prefersDark);
   } else if (theme === 'dark') {
     document.body.classList.add('dark-mode');
+    console.log('🌙 Adding dark-mode class');
   } else {
     document.body.classList.remove('dark-mode');
+    console.log('🌙 Removing dark-mode class');
   }
+
+  console.log('🌙 Body classes after:', document.body.className);
+  console.log('🌙 Has dark-mode class:', document.body.classList.contains('dark-mode'));
 }
 
 
