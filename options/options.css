@@ -1400,6 +1400,56 @@ body.dark-mode select:focus-visible {
   opacity: 0.8;
 }
 
+/* Empty Repos Card */
+.empty-repos-card {
+  text-align: center;
+  padding: 48px 32px;
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+
+.empty-repos-icon {
+  margin-bottom: 20px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.empty-repos-card h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.empty-repos-card > p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-repos-tips {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.empty-repos-tips .tip-note {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  padding: 16px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  text-align: left;
+}
+
 .snoozed-repo-item {
   display: flex;
   align-items: center;

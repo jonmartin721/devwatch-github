@@ -1282,38 +1282,28 @@ function renderActivities() {
     if (!state.showArchive) emptyMessage = 'No new activity';
     if (state.searchQuery) emptyMessage = 'No matching activity';
 
-    // Check if user has 0 repositories
-    chrome.storage.sync.get(['repos'], async (result) => {
-      const repos = result.repos || [];
-      const hasZeroRepos = repos.length === 0;
+    // Always make "options" a link to add repos section
+    const optionsText = `<a href="#" id="optionsLink" class="options-link">options</a>`;
+    const fullMessage = `Go to ${optionsText} to watch more repositories.`;
 
-      const optionsText = hasZeroRepos
-        ? `<a href="#" id="optionsLink" class="options-link">options</a>`
-        : 'options';
+    list.innerHTML = `
+      <div class="empty-state">
+        <p>${emptyMessage}</p>
+        <small>${fullMessage}</small>
+      </div>
+    `;
 
-      const fullMessage = `Go to ${optionsText} to watch more repositories.`;
+    // Add click listener for options link
+    const optionsLink = document.getElementById('optionsLink');
+    if (optionsLink) {
+      optionsLink.addEventListener('click', async (e) => {
+        e.preventDefault();
 
-      list.innerHTML = `
-        <div class="empty-state">
-          <p>${emptyMessage}</p>
-          <small>${fullMessage}</small>
-        </div>
-      `;
-
-      // Add click listener for options link if it exists
-      if (hasZeroRepos) {
-        const optionsLink = document.getElementById('optionsLink');
-        if (optionsLink) {
-          optionsLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-
-            // Open options page with hash and query parameter
-            const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
-            await chrome.tabs.create({ url: optionsUrl });
-          });
-        }
-      }
-    });
+        // Open options page with hash and query parameter
+        const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
+        await chrome.tabs.create({ url: optionsUrl });
+      });
+    }
     return;
   }
 

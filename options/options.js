@@ -1200,10 +1200,40 @@ function renderRepoList() {
   const paginationControls = document.getElementById('paginationControls');
 
   if (state.watchedRepos.length === 0) {
-    list.innerHTML = '<p class="help-text">No repositories added yet</p>';
+    // Hide search and hide pinned buttons when there are no repos
+    const toggleSearchBtn = document.getElementById('toggleSearchBtn');
+    const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
+    if (toggleSearchBtn) toggleSearchBtn.style.display = 'none';
+    if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'none';
+
+    list.innerHTML = `
+      <div class="empty-repos-card">
+        <div class="empty-repos-icon">
+          <svg width="48" height="48" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/>
+          </svg>
+        </div>
+        <h3>No Repositories Yet</h3>
+        <p>You haven't added any repositories to watch. Use the <strong>Add</strong> button above to add repositories manually, or click <strong>Import from GitHub</strong> to import your starred, watched, or participating repositories.</p>
+        <div class="empty-repos-tips">
+          <p class="tip-note">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;">
+              <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.92 6.085h.001a.749.749 0 1 1-1.342-.67c.169-.339.436-.701.849-.977C6.845 4.16 7.369 4 8 4a2.756 2.756 0 0 1 1.637.525c.503.377.863.965.863 1.725 0 .448-.115.83-.329 1.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6.24 6.24 0 0 0-.26.16.952.952 0 0 0-.276.245.75.75 0 0 1-1.248-.832c.184-.264.42-.489.692-.661.103-.067.207-.132.313-.195l.007-.004c.1-.061.182-.11.258-.161a.969.969 0 0 0 .277-.245C8.96 6.514 9 6.427 9 6.25a.612.612 0 0 0-.262-.525A1.27 1.27 0 0 0 8 5.5c-.369 0-.595.09-.74.187a1.01 1.01 0 0 0-.34.398ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
+            </svg>
+            You can add repositories using owner/repo format (e.g., "facebook/react"), GitHub URLs, or npm package names.
+          </p>
+        </div>
+      </div>
+    `;
     paginationControls.style.display = 'none';
     return;
   }
+
+  // Show search and hide pinned buttons when there are repos
+  const toggleSearchBtn = document.getElementById('toggleSearchBtn');
+  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
+  if (toggleSearchBtn) toggleSearchBtn.style.display = 'flex';
+  if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'flex';
 
   const filteredRepos = getFilteredRepos();
 
