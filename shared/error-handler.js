@@ -177,7 +177,9 @@ export function showError(elementId, error, response = null, context = {}, durat
   element.innerHTML = `
     <div class="error-toast" id="${errorId}" role="alert" aria-live="assertive">
       <div class="error-summary" onclick="document.getElementById('${errorId}-details').classList.toggle('visible')">
-        <span class="error-icon">⚠️</span>
+        <svg class="error-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0114.082 15H1.918a1.75 1.75 0 01-1.543-2.575zm1.763.707a.25.25 0 00-.44 0L1.698 13.132a.25.25 0 00.22.368h12.164a.25.25 0 00.22-.368zm.53 3.996v2.5a.75.75 0 11-1.5 0v-2.5a.75.75 0 111.5 0zM9 11a1 1 0 11-2 0 1 1 0 012 0z"/>
+        </svg>
         <span class="error-brief">${userError.title}</span>
         <span class="error-expand">›</span>
       </div>

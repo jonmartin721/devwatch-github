@@ -52,6 +52,12 @@ class DOMOptimizer {
       ? this.createElementFromHTML(newContent)
       : newContent;
 
+    // Guard against null/undefined newElement
+    if (!newElement) {
+      console.warn('DOMOptimizer: newElement is null or undefined');
+      return;
+    }
+
     // Simple diff and patch implementation
     this.patchElement(this.container, newElement);
   }
@@ -89,13 +95,20 @@ class DOMOptimizer {
    * @param {HTMLElement} newElement - New DOM element
    */
   patchElement(currentElement, newElement) {
+    // Guard against null/undefined elements
+    if (!currentElement || !newElement) {
+      return;
+    }
+
     // If elements are the same type, update attributes and children
     if (currentElement.tagName === newElement.tagName) {
       this.updateAttributes(currentElement, newElement);
       this.updateChildren(currentElement, newElement);
     } else {
       // Replace entire element
-      currentElement.parentNode.replaceChild(newElement, currentElement);
+      if (currentElement.parentNode) {
+        currentElement.parentNode.replaceChild(newElement, currentElement);
+      }
     }
   }
 
@@ -105,17 +118,28 @@ class DOMOptimizer {
    * @param {HTMLElement} newElement - New element
    */
   updateAttributes(currentElement, newElement) {
+    // Guard against null/undefined elements
+    if (!currentElement || !newElement) {
+      return;
+    }
+
     // Remove attributes that are no longer present
-    for (const attr of currentElement.attributes) {
-      if (!newElement.hasAttribute(attr.name)) {
-        currentElement.removeAttribute(attr.name);
+    if (currentElement.attributes) {
+      for (let i = 0; i < currentElement.attributes.length; i++) {
+        const attr = currentElement.attributes[i];
+        if (attr && attr.name && !newElement.hasAttribute(attr.name)) {
+          currentElement.removeAttribute(attr.name);
+        }
       }
     }
 
     // Add or update attributes
-    for (const attr of newElement.attributes) {
-      if (currentElement.getAttribute(attr.name) !== attr.value) {
-        currentElement.setAttribute(attr.name, attr.value);
+    if (newElement.attributes) {
+      for (let i = 0; i < newElement.attributes.length; i++) {
+        const attr = newElement.attributes[i];
+        if (attr && attr.name && currentElement.getAttribute(attr.name) !== attr.value) {
+          currentElement.setAttribute(attr.name, attr.value);
+        }
       }
     }
 
@@ -131,12 +155,17 @@ class DOMOptimizer {
    * @param {HTMLElement} newElement - New element
    */
   updateChildren(currentElement, newElement) {
-    const currentChildren = Array.from(currentElement.childNodes);
-    const newChildren = Array.from(newElement.childNodes);
+    // Guard against null/undefined elements
+    if (!currentElement || !newElement) {
+      return;
+    }
+
+    const currentChildren = Array.from(currentElement.childNodes || []);
+    const newChildren = Array.from(newElement.childNodes || []);
 
     // Simple strategy: if child counts are very different, replace all
     if (Math.abs(currentChildren.length - newChildren.length) > 5) {
-      currentElement.innerHTML = newElement.innerHTML;
+      currentElement.innerHTML = newElement.innerHTML || '';
       return;
     }
 
@@ -148,13 +177,24 @@ class DOMOptimizer {
 
       if (!currentChild && newChild) {
         // Add new child
-        currentElement.appendChild(newChild.cloneNode(true));
+        const clonedChild = newChild.cloneNode(true);
+        if (clonedChild) {
+          currentElement.appendChild(clonedChild);
+        }
       } else if (currentChild && !newChild) {
         // Remove current child
-        currentElement.removeChild(currentChild);
+        try {
+          currentElement.removeChild(currentChild);
+        } catch (e) {
+          // Child might have already been removed
+          console.warn('Failed to remove child:', e);
+        }
       } else if (currentChild && newChild) {
         // Update existing child
-        this.patchElement(currentChild, newChild.cloneNode(true));
+        const clonedChild = newChild.cloneNode(true);
+        if (clonedChild) {
+          this.patchElement(currentChild, clonedChild);
+        }
       }
     }
   }
