@@ -121,8 +121,6 @@ export class OnboardingManager {
     }
 
     async getPopularRepos() {
-        console.log('🔍 [DEBUG] getPopularRepos() called');
-
         try {
             // Try to fetch trending repositories from GitHub API
             // Get stored token (if the user entered one) and include it to
@@ -133,17 +131,9 @@ export class OnboardingManager {
             // so that prefetching works even if chrome.storage.local hasn't
             // been updated yet by UI code that persists the token. Fallback
             // to chrome.storage.local to support tokens set outside onboarding.
-            console.log('🔍 [DEBUG] Fetching token data...');
             const tokenStep = await this.getStepData('token');
             const local = await chrome.storage.local.get(['githubToken']);
             const githubToken = tokenStep?.token || local?.githubToken;
-
-            console.log('🔍 [DEBUG] Token status:', {
-                hasTokenStep: !!tokenStep,
-                hasLocalToken: !!local?.githubToken,
-                tokenLength: githubToken ? githubToken.length : 0,
-                tokenPrefix: githubToken ? githubToken.substring(0, 7) + '...' : 'none'
-            });
 
             const headers = {
                 'Accept': 'application/vnd.github.v3+json'
@@ -151,14 +141,9 @@ export class OnboardingManager {
 
             if (githubToken) {
                 headers['Authorization'] = `token ${githubToken}`;
-                console.log('🔍 [DEBUG] Added Authorization header to request');
-            } else {
-                console.log('🔍 [DEBUG] No token available, making unauthenticated request');
             }
 
             const apiUrl = 'https://api.github.com/search/repositories?q=stars:1000..50000&sort=stars&order=desc&per_page=20';
-            console.log('🔍 [DEBUG] Making API call to:', apiUrl);
-            console.log('🔍 [DEBUG] Request headers:', Object.keys(headers));
 
             let response;
             let retryCount = 0;
@@ -193,14 +178,11 @@ export class OnboardingManager {
 
                     // Check if we got a successful response
                     if (response && response.ok) {
-                        console.log('🔍 [DEBUG] API response status:', response.status, response.statusText);
-                        console.log('🔍 [DEBUG] API response headers:', Object.fromEntries(response.headers.entries()));
                         break; // Success, exit retry loop
                     }
 
                     // Handle errors with the response
                     if (response) {
-                        console.log('🔍 [DEBUG] API response status:', response.status, response.statusText);
 
                         // Handle rate limiting (403)
                         if (response.status === 403) {
@@ -209,8 +191,6 @@ export class OnboardingManager {
                                 const resetTime = parseInt(rateLimitReset) * 1000;
                                 const currentTime = Date.now();
                                 const waitTime = Math.max(0, resetTime - currentTime);
-
-                                console.log('🔍 [DEBUG] Rate limited. Reset time:', new Date(resetTime), 'Wait:', waitTime);
 
                                 if (waitTime < 30000) { // Only wait if less than 30 seconds
                                     await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -222,12 +202,10 @@ export class OnboardingManager {
 
                         // For other HTTP errors, log and continue to retry
                         const errorText = await response.text();
-                        console.log('🔍 [DEBUG] HTTP error on attempt', retryCount + 1, ':', response.status, errorText);
 
                         // Retry logic for HTTP errors
                         if (retryCount < maxRetries - 1) {
                             const delay = baseDelay * Math.pow(2, retryCount);
-                            console.log('🔍 [DEBUG] Retrying in', delay, 'ms...');
                             await new Promise(resolve => setTimeout(resolve, delay));
                             retryCount++;
                             continue;
@@ -240,7 +218,6 @@ export class OnboardingManager {
                     // If we have no response (fetch failed), retry logic is in catch block
                     if (!response && retryCount < maxRetries - 1) {
                         const delay = baseDelay * Math.pow(2, retryCount);
-                        console.log('🔍 [DEBUG] No response, retrying in', delay, 'ms...');
                         await new Promise(resolve => setTimeout(resolve, delay));
                         retryCount++;
                         continue;
@@ -251,11 +228,8 @@ export class OnboardingManager {
                     }
 
                 } catch (fetchError) {
-                    console.log('🔍 [DEBUG] Fetch error on attempt', retryCount + 1, ':', fetchError);
-
                     if (retryCount < maxRetries - 1) {
                         const delay = baseDelay * Math.pow(2, retryCount);
-                        console.log('🔍 [DEBUG] Retrying fetch in', delay, 'ms...');
                         await new Promise(resolve => setTimeout(resolve, delay));
                         retryCount++;
                         continue;
@@ -271,29 +245,15 @@ export class OnboardingManager {
             }
 
             const data = await response.json();
-            console.log('🔍 [DEBUG] API response data keys:', Object.keys(data));
-            console.log('🔍 [DEBUG] Items count:', data.items?.length || 0);
-
             const repos = data.items || [];
-            console.log('🔍 [DEBUG] Fetched repos from GitHub API:', repos.length);
-
-            if (repos.length > 0) {
-                console.log('🔍 [DEBUG] Sample repo:', repos[0]);
-            }
 
             // Filter to get 4 diverse repositories
-            console.log('🔍 [DEBUG] Filtering repos...');
             const filteredRepos = this.getFilteredRepos(repos);
-            console.log('🔍 [DEBUG] Filtered repos count:', filteredRepos.length);
-
             const finalRepos = filteredRepos.slice(0, 3);
-            console.log('🔍 [DEBUG] Final repos to return:', finalRepos.length);
 
             return finalRepos;
 
         } catch (error) {
-            console.error('🔍 [DEBUG] Error in getPopularRepos():', error);
-            console.error('🔍 [DEBUG] Error stack:', error.stack);
             console.warn('Failed to fetch trending repos, using fallback:', error);
 
             // Fallback to static popular repos - diverse, well-maintained projects
@@ -328,14 +288,11 @@ export class OnboardingManager {
                 }
             ];
 
-            console.log('🔍 [DEBUG] Returning fallback repos:', fallbackRepos.length);
             return fallbackRepos;
         }
     }
 
     getFilteredRepos(repos) {
-        console.log('🔍 [DEBUG] getFilteredRepos() called with', repos.length, 'repos');
-
         // Filter out very large projects and aim for diversity
         const excludePatterns = [
             /github/i,  // GitHub itself
@@ -343,39 +300,24 @@ export class OnboardingManager {
             /android/i, // Very large OS projects
         ];
 
-        // Log the first few repos for debugging
-        console.log('🔍 [DEBUG] Sample repos before filtering:',
-            repos.slice(0, 3).map(r => ({
-                name: `${r.owner.login}/${r.name}`,
-                stars: r.stargazers_count,
-                language: r.language
-            }))
-        );
-
         const filtered = repos.filter(repo => {
             const fullName = `${repo.owner.login}/${repo.name}`.toLowerCase();
 
             // Exclude by patterns
             if (excludePatterns.some(pattern => pattern.test(fullName))) {
-                console.log('🔍 [DEBUG] Excluding by pattern:', fullName);
                 return false;
             }
 
             // Exclude extremely large projects (over 75k stars)
             if (repo.stargazers_count > 75000) {
-                console.log('🔍 [DEBUG] Excluding too many stars:', fullName, repo.stargazers_count);
                 return false;
             }
 
-            console.log('🔍 [DEBUG] Keeping repo:', fullName, repo.stargazers_count);
             return true;
         });
 
-        console.log('🔍 [DEBUG] Filtered repos count before shuffle:', filtered.length);
-
         // Shuffle for variety and take first 4
         const result = this.shuffleArray(filtered);
-        console.log('🔍 [DEBUG] Final filtered repos:', result.length);
 
         return result;
     }

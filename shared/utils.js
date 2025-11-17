@@ -7,23 +7,14 @@
  * @param {string} theme - 'light', 'dark', or 'system'
  */
 export function applyTheme(theme) {
-  console.log('🌙 applyTheme called with:', theme);
-  console.log('🌙 Body classes before:', document.body.className);
-
   if (theme === 'system') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.body.classList.toggle('dark-mode', prefersDark);
-    console.log('🌙 System preference dark:', prefersDark);
   } else if (theme === 'dark') {
     document.body.classList.add('dark-mode');
-    console.log('🌙 Adding dark-mode class');
   } else {
     document.body.classList.remove('dark-mode');
-    console.log('🌙 Removing dark-mode class');
   }
-
-  console.log('🌙 Body classes after:', document.body.className);
-  console.log('🌙 Has dark-mode class:', document.body.classList.contains('dark-mode'));
 }
 
 
@@ -89,41 +80,4 @@ export function formatDateVerbose(dateString) {
   return formatDate(dateString, { verbose: true });
 }
 
-/**
- * Show a status message with auto-hide
- * @param {string} elementId - ID of the message element
- * @param {string} text - Message text
- * @param {string} type - Message type ('success' or 'error')
- * @param {number} duration - Duration in ms (default: 3000)
- */
-export function showStatusMessage(elementId, text, type = 'success', duration = 3000) {
-  const message = document.getElementById(elementId);
-  if (!message) return;
-
-  message.textContent = text;
-  message.className = `status-message ${type} show`;
-
-  setTimeout(() => {
-    message.classList.remove('show');
-  }, duration);
-}
-
-/**
- * Extract repository name from string or object format
- * @param {string|Object} repo - Repository as string or object with fullName
- * @returns {string} Repository name
- */
-export function extractRepoName(repo) {
-  return typeof repo === 'string' ? repo : repo.fullName;
-}
-
-/**
- * Toggle visibility between two elements
- * @param {HTMLElement} showElement - Element to show
- * @param {HTMLElement} hideElement - Element to hide
- */
-export function toggleElementVisibility(showElement, hideElement) {
-  if (showElement) showElement.style.display = 'block';
-  if (hideElement) hideElement.style.display = 'none';
-}
 

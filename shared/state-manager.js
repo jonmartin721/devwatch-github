@@ -66,7 +66,6 @@ class StateManager {
       };
 
       this.initialized = true;
-      console.log('[StateManager] State initialized from storage');
     } catch (error) {
       console.error('[StateManager] Failed to initialize state:', error);
       throw error;
@@ -80,7 +79,6 @@ class StateManager {
    */
   getState(key) {
     if (!this.initialized) {
-      console.warn('[StateManager] getState called before initialization');
       return key ? undefined : {};
     }
     return key ? this.state[key] : { ...this.state };
@@ -98,7 +96,6 @@ class StateManager {
     const { persist = true, notify = true } = options;
 
     if (!this.initialized) {
-      console.warn('[StateManager] setState called before initialization');
       return;
     }
 

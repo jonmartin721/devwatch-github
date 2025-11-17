@@ -3,12 +3,23 @@
  */
 
 /**
+ * Check if running in Chrome extension context
+ * @returns {boolean} True if Chrome APIs are available
+ */
+function isChromeExtension() {
+  return typeof chrome !== 'undefined' && chrome.storage !== undefined;
+}
+
+/**
  * Get an item from chrome.storage.sync with Promise API
  * @param {string} key - Storage key
  * @param {*} defaultValue - Default value if key doesn't exist
  * @returns {Promise<*>} Stored value or default
  */
 export function getSyncItem(key, defaultValue = null) {
+  if (!isChromeExtension()) {
+    return Promise.resolve(defaultValue);
+  }
   return new Promise((resolve) => {
     chrome.storage.sync.get([key], (result) => {
       resolve(result[key] !== undefined ? result[key] : defaultValue);
@@ -23,6 +34,9 @@ export function getSyncItem(key, defaultValue = null) {
  * @returns {Promise<*>} Stored value or default
  */
 export function getLocalItem(key, defaultValue = null) {
+  if (!isChromeExtension()) {
+    return Promise.resolve(defaultValue);
+  }
   return new Promise((resolve) => {
     chrome.storage.local.get([key], (result) => {
       resolve(result[key] !== undefined ? result[key] : defaultValue);
@@ -36,6 +50,9 @@ export function getLocalItem(key, defaultValue = null) {
  * @returns {Promise<Object>} Object with all keys and values
  */
 export function getSyncItems(keys) {
+  if (!isChromeExtension()) {
+    return Promise.resolve({});
+  }
   return new Promise((resolve) => {
     chrome.storage.sync.get(keys, (result) => {
       resolve(result);
@@ -49,6 +66,9 @@ export function getSyncItems(keys) {
  * @returns {Promise<Object>} Object with all keys and values
  */
 export function getLocalItems(keys) {
+  if (!isChromeExtension()) {
+    return Promise.resolve({});
+  }
   return new Promise((resolve) => {
     chrome.storage.local.get(keys, (result) => {
       resolve(result);
@@ -63,6 +83,9 @@ export function getLocalItems(keys) {
  * @returns {Promise<void>}
  */
 export function setSyncItem(key, value) {
+  if (!isChromeExtension()) {
+    return Promise.resolve();
+  }
   return new Promise((resolve) => {
     chrome.storage.sync.set({ [key]: value }, resolve);
   });
@@ -75,6 +98,9 @@ export function setSyncItem(key, value) {
  * @returns {Promise<void>}
  */
 export function setLocalItem(key, value) {
+  if (!isChromeExtension()) {
+    return Promise.resolve();
+  }
   return new Promise((resolve) => {
     chrome.storage.local.set({ [key]: value }, resolve);
   });
