@@ -1,8 +1,174 @@
-import { applyTheme, showStatusMessage } from '../shared/utils.js';
+import { applyTheme, formatDateVerbose } from '../shared/utils.js';
 import { getSyncItem, getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { extractRepoName } from '../shared/repository-utils.js';
 import { createHeaders } from '../shared/github-api.js';
-import { STAR_ICON, LINK_ICON, BELL_ICON, BELL_SLASH_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
+import { STAR_ICON, LINK_ICON, createSvg, getMuteIcon, getPinIcon } from '../shared/icons.js';
 import { escapeHtml } from '../shared/sanitize.js';
+import { safelyOpenUrl } from '../shared/security.js';
+import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
+import { validateRepository } from '../shared/repository-validator.js';
+
+/**
+ * Toast Notification System
+ */
+class ToastManager {
+  constructor() {
+    this.container = null;
+    this.toasts = new Map();
+    this.toastCounter = 0;
+  }
+
+  init() {
+    this.container = document.getElementById('toastContainer');
+    if (!this.container) {
+      console.warn('Toast container not found');
+    }
+  }
+
+  show(message, type = 'info', options = {}) {
+    if (!this.container) {
+      console.warn('Toast container not initialized');
+      return;
+    }
+
+    const {
+      duration = type === 'error' ? 8000 : 5000,
+      persistent = false,
+      action = null
+    } = options;
+
+    const toastId = ++this.toastCounter;
+    const toast = this.createToast(toastId, message, type, action);
+
+    this.container.appendChild(toast);
+    this.toasts.set(toastId, { element: toast, timeout: null });
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
+    // Set up auto-remove
+    if (!persistent && duration > 0) {
+      this.setupAutoRemove(toastId, duration);
+    }
+
+    return toastId;
+  }
+
+  createToast(id, message, type, action) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.dataset.toastId = id;
+
+    const icon = this.getIcon(type);
+
+    let toastHTML = `
+      <div class="toast-icon">${icon}</div>
+      <div class="toast-message">${escapeHtml(message)}</div>
+      <button class="toast-close" aria-label="Close toast">✕</button>
+      <div class="toast-progress"></div>
+    `;
+
+    if (action) {
+      const actionButton = `<button class="toast-action" data-action="${action.id}">${escapeHtml(action.text)}</button>`;
+      toastHTML = toastHTML.replace('</div><button class="toast-close">', `</div>${actionButton}<button class="toast-close">`);
+    }
+
+    toast.innerHTML = toastHTML;
+
+    // Add event listeners
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => this.remove(id));
+
+    const actionBtn = toast.querySelector('.toast-action');
+    if (actionBtn && action) {
+      actionBtn.addEventListener('click', () => {
+        action.handler();
+        this.remove(id);
+      });
+    }
+
+    return toast;
+  }
+
+  getIcon(type) {
+    const icons = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ℹ'
+    };
+    return icons[type] || icons.info;
+  }
+
+  setupAutoRemove(id, duration) {
+    const progressBar = document.querySelector(`[data-toast-id="${id}"] .toast-progress`);
+    if (progressBar) {
+      progressBar.style.transition = `width ${duration}ms linear`;
+      requestAnimationFrame(() => {
+        progressBar.style.width = '0%';
+      });
+    }
+
+    const timeout = setTimeout(() => {
+      this.remove(id);
+    }, duration);
+
+    const toastData = this.toasts.get(id);
+    if (toastData) {
+      toastData.timeout = timeout;
+    }
+  }
+
+  remove(id) {
+    const toastData = this.toasts.get(id);
+    if (!toastData) return;
+
+    const { element, timeout } = toastData;
+
+    // Clear timeout if exists
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    // Add removing animation
+    element.classList.add('removing');
+
+    // Remove after animation
+    setTimeout(() => {
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      this.toasts.delete(id);
+    }, 300);
+  }
+
+  // Convenience methods
+  success(message, options) {
+    return this.show(message, 'success', options);
+  }
+
+  error(message, options) {
+    return this.show(message, 'error', options);
+  }
+
+  warning(message, options) {
+    return this.show(message, 'warning', options);
+  }
+
+  info(message, options) {
+    return this.show(message, 'info', options);
+  }
+
+  // Clear all toasts
+  clear() {
+    this.toasts.forEach((_, id) => this.remove(id));
+  }
+}
+
+// Global toast manager instance
+const toastManager = new ToastManager();
 
 const state = {
   watchedRepos: [],
@@ -16,6 +182,9 @@ const state = {
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize toast manager first
+    toastManager.init();
+
     await loadSettings();
     setupEventListeners();
     setupThemeListener();
@@ -133,6 +302,9 @@ function setupEventListeners() {
     document.getElementById('tokenStatus').textContent = 'Checking...';
     document.getElementById('tokenStatus').className = 'token-status checking';
 
+    // Mark that this is a manual token entry for toast purposes
+    toastManager.isManualTokenEntry = true;
+
     tokenValidationTimeout = setTimeout(async () => {
       await validateToken(token);
       // Auto-save token after validation
@@ -148,7 +320,14 @@ function setupEventListeners() {
       const theme = e.target.value;
       await chrome.storage.sync.set({ theme });
       applyTheme(theme);
-      showMessage('Theme updated', 'success');
+
+      // Show toast notification
+      const themeNames = {
+        'light': 'Light Mode',
+        'dark': 'Dark Mode',
+        'system': 'System Theme'
+      };
+      toastManager.info(`Theme changed to ${themeNames[theme] || theme}`);
     });
   });
 
@@ -165,7 +344,8 @@ function setupEventListeners() {
         interval: interval
       });
 
-      showMessage('Check interval updated', 'success');
+      // Show toast notification
+      toastManager.info(`Check interval changed to ${interval} minutes`);
     });
   });
 
@@ -174,7 +354,9 @@ function setupEventListeners() {
     radio.addEventListener('change', async (e) => {
       const snoozeHours = parseInt(e.target.value);
       await chrome.storage.sync.set({ snoozeHours });
-      showMessage('Snooze duration updated', 'success');
+
+      // Show toast notification
+      toastManager.info(`Default snooze duration changed to ${snoozeHours} hour${snoozeHours > 1 ? 's' : ''}`);
     });
   });
 
@@ -192,7 +374,6 @@ function setupEventListeners() {
         // If trying to enable notifications but category is disabled, disable the notification
         if (target.checked && !filterToggle.checked) {
           target.checked = false;
-          showMessage(`Enable "Show in feed" for ${category} first`, 'error');
           return;
         }
       }
@@ -221,7 +402,6 @@ function setupEventListeners() {
       };
       await chrome.storage.sync.set({ filters, notifications });
       updateNotificationToggleStates();
-      showMessage('Settings updated', 'success');
     });
   });
 
@@ -286,6 +466,15 @@ function togglePanel(type) {
       addBtn.classList.add('active');
       searchPanel.classList.remove('show');
       searchBtn.classList.remove('active');
+
+      // Clear search text when switching from search to add mode
+      if (isSearchVisible) {
+        const searchInput = document.getElementById('repoSearch');
+        searchInput.value = '';
+        state.searchQuery = '';
+        renderRepoList(); // Re-render without search filter
+      }
+
       // Focus on input after animation
       setTimeout(() => {
         document.getElementById('repoInput').focus();
@@ -361,14 +550,20 @@ async function clearToken() {
   document.getElementById('clearTokenBtn').style.display = 'none';
 
   // Disable repo input when token is cleared
-  document.getElementById('repoInput').disabled = true;
+  const repoInput = document.getElementById('repoInput');
+  repoInput.disabled = true;
+  repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
   document.getElementById('addRepoBtn').disabled = true;
+  document.getElementById('repoHelpText').textContent = 'Add a valid GitHub token above to start adding repositories';
 
   // Hide import section when token is cleared
   document.getElementById('importReposSection').style.display = 'none';
 
   // Clear token from secure storage
   await clearStoredToken();
+
+  // Show success toast
+  toastManager.info('GitHub token cleared successfully');
 }
 
 async function validateToken(token) {
@@ -386,34 +581,67 @@ async function validateToken(token) {
       document.getElementById('clearTokenBtn').style.display = 'block';
 
       // Enable repo input when token is valid
-      document.getElementById('repoInput').disabled = false;
+      const repoInput = document.getElementById('repoInput');
+      repoInput.disabled = false;
+      repoInput.placeholder = 'e.g., react, facebook/react, or GitHub URL';
       document.getElementById('addRepoBtn').disabled = false;
       document.getElementById('repoHelpText').textContent = 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)';
 
       // Show import section when token is valid
       document.getElementById('importReposSection').style.display = 'block';
+
+      // Show success toast for valid token (only when user manually enters a new token)
+      // Don't show toast on page load or automatic validation
+      if (!toastManager.lastValidToken || toastManager.lastValidToken !== token) {
+        // Only show toast if this was a manual token entry (not on page load)
+        if (toastManager.isManualTokenEntry) {
+          toastManager.success(`GitHub token validated successfully for user: ${user.login}`);
+        }
+        toastManager.lastValidToken = token;
+      }
+
+      // Reset the manual entry flag
+      toastManager.isManualTokenEntry = false;
     } else if (response.status === 401) {
       statusEl.textContent = '✗ Invalid token';
       statusEl.className = 'token-status invalid';
       document.getElementById('clearTokenBtn').style.display = 'none';
 
       // Disable repo input when token is invalid
-      document.getElementById('repoInput').disabled = true;
+      const repoInput = document.getElementById('repoInput');
+      repoInput.disabled = true;
+      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
       document.getElementById('addRepoBtn').disabled = true;
+      document.getElementById('repoHelpText').textContent = 'Invalid token. Please check your GitHub token and try again.';
 
       // Hide import section when token is invalid
       document.getElementById('importReposSection').style.display = 'none';
+
+      // Show error toast for invalid token (only show once, not on every keystroke)
+      if (!toastManager.lastInvalidToken || toastManager.lastInvalidToken !== token) {
+        toastManager.error('Invalid GitHub token. Please check your token and try again.');
+        toastManager.lastInvalidToken = token;
+      }
     } else {
       statusEl.textContent = `✗ Error (${response.status})`;
       statusEl.className = 'token-status invalid';
       document.getElementById('clearTokenBtn').style.display = 'none';
 
       // Disable repo input on error
-      document.getElementById('repoInput').disabled = true;
+      const repoInput = document.getElementById('repoInput');
+      repoInput.disabled = true;
+      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
       document.getElementById('addRepoBtn').disabled = true;
+      document.getElementById('repoHelpText').textContent = 'GitHub API error. Please try again later.';
 
       // Hide import section on error
       document.getElementById('importReposSection').style.display = 'none';
+
+      // Show error toast for API errors
+      if (!toastManager.lastApiError || toastManager.lastApiError !== response.status) {
+        toastManager.error(`GitHub API error (${response.status}). Please try again later.`);
+        toastManager.lastApiError = response.status;
+      }
     }
   } catch (error) {
     statusEl.textContent = '✗ Network error';
@@ -421,11 +649,17 @@ async function validateToken(token) {
     document.getElementById('clearTokenBtn').style.display = 'none';
 
     // Disable repo input on network error
-    document.getElementById('repoInput').disabled = true;
+    const repoInput = document.getElementById('repoInput');
+    repoInput.disabled = true;
+    repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
     document.getElementById('addRepoBtn').disabled = true;
+    document.getElementById('repoHelpText').textContent = 'Network error. Please check your connection and try again.';
 
     // Hide import section on network error
     document.getElementById('importReposSection').style.display = 'none';
+
+    // Show network error toast
+    toastManager.error('Network error while validating token. Please check your connection and try again.');
   }
 }
 
@@ -456,6 +690,14 @@ async function loadSettings() {
       document.getElementById('clearTokenBtn').style.display = 'block';
       // Validate existing token
       validateToken(githubToken);
+    } else {
+      // No token - set appropriate placeholder and help text
+      const repoInput = document.getElementById('repoInput');
+      repoInput.disabled = true;
+      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
+      document.getElementById('addRepoBtn').disabled = true;
+      document.getElementById('repoHelpText').textContent = 'Add a valid GitHub token above to start adding repositories';
+      document.getElementById('importReposSection').style.display = 'none';
     }
 
     state.watchedRepos = settings.watchedRepos || [];
@@ -507,7 +749,7 @@ async function loadSettings() {
     // Load and display current snoozes
     renderSnoozedRepos(snoozeSettings.snoozedRepos || []);
   } catch (error) {
-    showMessage('Error loading settings', 'error');
+    console.error('Error loading settings:', error);
   }
 }
 
@@ -566,9 +808,9 @@ async function addRepo() {
     return;
   }
 
-  // Check if we've hit the 50 repo limit
-  if (state.watchedRepos.length >= 50) {
-    showRepoError('Maximum of 50 repositories allowed');
+  // Check if we've hit the maximum repo limit
+  if (state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
+    showRepoError(`Maximum of ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repositories allowed`);
     statusEl.className = 'repo-validation-status error';
     return;
   }
@@ -595,8 +837,8 @@ async function addRepo() {
     }
   }
 
-  // Validate owner/repo format
-  if (!repo.match(/^[\w-]+\/[\w-]+$/)) {
+  // Validate owner/repo format using the same pattern as the validator
+  if (!VALIDATION_PATTERNS.REPOSITORY_NAME.test(repo)) {
     showRepoError('Invalid format. Use: owner/repo, GitHub URL, or npm package');
     statusEl.className = 'repo-validation-status error';
     return;
@@ -609,35 +851,61 @@ async function addRepo() {
   }
 
   // Validate repo exists on GitHub and fetch metadata
-  const validationResult = await validateRepo(repo);
+  let validationResult;
+  try {
+    validationResult = await validateRepo(repo);
+  } catch (error) {
+    console.error('Validation error:', error);
+    showRepoError(`Validation error: ${error.message}`);
+    statusEl.className = 'repo-validation-status error';
+    return;
+  }
+
+  if (!validationResult) {
+    showRepoError('Validation returned no result');
+    statusEl.className = 'repo-validation-status error';
+    return;
+  }
 
   if (!validationResult.valid) {
-    showRepoError(validationResult.error);
+      showRepoError(validationResult.error || 'Repository validation failed');
     statusEl.className = 'repo-validation-status error';
     return;
   }
 
   // Check if already added (by fullName)
-  if (state.watchedRepos.some(r => (typeof r === 'string' ? r : r.fullName) === validationResult.metadata.fullName)) {
+  const alreadyExists = state.watchedRepos.some(r => (typeof r === 'string' ? r : r.fullName) === validationResult.fullName);
+
+  if (alreadyExists) {
     showRepoError('Repository already added');
     statusEl.className = 'repo-validation-status error';
     return;
   }
-
   // Show success indicator
   statusEl.className = 'repo-validation-status success';
 
-  state.watchedRepos.push(validationResult.metadata);
+  try {
+    state.watchedRepos.push(validationResult);
 
-  // Reset to last page to show the newly added repo
-  const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
-  state.currentPage = totalPages;
+    // Reset to last page to show the newly added repo
+    const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
+    state.currentPage = totalPages;
 
-  renderRepoList();
+    renderRepoList();
 
-  // Auto-save
-  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
-  showRepoMessage('Repository added', 'success');
+    // Auto-save
+    await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+
+    // Show success toast
+    toastManager.success(`Successfully added ${validationResult.fullName} to watched repositories`);
+  } catch (error) {
+    console.error('Error adding repository:', error);
+    showRepoError('Failed to add repository. Please try again.');
+    statusEl.className = 'repo-validation-status error';
+    // Remove the repo that was added to state if saving failed
+    state.watchedRepos.pop();
+    return;
+  }
 
   // Clear input and success indicator after brief delay
   setTimeout(() => {
@@ -683,9 +951,13 @@ function showRepoError(message) {
   const statusEl = document.getElementById('repoValidationStatus');
   const errorEl = document.getElementById('repoError');
 
+  // Show visual error indication
   input.classList.add('error');
   statusEl.className = 'repo-validation-status error';
   errorEl.textContent = message;
+
+  // Show toast notification
+  toastManager.error(message);
 
   // Remove error class after animation
   setTimeout(() => {
@@ -693,57 +965,89 @@ function showRepoError(message) {
   }, 500);
 }
 
+/**
+ * Validates a GitHub repository using simplified validation logic
+ *
+ * This function provides streamlined validation that focuses on:
+ * - Quick format validation using regex patterns
+ * - Single API call to verify repository existence
+ * - Essential metadata extraction for UI display
+ * - Proper error handling with user-friendly messages
+ *
+ * @param {string} repo - Repository identifier in format "owner/repo"
+ * @returns {Promise<Object|null>} Repository data if valid, null if invalid
+ *
+ * @example
+ * // Valid repository
+ * const repo = await validateRepo('microsoft/vscode');
+ * // Returns: { fullName: 'microsoft/vscode', stars: 140000, ... }
+ *
+ * // Invalid repository
+ * const invalid = await validateRepo('invalid/repo');
+ * // Returns: null
+ */
 async function validateRepo(repo) {
+  const githubToken = await getToken();
+
+  if (!githubToken) {
+    return { valid: false, error: 'No GitHub token found. Please add a token first.' };
+  }
+
+  // First do basic validation
+  const basicResult = await validateRepository(repo, githubToken);
+
+  if (!basicResult.valid) {
+    return basicResult;
+  }
+
   try {
-    const githubToken = await getSyncItem('githubToken');
-    const headers = githubToken ? createHeaders(githubToken) : {
-      'Accept': 'application/vnd.github.v3+json'
-    };
+    // Try to fetch latest release for additional metadata
+    const headers = createHeaders(githubToken);
+    const releasesResponse = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers });
 
-    const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
-
-    if (response.ok) {
-      const data = await response.json();
-
-      // Fetch latest release
-      let latestRelease = null;
-      try {
-        const releaseResponse = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers });
-        if (releaseResponse.ok) {
-          const releaseData = await releaseResponse.json();
-          latestRelease = {
-            version: releaseData.tag_name,
-            publishedAt: releaseData.published_at
-          };
-        }
-      } catch (e) {
-        // No releases or error fetching - that's ok
-      }
-
-      return {
-        valid: true,
-        metadata: {
-          fullName: data.full_name,
-          description: data.description || 'No description provided',
-          language: data.language || 'Unknown',
-          stars: data.stargazers_count,
-          forks: data.forks_count,
-          updatedAt: data.updated_at,
-          latestRelease,
-          addedAt: new Date().toISOString()
-        }
+    let latestRelease = null;
+    if (releasesResponse.ok) {
+      const releaseData = await releasesResponse.json();
+      latestRelease = {
+        version: releaseData.tag_name,
+        publishedAt: releaseData.published_at
       };
-    } else if (response.status === 404) {
-      return { valid: false, error: `Repository "${repo}" not found` };
-    } else if (response.status === 403) {
-      return { valid: false, error: 'Rate limit exceeded' };
-    } else if (response.status === 401) {
-      return { valid: false, error: 'Invalid token' };
-    } else {
-      return { valid: false, error: `Error (${response.status})` };
     }
+    // If no releases, that's ok - latestRelease stays null
+
+    // Return the enhanced result
+    return {
+      valid: true,
+      metadata: {
+        ...basicResult.metadata,
+        latestRelease
+      },
+      // Legacy compatibility fields
+      name: basicResult.metadata.name,
+      fullName: basicResult.metadata.fullName,
+      description: basicResult.metadata.description,
+      language: basicResult.metadata.language,
+      stars: basicResult.metadata.stars,
+      forks: basicResult.metadata.forks,
+      updatedAt: basicResult.metadata.updatedAt
+    };
   } catch (error) {
-    return { valid: false, error: 'Network error' };
+    // If release fetch fails, return basic validation result
+    return {
+      valid: true,
+      metadata: {
+        ...basicResult.metadata,
+        latestRelease: null
+      },
+      // Legacy compatibility fields
+      name: basicResult.metadata.name,
+      fullName: basicResult.metadata.fullName,
+      description: basicResult.metadata.description,
+      language: basicResult.metadata.language,
+      stars: basicResult.metadata.stars,
+      forks: basicResult.metadata.forks,
+      updatedAt: basicResult.metadata.updatedAt
+    };
   }
 }
 
@@ -764,10 +1068,11 @@ async function removeRepo(repoFullName) {
   // Auto-save
   await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
 
+  // Show success toast
+  toastManager.success(`Removed ${repoFullName} from watched repositories`);
+
   // Clean up notifications and activities for the removed repository
   await cleanupRepoNotifications(repoFullName);
-
-  showRepoMessage('Repository removed', 'success');
 }
 
 async function cleanupRepoNotifications(repoFullName) {
@@ -789,8 +1094,7 @@ async function cleanupRepoNotifications(repoFullName) {
     await setLocalItem('activities', updatedActivities);
     await setLocalItem('readItems', updatedReadItems);
 
-    console.log(`[DevWatch] Cleaned up ${removedActivityIds.length} notifications for removed repository: ${repoFullName}`);
-  } catch (error) {
+    } catch (error) {
     console.error(`[DevWatch] Error cleaning up notifications for ${repoFullName}:`, error);
     // Don't show an error message to the user since this is cleanup logic
     // The repo removal was successful even if cleanup failed
@@ -803,7 +1107,7 @@ function getFilteredRepos() {
   // Filter out pinned repos if hide pinned is enabled
   if (state.hidePinnedRepos) {
     repos = repos.filter(repo => {
-      const fullName = typeof repo === 'string' ? repo : repo.fullName;
+      const fullName = extractRepoName(repo);
       return !state.pinnedRepos.includes(fullName);
     });
   }
@@ -814,7 +1118,7 @@ function getFilteredRepos() {
   }
 
   return repos.filter(repo => {
-    const fullName = typeof repo === 'string' ? repo : repo.fullName;
+    const fullName = extractRepoName(repo);
     const description = typeof repo === 'string' ? '' : repo.description;
     const language = typeof repo === 'string' ? '' : repo.language;
 
@@ -833,20 +1137,6 @@ function formatNumber(num) {
   return num.toString();
 }
 
-// Local formatDate for options page (different from popup's formatDate)
-function formatDateLocal(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  return `${Math.floor(diffDays / 365)} years ago`;
-}
 
 function renderRepoList() {
   const list = document.getElementById('repoList');
@@ -948,7 +1238,7 @@ function renderRepoList() {
             <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(stars)}</span>
             ${sanitizedLanguage ? `<span class="meta-item">${sanitizedLanguage}</span>` : ''}
             ${latestRelease ? `<span class="meta-item">Latest: ${sanitizedReleaseVersion}</span>` : ''}
-            <span class="meta-item">Updated ${formatDateLocal(updatedAt)}</span>
+            <span class="meta-item">Updated ${formatDateVerbose(updatedAt)}</span>
           </div>
         </div>
         <div class="repo-actions">
@@ -989,10 +1279,10 @@ function renderRepoList() {
   });
 
   list.querySelectorAll('.link-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const repo = btn.dataset.repo;
-      window.open(`https://github.com/${repo}`, '_blank');
+      await safelyOpenUrl(`https://github.com/${repo}`);
     });
   });
 }
@@ -1011,7 +1301,13 @@ async function toggleMuteRepo(repoFullName, mute) {
   // Auto-save and re-render
   await chrome.storage.sync.set({ mutedRepos: state.mutedRepos });
   renderRepoList();
-  showRepoMessage(mute ? 'Repository muted' : 'Repository unmuted', 'success');
+
+  // Show toast notification
+  if (mute) {
+    toastManager.info(`Muted notifications for ${repoFullName}`);
+  } else {
+    toastManager.info(`Unmuted notifications for ${repoFullName}`);
+  }
 }
 
 async function trackRepoUnmuted(repoFullName) {
@@ -1034,8 +1330,7 @@ async function trackRepoUnmuted(repoFullName) {
     }
 
     await chrome.storage.sync.set({ unmutedRepos });
-    console.log(`[DevWatch] Tracked unmute timestamp for ${repoFullName}`);
-  } catch (error) {
+      } catch (error) {
     console.error(`[DevWatch] Error tracking unmute for ${repoFullName}:`, error);
     // Don't show error to user - this is enhancement functionality
   }
@@ -1053,16 +1348,15 @@ async function togglePinRepo(repoFullName, pin) {
   // Auto-save and re-render
   await chrome.storage.sync.set({ pinnedRepos: state.pinnedRepos });
   renderRepoList();
-  showRepoMessage(pin ? 'Repository pinned' : 'Repository unpinned', 'success');
+
+  // Show toast notification
+  if (pin) {
+    toastManager.info(`Pinned ${repoFullName} to the top`);
+  } else {
+    toastManager.info(`Unpinned ${repoFullName}`);
+  }
 }
 
-function showMessage(text, type) {
-  showStatusMessage('statusMessage', text, type);
-}
-
-function showRepoMessage(text, type) {
-  showStatusMessage('repoStatusMessage', text, type);
-}
 
 // Import repositories functionality
 let importModalState = {
@@ -1111,7 +1405,6 @@ function setupModalFocusTrap(modal) {
 async function openImportModal(type) {
   const token = await getToken();
   if (!token) {
-    showRepoMessage('Please add a GitHub token first', 'error');
     return;
   }
 
@@ -1290,7 +1583,7 @@ function renderImportReposList() {
           <div class="repo-meta">
             <span class="meta-item">${createSvg(STAR_ICON, 16, 16, 'star-icon')}${formatNumber(repo.stars)}</span>
             ${sanitizedLanguage && sanitizedLanguage !== 'Unknown' ? `<span class="meta-item">${sanitizedLanguage}</span>` : ''}
-            <span class="meta-item">Updated ${formatDateLocal(repo.updatedAt)}</span>
+            <span class="meta-item">Updated ${formatDateVerbose(repo.updatedAt)}</span>
           </div>
         </div>
         ${isDisabled ? '<div class="repo-actions"><span class="already-added-badge">Already added</span></div>' : ''}
@@ -1365,9 +1658,8 @@ async function importSelectedRepos() {
   // Re-render repo list
   renderRepoList();
 
-  // Close modal and show success message
+  // Close modal
   closeImportModal();
-  showRepoMessage(`Successfully imported ${reposToImport.length} ${reposToImport.length === 1 ? 'repository' : 'repositories'}`, 'success');
 }
 
 // Export settings to JSON file
@@ -1407,10 +1699,11 @@ async function exportSettings() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showMessage('Settings exported successfully', 'success');
+    // Show success toast
+    toastManager.success('Settings exported successfully');
   } catch (error) {
     console.error('Export error:', error);
-    showMessage('Failed to export settings', 'error');
+    toastManager.error('Failed to export settings');
   }
 }
 
@@ -1435,6 +1728,7 @@ async function handleImportFile(event) {
 
     if (!confirmed) {
       event.target.value = ''; // Reset file input
+      toastManager.info('Import cancelled');
       return;
     }
 
@@ -1463,7 +1757,8 @@ async function handleImportFile(event) {
     // Reload settings to update UI
     await loadSettings();
 
-    showMessage('Settings imported successfully! Reloading page...', 'success');
+    // Show success toast before reload
+    toastManager.success('Settings imported successfully - reloading page...');
 
     // Reload page after short delay
     setTimeout(() => {
@@ -1472,7 +1767,7 @@ async function handleImportFile(event) {
 
   } catch (error) {
     console.error('Import error:', error);
-    showMessage('Failed to import settings. Please check the file format.', 'error');
+    toastManager.error('Failed to import settings: ' + error.message);
   } finally {
     // Reset file input
     event.target.value = '';
@@ -1498,7 +1793,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderRepoList,
     migrateRepoFormat,
     formatNumber,
-    formatDate: formatDateLocal,  // Export local version for tests
+    formatDate: formatDateVerbose,  // Export verbose formatter for tests
     exportSettings,
     handleImportFile
   };
@@ -1507,7 +1802,6 @@ if (typeof module !== 'undefined' && module.exports) {
 // Snooze management functions
 function renderSnoozedRepos(snoozedRepos) {
   const container = document.getElementById('snoozedReposList');
-  const emptyState = document.getElementById('emptySnoozes');
 
   // Filter out expired snoozes
   const now = Date.now();
@@ -1593,9 +1887,12 @@ async function unsnoozeRepo(repo) {
     // Re-render the snoozed repos list
     renderSnoozedRepos(snoozedRepos);
 
-    showStatusMessage(`${repo} has been unsnoozed`, 'success');
+    // Show success toast
+    toastManager.info(`Unsnoozed ${repo} - notifications will resume`);
+
   } catch (error) {
-    showStatusMessage(`Error unsnoozing ${repo}: ${error.message}`, 'error');
+    console.error(`Error unsnoozing ${repo}:`, error);
+    toastManager.error(`Failed to unsnooze ${repo}`);
   }
 }
 
@@ -1615,13 +1912,12 @@ export {
   validateRepo,
   removeRepo,
   cleanupRepoNotifications,
-  toggleMuteRepo,
   trackRepoUnmuted,
   getFilteredRepos,
   renderRepoList,
   migrateRepoFormat,
   formatNumber,
-  formatDateLocal as formatDate,  // Export local version for tests
+  formatDateVerbose as formatDate,  // Export verbose formatter for tests
   exportSettings,
   handleImportFile
 };

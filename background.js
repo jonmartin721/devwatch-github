@@ -1,6 +1,6 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getToken } from './shared/storage-helpers.js';
-import { extractRepoName } from './shared/utils.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getToken, getFilteringSettings } from './shared/storage-helpers.js';
+import { extractRepoName } from './shared/repository-utils.js';
 import { safelyOpenUrl } from './shared/security.js';
 
 const ALARM_NAME = 'checkGitHub';
@@ -80,7 +80,6 @@ async function checkGitHubActivity() {
       'unmutedRepos'
     ]);
 
-    console.log('[DevWatch] Token present:', !!githubToken);
     console.log('[DevWatch] Watched repos:', watchedRepos?.length || 0);
 
     if (!githubToken) {
@@ -162,69 +161,112 @@ async function fetchRepoActivity(repo, token, since, filters) {
   const headers = createHeaders(token);
 
   async function fetchWithRateLimit(url) {
-    const response = await fetch(url, { headers });
+    try {
+      const response = await fetch(url, { headers });
 
-    // Track rate limits
-    const remaining = response.headers.get('X-RateLimit-Remaining');
-    const limit = response.headers.get('X-RateLimit-Limit');
-    const reset = response.headers.get('X-RateLimit-Reset');
+      // Track rate limits
+      const remaining = response.headers.get('X-RateLimit-Remaining');
+      const limit = response.headers.get('X-RateLimit-Limit');
+      const reset = response.headers.get('X-RateLimit-Reset');
 
-    if (remaining && limit) {
-      await setLocalItem('rateLimit', {
-        remaining: parseInt(remaining),
-        limit: parseInt(limit),
-        reset: parseInt(reset) * 1000
-      });
+      if (remaining && limit) {
+        await setLocalItem('rateLimit', {
+          remaining: parseInt(remaining),
+          limit: parseInt(limit),
+          reset: parseInt(reset) * 1000
+        });
+      }
+
+      handleApiResponse(response, repo);
+      return response;
+    } catch (fetchError) {
+      console.error(`Network error fetching ${url}:`, fetchError.message);
+      throw new Error(`Network error: ${fetchError.message}`);
     }
+  }
 
-    handleApiResponse(response, repo);
-    return response;
+  async function fetchAndProcessActivities(url, activityType, dateField) {
+    try {
+      const response = await fetchWithRateLimit(url);
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Validate that we received an array
+      if (!Array.isArray(data)) {
+        console.warn(`Expected array from ${url}, received:`, typeof data);
+        return [];
+      }
+
+      // Process activities with proper error handling
+      const newActivities = filterActivitiesByDate(data, since, dateField);
+      return newActivities.map(item => mapActivity(item, activityType, repo));
+
+    } catch (error) {
+      console.error(`Error fetching ${activityType} for ${repo}:`, error.message);
+      // Don't throw - continue with other activity types
+      return [];
+    }
   }
 
   try {
-    // Fetch PRs
+    // Fetch PRs with individual error handling
     if (filters.prs) {
-      const prsResponse = await fetchWithRateLimit(
-        `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc`
-      );
-
-      const prs = await prsResponse.json();
-      const newPrs = filterActivitiesByDate(prs, since, 'created_at');
-      activities.push(...newPrs.map(pr => mapActivity(pr, 'pr', repo)));
+      const prsUrl = `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc`;
+      const prActivities = await fetchAndProcessActivities(prsUrl, 'pr', 'created_at');
+      activities.push(...prActivities);
     }
 
-    // Fetch Issues
+    // Fetch Issues with individual error handling
     if (filters.issues) {
-      const issuesResponse = await fetchWithRateLimit(
-        `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc`
-      );
+      const issuesUrl = `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc`;
+      const response = await fetchWithRateLimit(issuesUrl);
 
-      const issues = await issuesResponse.json();
-      const newIssues = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) > since);
-      activities.push(...newIssues.map(issue => mapActivity(issue, 'issue', repo)));
+      if (response.ok) {
+        const issuesData = await response.json();
+
+        if (Array.isArray(issuesData)) {
+          // Filter out pull requests and filter by date
+          const issuesOnly = issuesData.filter(issue => !issue.pull_request);
+          const newIssues = filterActivitiesByDate(issuesOnly, since, 'created_at');
+          activities.push(...newIssues.map(issue => mapActivity(issue, 'issue', repo)));
+        }
+      }
     }
 
-    // Fetch Releases
+    // Fetch Releases with individual error handling
     if (filters.releases) {
-      const releasesResponse = await fetchWithRateLimit(
-        `https://api.github.com/repos/${repo}/releases`
-      );
-
-      const releases = await releasesResponse.json();
-      const newReleases = filterActivitiesByDate(releases, since, 'published_at');
-      activities.push(...newReleases.map(release => mapActivity(release, 'release', repo)));
+      const releasesUrl = `https://api.github.com/repos/${repo}/releases`;
+      const releaseActivities = await fetchAndProcessActivities(releasesUrl, 'release', 'published_at');
+      activities.push(...releaseActivities);
     }
+
   } catch (error) {
-    console.error(`Error fetching activity for ${repo}:`, error.message);
+    console.error(`Critical error in fetchRepoActivity for ${repo}:`, error.message);
+
+    // Store error for user display but don't crash
+    let userMessage = 'Unable to fetch repository activity';
+    if (error.message.includes('401')) {
+      userMessage = 'Authentication failed. Please check your GitHub token.';
+    } else if (error.message.includes('403')) {
+      userMessage = 'Access denied or rate limit exceeded.';
+    } else if (error.message.includes('404')) {
+      userMessage = 'Repository not found or access denied.';
+    } else if (error.message.includes('Network error')) {
+      userMessage = 'Network connection error. Please check your internet connection.';
+    }
+
     await setLocalItem('lastError', {
-      message: error.message,
+      message: userMessage,
       repo,
-      timestamp: Date.now(),
-      // Store response status if available for better error handling
-      status: error.response?.status,
-      statusText: error.response?.statusText
+      timestamp: Date.now()
     });
-    throw error;
+
+    // Return empty activities array instead of throwing
+    return [];
   }
 
   return activities;
@@ -261,7 +303,7 @@ async function cleanupOldUnmutedEntries(unmutedRepos) {
 
 async function storeActivities(newActivities) {
   const { activities = [] } = await getLocalItems(['activities']);
-  const { mutedRepos = [], snoozedRepos = [] } = await getSyncItems(['mutedRepos', 'snoozedRepos']);
+  const { mutedRepos, snoozedRepos } = await getFilteringSettings();
 
   // Clean up expired snoozes
   const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);

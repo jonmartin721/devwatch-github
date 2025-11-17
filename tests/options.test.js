@@ -34,7 +34,6 @@ import {
   fetchGitHubRepoFromNpm,
   validateRepo,
   cleanupRepoNotifications,
-  toggleMuteRepo,
   trackRepoUnmuted,
   formatNumber,
   formatDate
@@ -155,6 +154,18 @@ describe('Options Page - Repository Management', () => {
   });
 
   describe('validateRepo', () => {
+    beforeEach(() => {
+      // Mock token storage for validateRepo tests
+      chrome.storage.sync.get.mockImplementation((keys, callback) => {
+        if (keys.includes('githubToken')) {
+          const result = { githubToken: 'test-token' };
+          if (callback) callback(result);
+          return Promise.resolve(result);
+        }
+        return Promise.resolve({});
+      });
+    });
+
     test('validates existing repository and fetches metadata', async () => {
 
       // Mock repo API response
@@ -237,13 +248,19 @@ describe('Options Page - Repository Management', () => {
 
       fetch.mockResolvedValueOnce({
         ok: false,
-        status: 403
+        status: 403,
+        headers: {
+          get: jest.fn().mockImplementation((header) => {
+            if (header === 'X-RateLimit-Remaining') return '0';
+            return null;
+          })
+        }
       });
 
       const result = await validateRepo('some/repo');
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Rate limit exceeded');
+      expect(result.error).toContain('GitHub rate limit exceeded');
     });
 
     test('handles 401 invalid token', async () => {
@@ -256,7 +273,7 @@ describe('Options Page - Repository Management', () => {
       const result = await validateRepo('some/repo');
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Invalid token');
+      expect(result.error).toContain('Authentication failed');
     });
 
     test('provides default values for missing metadata', async () => {

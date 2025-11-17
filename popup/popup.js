@@ -1,5 +1,6 @@
 import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
-import { getSyncItem } from '../shared/storage-helpers.js';
+import { getSyncItem, getFilteringSettings } from '../shared/storage-helpers.js';
+import { getExcludedRepos } from '../shared/storage-helpers.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
 import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
 import { safelyOpenUrl } from '../shared/security.js';
@@ -12,21 +13,47 @@ import {
   cacheForOffline,
   showCachedActivities
 } from '../shared/offline-manager.js';
+import { stateManager, useState, setState, subscribe } from '../shared/state-manager.js';
+import { ActivityListRenderer } from '../shared/dom-optimizer.js';
 
-let currentFilter = 'all';
-let allActivities = [];
-let readItems = [];
-let showArchive = false;
-let searchQuery = '';
+// Legacy global variables for compatibility (will be phased out)
 let collapsedRepos = new Set();
 let pinnedRepos = [];
 
+// Optimized DOM renderer
+let activityRenderer = null;
+
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    loadActivities();
-    setupEventListeners();
-    setupKeyboardNavigation();
-    setupOfflineHandlers();
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // Initialize state manager first
+      await stateManager.initialize();
+
+      // Initialize optimized DOM renderer
+      const activityList = document.getElementById('activityList');
+      if (activityList) {
+        activityRenderer = new ActivityListRenderer(activityList);
+      }
+
+      // Setup state change subscription
+      subscribe((currentState, previousState) => {
+        // Re-render activities when relevant state changes
+        const relevantKeys = ['allActivities', 'currentFilter', 'searchQuery', 'showArchive', 'readItems'];
+        const hasRelevantChanges = relevantKeys.some(key => currentState[key] !== previousState[key]);
+
+        if (hasRelevantChanges) {
+          renderActivities();
+        }
+      });
+
+      loadActivities();
+      setupEventListeners();
+      setupKeyboardNavigation();
+      setupOfflineHandlers();
+    } catch (error) {
+      console.error('Failed to initialize popup:', error);
+      showError('errorMessage', 'Failed to load extension data');
+    }
   });
 }
 
@@ -46,16 +73,14 @@ function setupEventListeners() {
 
   // Search input
   document.getElementById('searchInput').addEventListener('input', (e) => {
-    searchQuery = e.target.value.toLowerCase();
-    renderActivities();
+    setState({ searchQuery: e.target.value.toLowerCase() });
   });
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
-      currentFilter = e.target.dataset.type;
-      renderActivities();
+      setState({ currentFilter: e.target.dataset.type });
     });
   });
 
@@ -129,21 +154,21 @@ async function loadActivities() {
     try {
       const cachedActivities = await getCachedData('activities_cache');
       const cachedReadItems = await getCachedData('readItems_cache');
-      const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos']);
+      const { mutedRepos, snoozedRepos } = await getFilteringSettings();
 
       if (cachedActivities) {
-        // Filter out muted and snoozed repos
-        const mutedRepos = settings.mutedRepos || [];
-        const snoozedRepos = settings.snoozedRepos || [];
-        const now = Date.now();
-        const activeSnoozedRepos = snoozedRepos.filter(s => s.expiresAt > now).map(s => s.repo);
-        const excludedRepos = new Set([...mutedRepos, ...activeSnoozedRepos]);
+        // Filter out muted and snoozed repos using shared utilities
+        const excludedRepos = getExcludedRepos(mutedRepos, snoozedRepos);
+        const filteredActivities = cachedActivities.filter(a => !excludedRepos.has(a.repo));
 
-        allActivities = cachedActivities.filter(a => !excludedRepos.has(a.repo));
-        readItems = cachedReadItems || [];
+        // Update state with cached data
+        await setState({
+          allActivities: filteredActivities,
+          readItems: cachedReadItems || []
+        }, { persist: false }); // Don't persist cached data to storage
 
         // Show cached indicator
-        showCachedActivities(allActivities);
+        showCachedActivities(filteredActivities);
         renderActivities();
         return;
       } else {
@@ -172,25 +197,25 @@ async function loadActivities() {
 
   try {
     const data = await chrome.storage.local.get(['activities', 'readItems', 'rateLimit', 'lastError', 'collapsedRepos']);
-    const settings = await chrome.storage.sync.get(['mutedRepos', 'snoozedRepos', 'pinnedRepos']);
+    const settings = await getFilteringSettings();
+    pinnedRepos = await getSyncItem('pinnedRepos', []);
 
     // Load collapsed state
     collapsedRepos = new Set(data.collapsedRepos || []);
-    pinnedRepos = settings.pinnedRepos || [];
 
-    // Filter out muted and snoozed repos
-    const mutedRepos = settings.mutedRepos || [];
-    const snoozedRepos = settings.snoozedRepos || [];
-    const now = Date.now();
-    const activeSnoozedRepos = snoozedRepos.filter(s => s.expiresAt > now).map(s => s.repo);
-    const excludedRepos = new Set([...mutedRepos, ...activeSnoozedRepos]);
+    // Filter out muted and snoozed repos using shared utilities
+    const excludedRepos = getExcludedRepos(settings.mutedRepos, settings.snoozedRepos);
+    const filteredActivities = (data.activities || []).filter(a => !excludedRepos.has(a.repo));
 
-    allActivities = (data.activities || []).filter(a => !excludedRepos.has(a.repo));
-    readItems = data.readItems || [];
+    // Update state manager with loaded data
+    await setState({
+      allActivities: filteredActivities,
+      readItems: data.readItems || []
+    });
 
     // Cache the loaded data for offline use
-    await cacheForOffline('activities_cache', allActivities, 3600000); // 1 hour
-    await cacheForOffline('readItems_cache', readItems, 3600000);
+    await cacheForOffline('activities_cache', filteredActivities, 3600000); // 1 hour
+    await cacheForOffline('readItems_cache', data.readItems || [], 3600000);
 
     renderActivities();
     updateRateLimit(data.rateLimit);
@@ -243,61 +268,76 @@ function showStoredError(lastError) {
     return;
   }
 
-  // Create a mock response object if we have status info
-  let mockResponse = null;
-  if (lastError.status) {
-    mockResponse = {
-      status: lastError.status,
-      statusText: lastError.statusText || ''
-    };
-  }
-
-  // Use the enhanced error notification system
+  // Use the enhanced error notification system with sanitized error message
   const error = new Error(lastError.message);
   const context = lastError.repo ? { repo: lastError.repo } : {};
-  showError('errorMessage', error, mockResponse, context, 10000);
+  showError('errorMessage', error, null, context, 10000);
 }
 
+// Renders the filtered activity list using ActivityListRenderer for efficient DOM updates
 function renderActivities() {
   const list = document.getElementById('activityList');
-
-  let filtered = allActivities;
-
-  // Filter by type
-  if (currentFilter !== 'all') {
-    filtered = filtered.filter(a => a.type === currentFilter);
-  }
-
-  // Filter by archive (show/hide read items)
-  if (!showArchive) {
-    filtered = filtered.filter(a => !readItems.includes(a.id));
-  }
-
-  // Filter by search query
-  if (searchQuery) {
-    filtered = filtered.filter(a =>
-      a.title.toLowerCase().includes(searchQuery) ||
-      a.repo.toLowerCase().includes(searchQuery) ||
-      a.author.toLowerCase().includes(searchQuery)
-    );
-  }
+  const state = useState();
+  const filtered = stateManager.getFilteredActivities();
 
   if (filtered.length === 0) {
-    let emptyMessage = 'No activity';
-    if (!showArchive) emptyMessage = 'No unread activity';
-    if (searchQuery) emptyMessage = 'No matches found';
+    let emptyMessage = 'No recent activity';
+    if (!state.showArchive) emptyMessage = 'No new activity';
+    if (state.searchQuery) emptyMessage = 'No matching activity';
 
     list.innerHTML = `
       <div class="empty-state">
         <p>${emptyMessage}</p>
-        <small>Check your settings to add repositories</small>
+        <small>Go to options to watch more repositories</small>
       </div>
     `;
     return;
   }
 
-  const unreadCount = filtered.filter(a => !readItems.includes(a.id)).length;
-  const repoCount = Object.keys(groupByRepo(filtered)).length;
+  // Use optimized renderer if available, fallback to legacy rendering
+  if (activityRenderer) {
+    const unreadCount = filtered.filter(a => !state.readItems.includes(a.id)).length;
+    const repoCount = new Set(filtered.map(a => a.repo)).size;
+
+    // Render with optimized renderer
+    activityRenderer.render(filtered, {
+      groupByRepo: true,
+      maxItems: 50
+    });
+
+    // Add header with action buttons
+    const header = `
+      <div class="list-header">
+        <span>${unreadCount > 0 ? `${unreadCount} unread` : ''}</span>
+        <div class="header-actions">
+          ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">Collapse all</button>` : ''}
+          ${unreadCount > 0 ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    // Prepend header to the container
+    const existingHeader = list.querySelector('.list-header');
+    if (!existingHeader) {
+      list.insertAdjacentHTML('afterbegin', header);
+    }
+
+    // Event listeners are already attached in the DOM generation
+    return;
+  }
+
+  // Fallback to legacy rendering if renderer not available
+  legacyRenderActivities(filtered, state);
+}
+
+/**
+ * Legacy rendering function as fallback
+ */
+function legacyRenderActivities(filtered, state) {
+  const list = document.getElementById('activityList');
+
+  const unreadCount = filtered.filter(a => !state.readItems.includes(a.id)).length;
+  const repoCount = new Set(filtered.map(a => a.repo)).size;
   const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
 
   const header = `
@@ -318,7 +358,7 @@ function renderActivities() {
   // Render each repo group
   Object.keys(grouped).forEach(repo => {
     const activities = grouped[repo];
-    const repoUnreadCount = activities.filter(a => !readItems.includes(a.id)).length;
+    const repoUnreadCount = activities.filter(a => !state.readItems.includes(a.id)).length;
     const isCollapsed = collapsedRepos.has(repo);
     const isPinned = pinnedRepos.includes(repo);
 
@@ -432,7 +472,7 @@ function toggleSearch() {
   } else {
     searchBox.style.display = 'none';
     searchBtn.classList.remove('active');
-    searchQuery = '';
+    setState({ searchQuery: '' });
     searchInput.value = '';
     renderActivities();
   }
@@ -440,13 +480,15 @@ function toggleSearch() {
 
 function toggleArchive() {
   const archiveBtn = document.getElementById('archiveBtn');
-  showArchive = !showArchive;
-  archiveBtn.classList.toggle('active', showArchive);
+  const currentState = useState().showArchive;
+  setState({ showArchive: !currentState });
+  archiveBtn.classList.toggle('active', !currentState);
   renderActivities();
 }
 
 function renderActivityItem(activity) {
-  const isRead = readItems.includes(activity.id);
+  const state = useState();
+  const isRead = state.readItems.includes(activity.id);
 
   // Sanitize all user-generated content to prevent XSS
   const sanitizedTitle = escapeHtml(activity.title);
@@ -584,15 +626,18 @@ async function snoozeRepo(repo) {
 }
 
 async function toggleReadState(id) {
-  const isRead = readItems.includes(id);
+  const state = useState();
+  const isRead = state.readItems.includes(id);
   const action = isRead ? 'markAsUnread' : 'markAsRead';
 
   try {
     await chrome.runtime.sendMessage({ action, id });
     if (isRead) {
-      readItems = readItems.filter(item => item !== id);
+      const newReadItems = state.readItems.filter(item => item !== id);
+      setState({ readItems: newReadItems });
     } else {
-      readItems.push(id);
+      const newReadItems = [...state.readItems, id];
+      setState({ readItems: newReadItems });
     }
     renderActivities();
   } catch (error) {
@@ -601,11 +646,13 @@ async function toggleReadState(id) {
 }
 
 async function markAsRead(id) {
-  if (readItems.includes(id)) return;
+  const state = useState();
+  if (state.readItems.includes(id)) return;
 
   try {
     await chrome.runtime.sendMessage({ action: 'markAsRead', id });
-    readItems.push(id);
+    const newReadItems = [...state.readItems, id];
+    setState({ readItems: newReadItems });
   } catch (error) {
     showError('errorMessage', error, null, { action: 'mark as read' }, 3000);
   }
@@ -614,7 +661,9 @@ async function markAsRead(id) {
 async function handleMarkAllRead() {
   try {
     await chrome.runtime.sendMessage({ action: 'markAllAsRead' });
-    readItems = allActivities.map(a => a.id);
+    const state = useState();
+    const newReadItems = state.allActivities.map(a => a.id);
+    setState({ readItems: newReadItems });
     renderActivities();
   } catch (error) {
     showError('errorMessage', error, null, { action: 'mark all as read' }, 3000);
@@ -622,7 +671,8 @@ async function handleMarkAllRead() {
 }
 
 async function handleCollapseAll() {
-  const grouped = groupByRepo(allActivities);
+  const state = useState();
+  const grouped = groupByRepo(state.allActivities);
   const allRepos = Object.keys(grouped);
   const allCollapsed = collapsedRepos.size === allRepos.length;
 

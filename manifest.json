@@ -32,6 +32,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.github.com https://registry.npmjs.org; img-src 'self' https: data:; default-src 'self'; style-src 'self' 'unsafe-inline'"
   }
 }

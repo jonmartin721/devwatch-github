@@ -123,18 +123,18 @@ Your privacy and security are top priorities:
 - **API-Only Communication** - The extension only communicates with GitHub's official API
 - **No Third Parties** - No data is sent to external servers or analytics services
 - **Minimal Permissions** - Token is used exclusively for fetching repository activity
-- **Open Source** - Full transparency - you can review the entire codebase
+- **Open Source** - Full transparency - you can review the entire codebase and suggest changes, and raise/fix issues if you see them
 
 ## 📊 Rate Limiting
-
-GitHub's API has generous rate limits that this extension respects:
+GitHub's API has very relaxed rate limits that this extension benefits from and optimizes for:
 
 - **5,000 requests/hour** for authenticated users (compared to 60 for unauthenticated)
 - **Default interval**: 15 minutes (well within rate limits)
 - **Efficient checking**: Each repo typically uses 1-3 API requests per check
 - **Smart batching**: Groups requests to minimize API usage
 
-You can safely monitor dozens of repositories without approaching GitHub's limits.
+You can safely monitor dozens of repositories without approaching GitHub's limits. 
+We do limit the maximum number of repositories to 50 to make sure you don't reach that limit however.
 
 ## 🛠️ Development
 
@@ -173,7 +173,7 @@ npm test
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are very welcome! Please feel free to submit issues or pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### How to Contribute
 - **Bug Reports**: Use GitHub Issues with clear reproduction steps
@@ -190,7 +190,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests. S
 
 ## 🗺️ Roadmap
 
-Future features being considered:
+Future features being considered (that you could help with!):
 - **Comment notifications** - Track new comments on issues and PRs
 - **Mention tracking** - Get notified when you're mentioned
 - **Multiple GitHub accounts** - Switch between different accounts
@@ -209,7 +209,6 @@ Copyright (c) 2025 Jonathan Martin
 
 - **Report issues**: [GitHub Issues](https://github.com/jonmartin721/devwatch-github/issues)
 - **Feature requests**: [GitHub Discussions](https://github.com/jonmartin721/devwatch-github/discussions)
-- **View source**: [GitHub Repository](https://github.com/jonmartin721/devwatch-github)
 
 ---
 
@@ -217,6 +216,6 @@ Copyright (c) 2025 Jonathan Martin
 
 **Built with ❤️ for developers who want to stay productive**
 
-[⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if it helps you stay on top of your GitHub activity!
+[⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if it helps you in any way!
 
 </div>

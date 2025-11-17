@@ -163,8 +163,8 @@ describe('Background Service Worker', () => {
         headers: { get: () => null }
       });
 
-      await expect(fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters))
-        .rejects.toThrow('Invalid GitHub token');
+      const result = await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
+      expect(result).toEqual([]);
     });
 
     test('handles 403 rate limit exceeded', async () => {
@@ -176,8 +176,8 @@ describe('Background Service Worker', () => {
         headers: { get: () => null }
       });
 
-      await expect(fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters))
-        .rejects.toThrow('Rate limit exceeded');
+      const result = await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
+      expect(result).toEqual([]);
     });
 
     test('handles 404 repository not found', async () => {
@@ -189,8 +189,8 @@ describe('Background Service Worker', () => {
         headers: { get: () => null }
       });
 
-      await expect(fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters))
-        .rejects.toThrow(`Repository ${mockRepo} not found`);
+      const result = await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
+      expect(result).toEqual([]);
     });
 
     test('tracks rate limit headers', async () => {
