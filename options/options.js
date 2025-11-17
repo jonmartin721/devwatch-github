@@ -16,6 +16,8 @@ class ToastManager {
     this.container = null;
     this.toasts = new Map();
     this.toastCounter = 0;
+    this.lastValidToken = null;
+    this.isManualTokenEntry = false;
   }
 
   init() {
@@ -188,6 +190,9 @@ if (typeof document !== 'undefined') {
     await loadSettings();
     setupEventListeners();
     setupThemeListener();
+
+    // Handle URL parameters for enhanced navigation
+    handleUrlParameters();
   });
 }
 
@@ -200,6 +205,36 @@ function setupThemeListener() {
       applyTheme(theme);
     }
   });
+}
+
+function handleUrlParameters() {
+  // Check for URL parameters to enhance user experience
+  const urlParams = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+
+  // Handle showAdd parameter to open Add repository panel
+  if (urlParams.get('showAdd') === 'true') {
+    // Wait a bit for DOM to be fully ready
+    setTimeout(() => {
+      const toggleAddBtn = document.getElementById('toggleAddBtn');
+      if (toggleAddBtn && !toggleAddBtn.classList.contains('active')) {
+        toggleAddBtn.click();
+      }
+    }, 100);
+  }
+
+  // Handle hash navigation to scroll to specific section
+  if (hash) {
+    setTimeout(() => {
+      // Extract just the hash part without query parameters
+      const hashParts = hash.split('?');
+      const cleanHash = hashParts[0];
+      const targetSection = document.querySelector(cleanHash);
+      if (targetSection) {
+        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 200);
+  }
 }
 
 function setupEventListeners() {
@@ -600,7 +635,7 @@ async function validateToken(token) {
         toastManager.lastValidToken = token;
       }
 
-      // Reset the manual entry flag
+      // Reset the manual entry flag after showing toast
       toastManager.isManualTokenEntry = false;
     } else if (response.status === 401) {
       statusEl.textContent = '✗ Invalid token';

@@ -391,6 +391,49 @@ h1 {
   color: var(--text-primary);
 }
 
+.repo-pin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.repo-pin-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.repo-pin-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.repo-pin-btn.pinned {
+  color: var(--accent-color);
+}
+
+.repo-pin-btn.pinned:hover {
+  color: var(--accent-color);
+  filter: brightness(1.2);
+}
+
+.options-link {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.options-link:hover {
+  text-decoration: underline;
+  color: var(--link-hover-color);
+}
+
 .repo-activities {
   max-height: 10000px;
   overflow: hidden;

@@ -1,7 +1,7 @@
 import { applyTheme, formatDate, toggleElementVisibility } from '../shared/utils.js';
 import { getSyncItem, getFilteringSettings } from '../shared/storage-helpers.js';
 import { getExcludedRepos } from '../shared/storage-helpers.js';
-import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, createSvg } from '../shared/icons.js';
+import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, getPinIcon, createSvg } from '../shared/icons.js';
 import { escapeHtml, sanitizeImageUrl } from '../shared/sanitize.js';
 import { safelyOpenUrl } from '../shared/security.js';
 import { showError, clearError } from '../shared/error-handler.js';
@@ -285,12 +285,38 @@ function renderActivities() {
     if (!state.showArchive) emptyMessage = 'No new activity';
     if (state.searchQuery) emptyMessage = 'No matching activity';
 
-    list.innerHTML = `
-      <div class="empty-state">
-        <p>${emptyMessage}</p>
-        <small>Go to options to watch more repositories</small>
-      </div>
-    `;
+    // Check if user has 0 repositories
+    chrome.storage.sync.get(['repos'], async (result) => {
+      const repos = result.repos || [];
+      const hasZeroRepos = repos.length === 0;
+
+      const optionsText = hasZeroRepos
+        ? `<a href="#" id="optionsLink" class="options-link">options</a>`
+        : 'options';
+
+      const fullMessage = `Go to ${optionsText} to watch more repositories`;
+
+      list.innerHTML = `
+        <div class="empty-state">
+          <p>${emptyMessage}</p>
+          <small>${fullMessage}</small>
+        </div>
+      `;
+
+      // Add click listener for options link if it exists
+      if (hasZeroRepos) {
+        const optionsLink = document.getElementById('optionsLink');
+        if (optionsLink) {
+          optionsLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            // Open options page with hash and query parameter
+            const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
+            await chrome.tabs.create({ url: optionsUrl });
+          });
+        }
+      }
+    });
     return;
   }
 
@@ -371,6 +397,9 @@ function legacyRenderActivities(filtered, state) {
           <span class="repo-group-name">${repo}</span>
         </div>
         <div class="repo-group-actions">
+          <button class="repo-pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${repo}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} ${repo} repository">
+            ${getPinIcon(isPinned)}
+          </button>
           ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
           <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository" aria-label="Snooze ${repo} repository">
             ${createSvg(SNOOZE_ICON, 14, 14)}
@@ -409,6 +438,15 @@ function legacyRenderActivities(filtered, state) {
       e.stopPropagation();
       const repo = btn.dataset.repo;
       toggleRepoCollapse(repo);
+    });
+  });
+
+  // Pin button listeners
+  list.querySelectorAll('.repo-pin-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      togglePinRepo(repo);
     });
   });
 
@@ -595,6 +633,28 @@ async function toggleRepoCollapse(repo) {
 
   // Re-render
   renderActivities();
+}
+
+async function togglePinRepo(repo) {
+  try {
+    const isCurrentlyPinned = pinnedRepos.includes(repo);
+
+    if (isCurrentlyPinned) {
+      // Unpin the repo
+      pinnedRepos = pinnedRepos.filter(r => r !== repo);
+    } else {
+      // Pin the repo
+      pinnedRepos.push(repo);
+    }
+
+    // Save to storage
+    await chrome.storage.sync.set({ pinnedRepos });
+
+    // Re-render activities to show updated pin state
+    renderActivities();
+  } catch (error) {
+    showError('errorMessage', error, null, { action: 'toggle pin repository', repo }, 3000);
+  }
 }
 
 async function snoozeRepo(repo) {
@@ -818,6 +878,7 @@ if (typeof module !== 'undefined' && module.exports) {
     groupByTime,
     groupByRepo,
     toggleRepoCollapse,
+    togglePinRepo,
     snoozeRepo,
     toggleDarkMode,
     updateDarkModeIcon,
@@ -840,6 +901,7 @@ export {
   groupByTime,
   groupByRepo,
   toggleRepoCollapse,
+  togglePinRepo,
   snoozeRepo,
   toggleDarkMode,
   updateDarkModeIcon,
