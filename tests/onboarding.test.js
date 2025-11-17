@@ -40,8 +40,11 @@ global.chrome = {
 };
 
 // Import functions we need from popup
-let handleNextStep;
 import { OnboardingManager } from '../shared/onboarding.js';
+import { handleNextStep, renderReposStep } from '../popup/views/onboarding-view.js';
+
+let _handleNextStep;
+let _renderReposStep;
 
 describe('Onboarding - token persistence', () => {
   beforeEach(async () => {
@@ -61,7 +64,9 @@ describe('Onboarding - token persistence', () => {
     document.body.innerHTML = '';
     // Reload modules to reset module-level onboardingManager cache
     jest.resetModules();
-    ({ handleNextStep } = await import('../popup/popup.js'));
+    const module = await import('../popup/views/onboarding-view.js');
+    _handleNextStep = module.handleNextStep;
+    _renderReposStep = module.renderReposStep;
   });
 
   test('preserves validated flag when saving token and navigating next', async () => {
@@ -80,7 +85,7 @@ describe('Onboarding - token persistence', () => {
     expect(dataBefore.username).toBe('alice');
 
     // Call handleNextStep which should preserve existing validated info
-    await handleNextStep();
+    await _handleNextStep();
 
     // Read what's saved
     const result = await new Promise((resolve) => {
@@ -164,9 +169,8 @@ describe('Onboarding - token persistence', () => {
     // Create minimal DOM so renderReposStep can return HTML safely
     document.body.innerHTML = '<div id="onboardingView"></div>';
 
-    // Import renderReposStep dynamically from popup to avoid test ordering issues
-    const { renderReposStep } = await import('../popup/popup.js');
-    const html = await renderReposStep();
+    // Use renderReposStep from onboarding-view
+    const html = await _renderReposStep();
 
     expect(html).toContain('alice/fancy');
 
@@ -198,7 +202,7 @@ describe('Onboarding - token persistence', () => {
     `;
 
     // Call the function that handles saving for categories
-    await handleNextStep();
+    await _handleNextStep();
 
     // Poll storage for categories to avoid race with other tests that might
     // call rendering or on-boarding state changes. Retry until present.

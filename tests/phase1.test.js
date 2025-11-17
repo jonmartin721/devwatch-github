@@ -55,11 +55,9 @@ jest.mock('../shared/storage-helpers.js', () => ({
   __esModule: true
 }));
 
-// Import functions from popup.js
-import {
-  groupByTime,
-  updateRateLimit
-} from '../popup/popup.js';
+// Import functions from popup modules
+import { groupByTime } from '../popup/views/activity-item-view.js';
+import { updateRateLimit } from '../popup/controllers/activity-controller.js';
 
 // Import error handling utilities
 import { showError } from '../shared/error-handler.js';
@@ -92,12 +90,6 @@ describe('Dark Mode', () => {
     applyTheme('system');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     expect(document.body.classList.contains('dark-mode')).toBe(prefersDark);
-  });
-
-  test.skip('updates dark mode icon - needs mock refactoring', () => {
-    // Skip this test for now - the dark mode icon functionality
-    // now depends on async storage operations which require different mocking
-    // The functionality works in practice, just needs test refactoring
   });
 });
 

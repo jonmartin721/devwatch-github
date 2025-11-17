@@ -29,12 +29,16 @@ global.chrome = {
 // Mock fetch
 global.fetch = jest.fn();
 
+// Import functions from npm-api.js
+import { fetchGitHubRepoFromNpm } from '../shared/api/npm-api.js';
+
+// Import functions from repository-controller.js
+import { trackRepoUnmuted } from '../options/controllers/repository-controller.js';
+
 // Import functions from options.js
 import {
-  fetchGitHubRepoFromNpm,
   validateRepo,
   cleanupRepoNotifications,
-  trackRepoUnmuted,
   formatNumber,
   formatDate
 } from '../options/options.js';
