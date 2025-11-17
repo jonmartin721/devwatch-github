@@ -42,6 +42,15 @@ describe('Storage Helpers', () => {
           set: jest.fn((items, callback) => {
             Object.assign(mockSyncStorage, items);
             if (callback) callback();
+          }),
+          remove: jest.fn((keys) => {
+            return new Promise((resolve) => {
+              const keyArray = Array.isArray(keys) ? keys : [keys];
+              keyArray.forEach(key => {
+                delete mockSyncStorage[key];
+              });
+              resolve();
+            });
           })
         },
         local: {
@@ -58,6 +67,15 @@ describe('Storage Helpers', () => {
           set: jest.fn((items, callback) => {
             Object.assign(mockLocalStorage, items);
             if (callback) callback();
+          }),
+          remove: jest.fn((keys) => {
+            return new Promise((resolve) => {
+              const keyArray = Array.isArray(keys) ? keys : [keys];
+              keyArray.forEach(key => {
+                delete mockLocalStorage[key];
+              });
+              resolve();
+            });
           })
         }
       }
@@ -346,8 +364,8 @@ describe('Storage Helpers', () => {
       expect(result).toBe('sync-token-456');
       // Should be copied to local storage
       expect(mockLocalStorage.githubToken).toBe('sync-token-456');
-      // Should be cleared from sync storage
-      expect(mockSyncStorage.githubToken).toBe('');
+      // Should be removed from sync storage
+      expect(mockSyncStorage.githubToken).toBeUndefined();
     });
 
     it('should return null if no token exists', async () => {
@@ -384,12 +402,12 @@ describe('Storage Helpers', () => {
       expect(mockLocalStorage.githubToken).toBe('new-token-789');
     });
 
-    it('should clear token from sync storage', async () => {
+    it('should remove token from sync storage', async () => {
       mockSyncStorage.githubToken = 'old-sync-token';
 
       await setToken('new-token-789');
 
-      expect(mockSyncStorage.githubToken).toBe('');
+      expect(mockSyncStorage.githubToken).toBeUndefined();
     });
 
     it('should overwrite existing local token', async () => {

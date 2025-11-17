@@ -230,7 +230,9 @@ function legacyRenderActivities(
 
   list.querySelectorAll('.activity-item').forEach(item => {
     const content = item.querySelector('.activity-content');
-    content.addEventListener('click', async () => {
+
+    // Shared handler for opening activity
+    const handleOpen = async () => {
       const id = item.dataset.id;
       const url = item.dataset.url;
       markAsRead(id);
@@ -239,6 +241,18 @@ function legacyRenderActivities(
       const opened = await safelyOpenUrl(url);
       if (!opened) {
         showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
+      }
+    };
+
+    // Click handler for content
+    content.addEventListener('click', handleOpen);
+
+    // Keyboard handler for the entire item (role="button")
+    item.addEventListener('keydown', (e) => {
+      // Activate on Enter or Space key
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleOpen();
       }
     });
 

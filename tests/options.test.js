@@ -11,6 +11,9 @@ global.chrome = {
       set: jest.fn((items, callback) => {
         // Always call callback if provided
         if (callback) callback();
+      }),
+      remove: jest.fn((keys) => {
+        return Promise.resolve();
       })
     },
     local: {
@@ -21,6 +24,9 @@ global.chrome = {
       set: jest.fn((items, callback) => {
         // Always call callback if provided
         if (callback) callback();
+      }),
+      remove: jest.fn((keys) => {
+        return Promise.resolve();
       })
     }
   }

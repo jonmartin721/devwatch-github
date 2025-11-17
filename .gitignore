@@ -14,3 +14,14 @@ CLAUDE.md
 notes.md
 todo.txt
 ROADMAP.md
+
+# AI assistant directories
+.claude/
+.cursor/
+.aider/
+.codeium/
+.copilot/
+.qwen/
+.gemini/
+.windsurf/
+.continue/

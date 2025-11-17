@@ -19,6 +19,13 @@ function getFocusableElements(container) {
 }
 
 function handleModalFocusTrap(e) {
+  // Allow closing modal with Escape key
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeImportModal();
+    return;
+  }
+
   if (e.key !== 'Tab') return;
 
   const modal = document.getElementById('importModal');

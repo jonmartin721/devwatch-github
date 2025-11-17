@@ -121,6 +121,33 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 - **Theme**: Choose dark, light, or system theme
 - **Backup/Restore**: Export and import your settings
 
+## ♿ Accessibility
+
+GitHub Devwatch is built with accessibility in mind to ensure everyone can use it effectively:
+
+### WCAG 2.1 Level A Compliance
+- **Form Labels**: All form inputs have proper visible labels for screen readers
+- **Keyboard Navigation**: Full keyboard support with intuitive shortcuts
+- **Focus Management**: Proper focus indicators and logical tab order
+- **ARIA Landmarks**: Semantic HTML with proper ARIA roles and labels
+- **Screen Reader Support**: Descriptive labels and live region announcements
+
+### Keyboard Shortcuts
+- **R** - Refresh activity
+- **S** - Toggle search
+- **A** - Toggle archive view
+- **Escape** - Close modals and search
+- **Arrow Keys** - Navigate between filter tabs
+- **Enter/Space** - Activate buttons and links
+
+### Testing & Validation
+- Automated accessibility testing with axe-core
+- Manual testing with NVDA and JAWS screen readers
+- Keyboard-only navigation verified
+- Focus trap implementation in modals
+
+For accessibility issues or suggestions, please [open an issue](https://github.com/jonmartin721/devwatch-github/issues).
+
 ## 🔒 Privacy & Security
 
 Your privacy and security are top priorities:

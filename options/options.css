@@ -51,6 +51,25 @@ body {
   padding: 40px 20px;
 }
 
+/* Utility classes */
+.hidden {
+  display: none !important;
+}
+
+.mt-12 {
+  margin-top: 12px;
+}
+
+.svg-inline {
+  vertical-align: text-bottom;
+  margin-right: 6px;
+}
+
+.svg-inline-centered {
+  vertical-align: text-bottom;
+  margin: 0 2px;
+}
+
 .container {
   max-width: 800px;
   margin: 0 auto;
@@ -224,6 +243,24 @@ button.danger:hover {
 }
 
 /* Chip Group Styles */
+.chip-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 .chip-group {
   display: flex;
   flex-wrap: wrap;
@@ -751,8 +788,16 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .add-repo-form {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-top: 16px;
+}
+
+.repo-input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .repo-input-wrapper {

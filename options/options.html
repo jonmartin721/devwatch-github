@@ -33,7 +33,7 @@
           <label for="githubToken">Token</label>
           <div class="token-input-wrapper">
             <input type="password" id="githubToken" placeholder="ghp_..." aria-describedby="token-help" autocomplete="off">
-            <button id="clearTokenBtn" class="danger" style="display: none;" aria-label="Clear stored GitHub token">Clear Token</button>
+            <button id="clearTokenBtn" class="danger hidden" aria-label="Clear stored GitHub token">Clear Token</button>
           </div>
           <span id="tokenStatus" class="token-status" aria-live="polite"></span>
           <p id="token-help" class="help-text">
@@ -52,13 +52,13 @@
       <div class="repo-action-buttons">
         <div class="action-buttons-left">
           <button id="toggleAddBtn" class="action-btn" aria-label="Toggle add repository form">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
             </svg>
             <span>Add</span>
           </button>
           <button id="toggleSearchBtn" class="action-btn" aria-label="Toggle search repositories">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
             </svg>
             <span>Search</span>
@@ -66,7 +66,7 @@
         </div>
         <div class="action-buttons-right">
           <button id="hidePinnedToggleBtn" class="action-btn" aria-label="Toggle hide pinned repositories">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
               <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
             </svg>
@@ -78,6 +78,7 @@
       <!-- Add Repository Panel (Hidden by default) -->
       <div class="repo-panel" id="addRepoPanel">
         <div class="add-repo-form" role="form" aria-label="Add new repository">
+          <label for="repoInput" class="repo-input-label">Repository:</label>
           <div class="repo-input-wrapper">
             <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, or GitHub URL" disabled aria-describedby="repo-help">
             <span id="repoValidationStatus" class="repo-validation-status" aria-live="polite"></span>
@@ -88,30 +89,30 @@
         <div id="repoError" class="repo-error"></div>
 
         <!-- Quick Import Section -->
-        <div class="import-repos-section" id="importReposSection" style="display: none;">
+        <div class="import-repos-section hidden" id="importReposSection">
           <p class="help-text">Quick import repositories from your GitHub account:</p>
           <div class="import-buttons">
             <button id="importWatchedBtn" class="import-btn">
-              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
               Import Watched
             </button>
             <button id="importStarredBtn" class="import-btn">
-              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
               </svg>
               Import Starred
             </button>
             <button id="importParticipatingBtn" class="import-btn">
-              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
               Import Participating
             </button>
             <button id="importMineBtn" class="import-btn">
-              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
               Import Mine
@@ -125,8 +126,8 @@
         <div class="repo-search-controls">
           <div class="search-input-wrapper">
             <input type="text" id="repoSearch" placeholder="Search repositories...">
-            <button class="search-clear-btn" id="repoSearchClear" style="display: none;" aria-label="Clear search">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <button class="search-clear-btn hidden" id="repoSearchClear" aria-label="Clear search">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/>
               </svg>
             </button>
@@ -136,7 +137,7 @@
 
       <ul id="repoList" class="repo-list"></ul>
 
-      <div class="pagination-controls" id="paginationControls" style="display: none;">
+      <div class="pagination-controls hidden" id="paginationControls">
         <button id="prevPage" disabled>Previous</button>
         <span id="pageInfo" class="page-info"></span>
         <button id="nextPage" disabled>Next</button>
@@ -150,7 +151,7 @@
       <div class="activity-cards">
         <div class="activity-card">
           <div class="card-header">
-            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
             </svg>
             <div class="activity-info">
@@ -178,7 +179,7 @@
 
         <div class="activity-card">
           <div class="card-header">
-            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <div class="activity-info">
@@ -206,7 +207,7 @@
 
         <div class="activity-card">
           <div class="card-header">
-            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
             <div class="activity-info">
@@ -253,35 +254,38 @@
       <h2>Appearance</h2>
       <p class="help-text">Choose your preferred color scheme</p>
 
-      <div class="chip-group">
-        <div class="chip">
-          <input type="radio" name="theme" id="theme-system" value="system" checked>
-          <label for="theme-system">
-            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            System
-          </label>
+      <fieldset class="chip-fieldset">
+        <legend class="sr-only">Color scheme</legend>
+        <div class="chip-group">
+          <div class="chip">
+            <input type="radio" name="theme" id="theme-system" value="system" checked>
+            <label for="theme-system">
+              <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              System
+            </label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="theme" id="theme-light" value="light">
+            <label for="theme-light">
+              <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+              Light
+            </label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="theme" id="theme-dark" value="dark">
+            <label for="theme-dark">
+              <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+              </svg>
+              Dark
+            </label>
+          </div>
         </div>
-        <div class="chip">
-          <input type="radio" name="theme" id="theme-light" value="light">
-          <label for="theme-light">
-            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-            </svg>
-            Light
-          </label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="theme" id="theme-dark" value="dark">
-          <label for="theme-dark">
-            <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-            </svg>
-            Dark
-          </label>
-        </div>
-      </div>
+      </fieldset>
 
       </section>
 
@@ -289,52 +293,58 @@
       <h2>Check Interval</h2>
       <p class="help-text">How often to check for new GitHub activity</p>
 
-      <div class="chip-group">
-        <div class="chip">
-          <input type="radio" name="checkInterval" id="interval-5" value="5">
-          <label for="interval-5">5 min</label>
+      <fieldset class="chip-fieldset">
+        <legend class="sr-only">Check interval</legend>
+        <div class="chip-group">
+          <div class="chip">
+            <input type="radio" name="checkInterval" id="interval-5" value="5">
+            <label for="interval-5">5 min</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="checkInterval" id="interval-15" value="15" checked>
+            <label for="interval-15">15 min</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="checkInterval" id="interval-30" value="30">
+            <label for="interval-30">30 min</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="checkInterval" id="interval-60" value="60">
+            <label for="interval-60">1 hour</label>
+          </div>
         </div>
-        <div class="chip">
-          <input type="radio" name="checkInterval" id="interval-15" value="15" checked>
-          <label for="interval-15">15 min</label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="checkInterval" id="interval-30" value="30">
-          <label for="interval-30">30 min</label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="checkInterval" id="interval-60" value="60">
-          <label for="interval-60">1 hour</label>
-        </div>
-      </div>
+      </fieldset>
     </section>
 
     <section class="section" id="snooze">
       <h2>Snooze Duration</h2>
       <p class="help-text">How long to silence notifications when you snooze a repository. Snoozed repositories will appear below for management.</p>
 
-      <div class="chip-group">
-        <div class="chip">
-          <input type="radio" name="snoozeHours" id="snooze-1" value="1" checked>
-          <label for="snooze-1">1 hour</label>
+      <fieldset class="chip-fieldset">
+        <legend class="sr-only">Snooze duration</legend>
+        <div class="chip-group">
+          <div class="chip">
+            <input type="radio" name="snoozeHours" id="snooze-1" value="1" checked>
+            <label for="snooze-1">1 hour</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="snoozeHours" id="snooze-2" value="2">
+            <label for="snooze-2">2 hours</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="snoozeHours" id="snooze-4" value="4">
+            <label for="snooze-4">4 hours</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="snoozeHours" id="snooze-8" value="8">
+            <label for="snooze-8">8 hours</label>
+          </div>
+          <div class="chip">
+            <input type="radio" name="snoozeHours" id="snooze-24" value="24">
+            <label for="snooze-24">24 hours</label>
+          </div>
         </div>
-        <div class="chip">
-          <input type="radio" name="snoozeHours" id="snooze-2" value="2">
-          <label for="snooze-2">2 hours</label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="snoozeHours" id="snooze-4" value="4">
-          <label for="snooze-4">4 hours</label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="snoozeHours" id="snooze-8" value="8">
-          <label for="snooze-8">8 hours</label>
-        </div>
-        <div class="chip">
-          <input type="radio" name="snoozeHours" id="snooze-24" value="24">
-          <label for="snooze-24">24 hours</label>
-        </div>
-      </div>
+      </fieldset>
 
       <div class="current-snoozes">
         <h3>Currently Snoozed</h3>
@@ -352,22 +362,22 @@
       <p class="help-text">Backup and restore your configuration</p>
 
       <div class="import-export-buttons">
-        <input type="file" id="importFileInput" accept=".json" style="display: none;" aria-label="Choose backup file to import">
+        <input type="file" id="importFileInput" accept=".json" class="hidden" aria-label="Choose backup file to import">
         <button id="importBtn" class="import-export-btn">
-          <svg class="ie-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="ie-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Import
         </button>
         <button id="exportBtn" class="import-export-btn">
-          <svg class="ie-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="ie-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
           Export
         </button>
       </div>
 
-      <p class="help-text" style="margin-top: 12px;">
+      <p class="help-text mt-12">
         <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -381,14 +391,14 @@
 
       <div class="setup-help-buttons">
         <button id="restartOnboardingBtn" class="setup-btn">
-          <svg class="setup-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="setup-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
           Restart Setup Wizard
         </button>
       </div>
 
-      <p class="help-text" style="margin-top: 12px;">
+      <p class="help-text mt-12">
         <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -408,26 +418,26 @@
             <h5>Resources</h5>
             <ul>
               <li><a href="https://github.com/jonmartin721/devwatch-github#readme" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" style="vertical-align: text-bottom; margin-right: 6px;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" class="svg-inline" aria-hidden="true">
                   <path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0114.25 13H8.06l-2.573 2.573A1.458 1.458 0 013 14.543V13H1.75A1.75 1.75 0 010 11.25zM1.75 1.5a.25.25 0 00-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 01.75.75v2.19l2.72-2.72a.749.749 0 01.53-.22h6.5a.25.25 0 00.25-.25v-9.5a.25.25 0 00-.25-.25zm7 2.25v2.5a.75.75 0 01-1.5 0v-2.5a.75.75 0 011.5 0zM9 9a1 1 0 11-2 0 1 1 0 012 0z"/>
                 </svg>
                 Documentation & Help
               </a></li>
               <li><a href="https://github.com/jonmartin721/devwatch-github" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" style="vertical-align: text-bottom; margin-right: 6px;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" class="svg-inline" aria-hidden="true">
                   <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.09-.45.38-.87.69-1.06-1.77-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                 </svg>
                 GitHub Repository
               </a></li>
               <li><a href="https://github.com/jonmartin721/devwatch-github/issues" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#cf222e" style="vertical-align: text-bottom; margin-right: 6px;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="#cf222e" class="svg-inline" aria-hidden="true">
                   <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
                   <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 011.5 8z"/>
                 </svg>
                 Report Issues
               </a></li>
               <li><a href="https://github.com/jonmartin721/devwatch-github/releases" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#1a7f37" style="vertical-align: text-bottom; margin-right: 6px;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="#1a7f37" class="svg-inline" aria-hidden="true">
                   <path d="M1.643 3.143L.427 1.927A.25.25 0 000 2.104V5.75c0 .138.112.25.25.25h3.646a.25.25 0 00.177-.427L2.857 4H2a2 2 0 01-1.995-1.858L.045 2.642a.25.25 0 01.177-.368l1.421-.131zm6.714 0L7.041 1.927A.25.25 0 006.614 2.104V5.75c0 .138.112.25.25.25h3.646a.25.25 0 00.177-.427L9.5 4H8.75a2 2 0 01-1.995-1.858L6.759 2.642a.25.25 0 01.177-.368l1.421-.131z"/>
                   <path d="M12.414 5.375a.25.25 0 00-.177-.368l-1.42-.13A2 2 0 019.25 3.5h.75l1.185 1.074a.25.25 0 00.177-.427L10.25 1.927a.25.25 0 00-.427 0L8.614 3.143A.25.25 0 008.429 3.5h.821A2 2 0 0111 5.25v.041l.414.084zM2.414 5.375a.25.25 0 00-.177-.368l-1.42-.13A2 2 0 01.25 3.5h.75l1.185 1.074a.25.25 0 00.177-.427L1.25 1.927a.25.25 0 00-.427 0L-.614 3.143A.25.25 0 00-.429 3.5h.821A2 2 0 012 5.25v.041l.414.084z"/>
                 </svg>
@@ -440,7 +450,7 @@
       <div class="footer-bottom">
         <p>
           Made with
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="#e34c26" style="vertical-align: text-bottom; margin: 0 2px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="#e34c26" class="svg-inline-centered" aria-hidden="true">
             <path d="M8 14.25l-.71-.71C4.18 10.43 1.5 8.25 1.5 5.75 1.5 4.03 2.95 2.5 4.75 2.5c1.05 0 2.05.4 2.75 1.1L8 4.1l.5-.5c.7-.7 1.7-1.1 2.75-1.1 1.8 0 3.25 1.53 3.25 3.25 0 2.5-2.68 4.68-5.79 7.79l-.71.71z"/>
           </svg>
           for the GitHub community.
@@ -460,7 +470,7 @@
       <div class="modal-body">
         <div id="importLoadingState" class="import-loading">
           <div class="spinner">
-            <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+            <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="20" cy="20" r="16" stroke="var(--border-color)" stroke-width="3" fill="none"/>
               <circle cx="20" cy="20" r="16" stroke="var(--link-color)" stroke-width="3" fill="none"
                       stroke-dasharray="100" stroke-dashoffset="0"
@@ -473,12 +483,12 @@
           </div>
           <p>Fetching repositories from GitHub...</p>
         </div>
-        <div id="importReposList" class="import-repos-list" style="display: none;">
+        <div id="importReposList" class="import-repos-list hidden">
           <div class="import-search">
             <div class="search-input-wrapper">
               <input type="text" id="importRepoSearch" placeholder="Search repositories...">
-              <button class="search-clear-btn" id="importSearchClear" style="display: none;" aria-label="Clear search">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <button class="search-clear-btn hidden" id="importSearchClear" aria-label="Clear search">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                   <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/>
                 </svg>
               </button>
@@ -492,7 +502,7 @@
           </div>
           <ul id="importReposContainer" class="import-repos-container repo-list"></ul>
         </div>
-        <div id="importErrorState" class="import-error" style="display: none;">
+        <div id="importErrorState" class="import-error hidden">
           <p id="importErrorMessage"></p>
         </div>
       </div>

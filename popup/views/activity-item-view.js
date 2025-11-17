@@ -20,7 +20,7 @@ export function renderActivityItem(activity) {
   const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar);
 
   return `
-    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${escapeHtml(activity.id)}" data-url="${escapeHtml(activity.url)}">
+    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${escapeHtml(activity.id)}" data-url="${escapeHtml(activity.url)}" role="button" tabindex="0" aria-label="Open ${sanitizedType}: ${sanitizedTitle} by ${sanitizedAuthor}">
       <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
       <div class="activity-content">
         <div class="activity-header">

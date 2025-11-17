@@ -141,8 +141,8 @@ export async function getToken() {
   if (syncToken) {
     // Migrate to local storage
     await setLocalItem('githubToken', syncToken);
-    // Clear from sync storage for security
-    await setSyncItem('githubToken', '');
+    // Remove from sync storage for security
+    await chrome.storage.sync.remove(['githubToken']);
     return syncToken;
   }
 
@@ -158,7 +158,7 @@ export async function getToken() {
 export async function setToken(token) {
   await setLocalItem('githubToken', token);
   // Ensure no token in sync storage
-  await setSyncItem('githubToken', '');
+  await chrome.storage.sync.remove(['githubToken']);
 }
 
 /**

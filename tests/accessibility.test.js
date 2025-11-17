@@ -4,6 +4,12 @@
 
 import { jest } from '@jest/globals';
 import '@testing-library/jest-dom';
+import jestAxe from 'jest-axe';
+
+const { axe, toHaveNoViolations } = jestAxe;
+
+// Extend Jest matchers
+expect.extend(toHaveNoViolations);
 
 // Mock DOM environment
 document.body.innerHTML = `
@@ -16,16 +22,19 @@ document.body.innerHTML = `
       </div>
     </header>
 
-    <div class="toolbar">
-      <div class="filters" role="tablist" aria-label="Filter activities by type">
-        <button class="filter-btn active" data-type="all" role="tab" aria-selected="true" aria-controls="activityList" tabindex="0">All</button>
-        <button class="filter-btn" data-type="pr" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">PRs</button>
-        <button class="filter-btn" data-type="issue" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Issues</button>
-        <button class="filter-btn" data-type="release" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Releases</button>
+    <nav aria-label="Activity filters">
+      <div class="toolbar">
+        <div class="filters" role="tablist" aria-label="Filter activities by type">
+          <button class="filter-btn active" data-type="all" role="tab" aria-selected="true" aria-controls="activityList" tabindex="0">All</button>
+          <button class="filter-btn" data-type="pr" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">PRs</button>
+          <button class="filter-btn" data-type="issue" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Issues</button>
+          <button class="filter-btn" data-type="release" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">Releases</button>
+        </div>
       </div>
-    </div>
+    </nav>
 
     <div id="searchBox" class="search-box" style="display: none;" role="search">
+      <label for="searchInput">Search:</label>
       <input type="text" id="searchInput" aria-label="Search through GitHub activities" autocomplete="off">
     </div>
 
@@ -264,6 +273,70 @@ describe('Accessibility Features', () => {
       // Should have additional indicators beyond color
       expect(activeFilter.classList.contains('active')).toBe(true);
       expect(inactiveFilter.classList.contains('active')).toBe(false);
+    });
+  });
+
+  describe('Automated WCAG Compliance (axe-core)', () => {
+    it('should not have any automatically detectable WCAG violations', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          // Disable color-contrast in JSDOM as it requires canvas support
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have valid form labels', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          label: { enabled: true },
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper button names', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          'button-name': { enabled: true },
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper ARIA attributes', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          'aria-valid-attr': { enabled: true },
+          'aria-valid-attr-value': { enabled: true },
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have unique IDs', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          'duplicate-id': { enabled: true },
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper landmark structure', async () => {
+      const results = await axe(document.body, {
+        rules: {
+          'landmark-one-main': { enabled: true },
+          'region': { enabled: true },
+          'color-contrast': { enabled: false }
+        }
+      });
+      expect(results).toHaveNoViolations();
     });
   });
 });
