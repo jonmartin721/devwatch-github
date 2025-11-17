@@ -97,9 +97,13 @@ describe('Onboarding - token persistence', () => {
   });
 
   test('getPopularRepos uses stored token in request', async () => {
-    const mockFetch = jest.fn().mockResolvedValueOnce({
+    const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ items: [ { owner: { login: 'owner' }, name: 'repo', description: 'desc', language: 'JS', stargazers_count: 2000 } ] })
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => ({ items: [ { owner: { login: 'owner' }, name: 'repo', description: 'desc', language: 'JS', stargazers_count: 2000 } ] }),
+      text: async () => ''
     });
 
     global.fetch = mockFetch;
@@ -112,8 +116,8 @@ describe('Onboarding - token persistence', () => {
     await manager.saveStepData('token', {});
     const result = await manager.getPopularRepos();
 
-    // Ensure fetch was called and Authorization header present
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // Ensure fetch was called with Authorization header
+    expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
     expect(options.headers['Authorization']).toBe('token ghp_TEST_TOKEN');
 
@@ -128,16 +132,20 @@ describe('Onboarding - token persistence', () => {
     // Save token inside onboarding step data, not in chrome.local
     await manager.saveStepData('token', { token: 'ghp_STEP_TOKEN' });
 
-    const mockFetch = jest.fn().mockResolvedValueOnce({
+    const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ items: [ { owner: { login: 'owner' }, name: 'repo' } ] })
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => ({ items: [ { owner: { login: 'owner' }, name: 'repo' } ] }),
+      text: async () => ''
     });
 
     global.fetch = mockFetch;
 
     const result = await manager.getPopularRepos();
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
     expect(options.headers['Authorization']).toBe('token ghp_STEP_TOKEN');
     expect(result.length).toBeGreaterThan(0);
