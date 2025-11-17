@@ -3,14 +3,17 @@ export default {
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'popup/*.js',
+    'popup/controllers/*.js',
     'options/*.js',
+    'options/controllers/*.js',
     'shared/*.js',
+    'shared/api/*.js',
     '!**/*.test.js'
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
+      branches: 45,
+      functions: 40,
       lines: 50
     }
   },

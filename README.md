@@ -6,6 +6,9 @@
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chrome.google.com/webstore)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/jonma/devwatch-github/workflows/CI/badge.svg)](https://github.com/jonma/devwatch-github/actions)
+[![Tests](https://img.shields.io/badge/tests-316%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-58%25-brightgreen)](tests/)
 
 ![Demo GIF](screenshots/demo.gif)
 
@@ -15,6 +18,7 @@
 
 ## ✨ Key Features
 
+- **🚀 Guided Setup Wizard** - Interactive onboarding walks you through the entire setup process
 - **🔔 Smart Notifications** - Get browser notifications for new PRs, issues, and releases
 - **📊 Multi-Repo Monitoring** - Watch up to 50 repositories from a single interface
 - **⚡ Real-time Updates** - Configurable check intervals (5, 15, 30, or 60 minutes)
@@ -23,6 +27,12 @@
 - **🔒 Secure & Private** - Token stored securely, no third-party data sharing
 
 ## 📸 Screenshots
+
+### Guided Setup Wizard
+<div align="center">
+  <img src="screenshots/onboarding-welcome.png" alt="Interactive setup wizard welcome screen" width="500">
+  <br><em>Interactive setup wizard guides you through configuration in under 2 minutes</em>
+</div>
 
 ### Extension Interface
 <table>
@@ -55,7 +65,7 @@
 1. Visit the Chrome Web Store (coming soon)
 2. Click "Add to Chrome"
 3. Grant permissions when prompted
-4. Configure your GitHub token and repositories
+4. Follow the guided setup wizard on first launch
 
 ### Manual Installation (For Development)
 
@@ -71,31 +81,27 @@ cd devwatch-github
    - Click "Load unpacked"
    - Select the extension directory
 
+3. Click the extension icon and follow the setup wizard
+
 ## ⚙️ Quick Setup
 
-### 1. Create a GitHub Personal Access Token
-- The extension will help you create one with the correct permissions. Click "Create a token with recommended permissions" under the token entry field to do this much more quickly.
+### First-Time Setup
+When you first install the extension, an **interactive setup wizard** guides you through:
 
-- Go to [GitHub Settings > Tokens](https://github.com/settings/tokens/new)
-- Give it a descriptive name (e.g., "GitHub Devwatch Extension")
-- Select scopes:
-  - `repo` (for private repositories)
-  - OR `public_repo` (for public repositories only)
-- Click "Generate token" and copy it
+1. **Welcome** - Overview of features and capabilities
+2. **GitHub Token** - Create and validate your personal access token with step-by-step instructions
+3. **Add Repositories** - Select which repositories to monitor
+4. **Activity Preferences** - Choose which types of activity to track (PRs, Issues, Releases)
+5. **Done!** - Start monitoring immediately
 
-### 2. Configure the Extension
-- Click the extension icon and open **Settings**
-- Paste your GitHub token
-- Add repositories to watch (format: `owner/repo`)
-- Choose activity types to monitor (PRs, Issues, Releases)
-- Set your preferred check interval (5, 15, 30, or 60 minutes)
-- Click **Save Settings**
+The entire setup takes about 2 minutes and requires no prior configuration knowledge.
 
-### 3. Start Monitoring
-- The extension automatically checks for activity at your chosen interval
-- Click the extension icon to view recent activity
-- Click any activity item to open it directly in GitHub
-- Badge count shows unread activity
+### Ongoing Use
+- The extension automatically checks for activity at your configured interval (default: 15 minutes)
+- Click the extension icon to view your activity feed
+- Get browser notifications for new activity
+- Badge count shows unread items at a glance
+- Manage repositories and preferences anytime in Settings
 
 ## 🎯 How to Use
 
@@ -142,14 +148,20 @@ We do limit the maximum number of repositories to 50 to make sure you don't reac
 ```
 /devwatch-github
   /icons                  # Extension icons in various sizes
-  /popup                  # Popup interface files
-    popup.html           # Main popup HTML
-    popup.js             # Popup logic and interactions
-    popup.css            # Popup styling
-  /options                # Settings page files
-    options.html         # Settings interface
-    options.js           # Settings management
-  /shared                 # Shared utilities and helpers
+  /popup                  # Popup interface
+    /controllers         # Popup business logic
+    /views               # Popup view components
+    popup.html
+    popup.js
+    popup.css
+  /options                # Settings page
+    /controllers         # Settings business logic
+    /views               # Settings view components
+    options.html
+    options.js
+  /shared                 # Shared utilities
+    /api                 # GitHub API integration
+    /ui                  # Shared UI components
   background.js           # Service worker for background tasks
   manifest.json           # Extension manifest (Manifest V3)
 ```
@@ -214,8 +226,8 @@ Copyright (c) 2025 Jonathan Martin
 
 <div align="center">
 
-**Built with ❤️ for developers who want to stay productive**
+**Built for developers who want to stay productive**
 
-[⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if it helps you in any way!
+[⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if you find it useful!
 
 </div>

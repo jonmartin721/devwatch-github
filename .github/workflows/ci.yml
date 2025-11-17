@@ -28,8 +28,8 @@ jobs:
     - name: Run type checker
       run: npm run typecheck
 
-    - name: Run tests
-      run: npm test
+    - name: Run tests with coverage
+      run: npm test -- --coverage --coverageReporters=text
 
     - name: Validate extension build
       run: npm run build
