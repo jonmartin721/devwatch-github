@@ -16,10 +16,13 @@ export async function showOnboarding(loadActivitiesCallback) {
   const searchBox = document.getElementById('searchBox');
 
   // Hide main content and show onboarding
-  onboardingView.style.display = 'block';
-  activityList.style.display = 'none';
-  toolbar.style.display = 'none';
-  searchBox.style.display = 'none';
+  if (onboardingView) {
+    onboardingView.classList.remove('hidden');
+    onboardingView.style.display = 'block';
+  }
+  if (activityList) activityList.style.display = 'none';
+  if (toolbar) toolbar.style.display = 'none';
+  if (searchBox) searchBox.style.display = 'none';
 
   // Hide entire header during onboarding
   const header = document.querySelector('header');
@@ -43,7 +46,7 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
     stepContent = `
       <div class="onboarding-progress">
         <div class="progress-bar">
-          <div class="progress-fill" style="width: ${progress.percentage}%"></div>
+          <div class="progress-fill"></div>
         </div>
         <div class="progress-text">Step ${progress.current} of ${progress.total}</div>
       </div>
@@ -92,14 +95,29 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
 
   onboardingView.innerHTML = stepContent;
 
+  // Set progress bar width programmatically (CSP-compliant)
+  if (progress.showProgress) {
+    const progressFill = onboardingView.querySelector('.progress-fill');
+    if (progressFill) {
+      progressFill.style.width = `${progress.percentage}%`;
+    }
+  }
+
   // Add event listeners for this step
   setupOnboardingStepListeners(currentStep, loadActivitiesCallback);
 
   // Show/hide footer skip button based on onboarding step
   const footerSkipBtn = document.getElementById('footerSkipBtn');
   if (footerSkipBtn) {
-    // Show skip button for steps 1-3 (token, repos, categories) only
-    footerSkipBtn.style.display = (progress.showProgress && currentStep !== 'complete') ? 'block' : 'none';
+    // Show skip button for repos and categories steps only (token is required)
+    const showSkip = progress.showProgress && currentStep !== 'complete' && currentStep !== 'token';
+    if (showSkip) {
+      footerSkipBtn.classList.remove('hidden');
+      footerSkipBtn.style.display = 'block';
+    } else {
+      footerSkipBtn.classList.add('hidden');
+      footerSkipBtn.style.display = 'none';
+    }
   }
 }
 
@@ -227,7 +245,7 @@ export async function renderReposStep() {
                   <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
                   <div class="repo-meta">
                     ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
-                    ${repo.stargazers_count ? `<span class="repo-stars"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
+                    ${repo.stargazers_count ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
                   </div>
                 </div>
                 <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
@@ -556,7 +574,7 @@ async function loadPopularRepos() {
             <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
             <div class="repo-meta">
               ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
-              ${repo.stargazers_count ? `<span class="repo-stars"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
+              ${repo.stargazers_count ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
             </div>
           </div>
           <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
@@ -584,16 +602,32 @@ function attachRepoButtonListeners() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const repo = btn.dataset.repo;
-      btn.disabled = true;
-      btn.textContent = 'Added ✓';
 
-      // Save repo to storage
-      const result = await chrome.storage.sync.get(['repos']);
-      const repos = result.repos || [];
-      if (!repos.includes(repo)) {
-        repos.push(repo);
-        await chrome.storage.sync.set({ repos });
+      // Add loading state
+      btn.classList.add('loading');
+      btn.textContent = '...';
+
+      // Save repo to storage with metadata and timestamp
+      const result = await chrome.storage.sync.get(['watchedRepos']);
+      const repos = result.watchedRepos || [];
+
+      // Check if repo already exists
+      const repoExists = repos.some(r => r.fullName === repo);
+
+      if (!repoExists) {
+        repos.push({
+          fullName: repo,
+          name: repo.split('/')[1],
+          addedAt: new Date().toISOString()
+        });
+        await chrome.storage.sync.set({ watchedRepos: repos });
       }
+
+      // Show success state
+      btn.classList.remove('loading');
+      btn.classList.add('added');
+      btn.disabled = true;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>';
     });
   });
 }
@@ -662,11 +696,16 @@ function setupReposStepListeners() {
       const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
       if (response.ok) {
-        const result = await chrome.storage.sync.get(['repos']);
-        const repos = result.repos || [];
-        if (!repos.includes(repo)) {
-          repos.push(repo);
-          await chrome.storage.sync.set({ repos });
+        const result = await chrome.storage.sync.get(['watchedRepos']);
+        const repos = result.watchedRepos || [];
+        const repoExists = repos.some(r => r.fullName === repo);
+        if (!repoExists) {
+          repos.push({
+            fullName: repo,
+            name: repo.split('/')[1],
+            addedAt: new Date().toISOString()
+          });
+          await chrome.storage.sync.set({ watchedRepos: repos });
         }
         manualInput.value = '';
         repoStatus.innerHTML = '<div class="status-success">✓ Repository added</div>';
@@ -816,7 +855,10 @@ export function exitOnboarding(loadActivitiesCallback) {
   const header = document.querySelector('header');
 
   // Show main content and hide onboarding
-  if (onboardingView) onboardingView.style.display = 'none';
+  if (onboardingView) {
+    onboardingView.classList.add('hidden');
+    onboardingView.style.display = 'none';
+  }
   if (activityList) activityList.style.display = 'block';
   if (toolbar) toolbar.style.display = 'flex';
   if (header) header.style.display = 'flex';
@@ -824,6 +866,7 @@ export function exitOnboarding(loadActivitiesCallback) {
   // Hide footer skip button when exiting onboarding
   const footerSkipBtn = document.getElementById('footerSkipBtn');
   if (footerSkipBtn) {
+    footerSkipBtn.classList.add('hidden');
     footerSkipBtn.style.display = 'none';
   }
 

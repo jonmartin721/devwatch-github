@@ -53,8 +53,23 @@ export function mapActivity(item, type, repo) {
     throw new Error('Invalid activity item: null or undefined');
   }
 
+  if (!type || !repo) {
+    throw new Error('Invalid activity mapping: type and repo are required');
+  }
+
+  // Generate unique ID, handling cases where number or id might be 0 or undefined
+  let uniqueId;
+  if (item.number !== undefined && item.number !== null) {
+    uniqueId = item.number;
+  } else if (item.id !== undefined && item.id !== null) {
+    uniqueId = item.id;
+  } else {
+    // Fallback to timestamp-based ID if neither exists
+    uniqueId = Date.now() + Math.random().toString(36).substring(7);
+  }
+
   const baseActivity = {
-    id: `${type}-${repo}-${item.number || item.id}`,
+    id: `${type}-${repo}-${uniqueId}`,
     type,
     repo,
     title: '',
@@ -104,5 +119,30 @@ export function mapActivity(item, type, repo) {
  * @returns {Array} Filtered items
  */
 export function filterActivitiesByDate(items, since, dateField = 'created_at') {
-  return items.filter(item => new Date(item[dateField]) > since);
+  // Validate inputs
+  if (!Array.isArray(items)) {
+    console.warn('[filterActivitiesByDate] Expected array, received:', typeof items);
+    return [];
+  }
+
+  if (!(since instanceof Date) || isNaN(since.getTime())) {
+    console.warn('[filterActivitiesByDate] Invalid date provided:', since);
+    return items; // Return all items if date is invalid
+  }
+
+  return items.filter(item => {
+    // Validate item exists and has the date field
+    if (!item || !item[dateField]) {
+      return false;
+    }
+
+    // Parse and validate the date
+    const itemDate = new Date(item[dateField]);
+    if (isNaN(itemDate.getTime())) {
+      console.warn(`[filterActivitiesByDate] Invalid date in item[${dateField}]:`, item[dateField]);
+      return false;
+    }
+
+    return itemDate > since;
+  });
 }

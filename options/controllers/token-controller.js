@@ -47,7 +47,9 @@ export async function validateToken(token, toastManager) {
       document.getElementById('addRepoBtn').disabled = false;
       document.getElementById('repoHelpText').textContent = 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)';
 
-      document.getElementById('importReposSection').style.display = 'block';
+      const importSection = document.getElementById('importReposSection');
+      importSection.classList.remove('hidden');
+      importSection.style.display = 'block';
 
       if (!toastManager.lastValidToken || toastManager.lastValidToken !== token) {
         if (toastManager.isManualTokenEntry) {
@@ -68,7 +70,9 @@ export async function validateToken(token, toastManager) {
       document.getElementById('addRepoBtn').disabled = true;
       document.getElementById('repoHelpText').textContent = 'Invalid token. Please check your GitHub token and try again.';
 
-      document.getElementById('importReposSection').style.display = 'none';
+      const importSection = document.getElementById('importReposSection');
+      importSection.classList.add('hidden');
+      importSection.style.display = 'none';
 
       if (!toastManager.lastInvalidToken || toastManager.lastInvalidToken !== token) {
         notifications.error('Invalid GitHub token. Please check your token and try again.');
@@ -85,7 +89,9 @@ export async function validateToken(token, toastManager) {
       document.getElementById('addRepoBtn').disabled = true;
       document.getElementById('repoHelpText').textContent = 'GitHub API error. Please try again later.';
 
-      document.getElementById('importReposSection').style.display = 'none';
+      const importSection = document.getElementById('importReposSection');
+      importSection.classList.add('hidden');
+      importSection.style.display = 'none';
 
       if (!toastManager.lastApiError || toastManager.lastApiError !== response.status) {
         notifications.error(`GitHub API error (${response.status}). Please try again later.`);

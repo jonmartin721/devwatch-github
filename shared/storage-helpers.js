@@ -78,31 +78,57 @@ export function getLocalItems(keys) {
 
 /**
  * Set an item in chrome.storage.sync with Promise API
+ * Includes quota checking and error handling
  * @param {string} key - Storage key
  * @param {*} value - Value to store
  * @returns {Promise<void>}
+ * @throws {Error} If storage quota exceeded or write fails
  */
 export function setSyncItem(key, value) {
   if (!isChromeExtension()) {
     return Promise.resolve();
   }
-  return new Promise((resolve) => {
-    chrome.storage.sync.set({ [key]: value }, resolve);
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.set({ [key]: value }, () => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        const error = chrome.runtime.lastError;
+        if (error.message && error.message.includes('QUOTA_EXCEEDED')) {
+          reject(new Error('Sync storage quota exceeded. Too much data to sync.'));
+        } else {
+          reject(new Error(`Storage write failed: ${error.message}`));
+        }
+      } else {
+        resolve();
+      }
+    });
   });
 }
 
 /**
  * Set an item in chrome.storage.local with Promise API
+ * Includes quota checking and error handling
  * @param {string} key - Storage key
  * @param {*} value - Value to store
  * @returns {Promise<void>}
+ * @throws {Error} If storage quota exceeded or write fails
  */
 export function setLocalItem(key, value) {
   if (!isChromeExtension()) {
     return Promise.resolve();
   }
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [key]: value }, resolve);
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [key]: value }, () => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        const error = chrome.runtime.lastError;
+        if (error.message && error.message.includes('QUOTA_EXCEEDED')) {
+          reject(new Error('Storage quota exceeded. Please clear old data.'));
+        } else {
+          reject(new Error(`Storage write failed: ${error.message}`));
+        }
+      } else {
+        resolve();
+      }
+    });
   });
 }
 
@@ -125,28 +151,12 @@ export function getExcludedRepos(mutedRepos = [], snoozedRepos = []) {
 }
 
 /**
- * Get GitHub token from local storage (with migration from sync storage)
+ * Get GitHub token from local storage
  * For security, tokens are stored in local storage (not synced across devices)
  * @returns {Promise<string|null>} Token or null
  */
 export async function getToken() {
-  // First check local storage
-  const localToken = await getLocalItem('githubToken');
-  if (localToken) {
-    return localToken;
-  }
-
-  // Migration: Check sync storage for existing tokens
-  const syncToken = await getSyncItem('githubToken');
-  if (syncToken) {
-    // Migrate to local storage
-    await setLocalItem('githubToken', syncToken);
-    // Remove from sync storage for security
-    await chrome.storage.sync.remove(['githubToken']);
-    return syncToken;
-  }
-
-  return null;
+  return await getLocalItem('githubToken');
 }
 
 /**
@@ -157,17 +167,14 @@ export async function getToken() {
  */
 export async function setToken(token) {
   await setLocalItem('githubToken', token);
-  // Ensure no token in sync storage
-  await chrome.storage.sync.remove(['githubToken']);
 }
 
 /**
- * Clear GitHub token from both local and sync storage
+ * Clear GitHub token from local storage
  * @returns {Promise<void>}
  */
 export async function clearToken() {
   await setLocalItem('githubToken', '');
-  await setSyncItem('githubToken', '');
 }
 
 // Storage configuration objects for batch operations

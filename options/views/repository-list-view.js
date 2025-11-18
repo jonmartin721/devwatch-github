@@ -4,6 +4,10 @@ import { STAR_ICON, LINK_ICON, createSvg, getMuteIcon, getPinIcon } from '../../
 import { safelyOpenUrl } from '../../shared/security.js';
 
 function formatNumber(num) {
+  // Guard against undefined/null values
+  if (num === undefined || num === null || isNaN(num)) {
+    return '0';
+  }
   if (num >= 1000) {
     return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   }
@@ -31,7 +35,7 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
         <p>You haven't added any repositories to watch. Use the <strong>Add</strong> button above to add repositories manually, or click <strong>Import from GitHub</strong> to import your starred, watched, or participating repositories.</p>
         <div class="empty-repos-tips">
           <p class="tip-note">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;">
+            <svg class="svg-inline" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.92 6.085h.001a.749.749 0 1 1-1.342-.67c.169-.339.436-.701.849-.977C6.845 4.16 7.369 4 8 4a2.756 2.756 0 0 1 1.637.525c.503.377.863.965.863 1.725 0 .448-.115.83-.329 1.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6.24 6.24 0 0 0-.26.16.952.952 0 0 0-.276.245.75.75 0 0 1-1.248-.832c.184-.264.42-.489.692-.661.103-.067.207-.132.313-.195l.007-.004c.1-.061.182-.11.258-.161a.969.969 0 0 0 .277-.245C8.96 6.514 9 6.427 9 6.25a.612.612 0 0 0-.262-.525A1.27 1.27 0 0 0 8 5.5c-.369 0-.595.09-.74.187a1.01 1.01 0 0 0-.34.398ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
             </svg>
             You can add repositories using owner/repo format (e.g., "facebook/react"), GitHub URLs, or npm package names.
@@ -57,8 +61,8 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
   }
 
   const sortedRepos = [...filteredRepos].sort((a, b) => {
-    const aFullName = typeof a === 'string' ? a : a.fullName;
-    const bFullName = typeof b === 'string' ? b : b.fullName;
+    const aFullName = a.fullName;
+    const bFullName = b.fullName;
     const aIsPinned = state.pinnedRepos.includes(aFullName);
     const bIsPinned = state.pinnedRepos.includes(bFullName);
 
@@ -82,35 +86,16 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
   }
 
   list.innerHTML = reposToDisplay.map(repo => {
-    if (typeof repo === 'string') {
-      const isMuted = state.mutedRepos.includes(repo);
-      const isPinned = state.pinnedRepos.includes(repo);
-      const sanitizedRepo = escapeHtml(repo);
-      return `
-        <li class="repo-item ${isMuted ? 'muted' : ''} ${isPinned ? 'pinned' : ''}">
-          <div class="repo-content">
-            <div class="repo-name">
-              ${sanitizedRepo}
-              <button class="link-btn inline-link" data-repo="${sanitizedRepo}" title="Open repository on GitHub">
-                ${createSvg(LINK_ICON, 14, 14)}
-              </button>
-            </div>
-            <div class="repo-description">Legacy format - remove and re-add to see details</div>
-          </div>
-          <div class="repo-actions">
-            <button class="pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${sanitizedRepo}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}">
-              ${getPinIcon(isPinned)}
-            </button>
-            <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedRepo}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
-              ${getMuteIcon(isMuted)}
-            </button>
-            <button class="danger" data-repo="${sanitizedRepo}">Remove</button>
-          </div>
-        </li>
-      `;
-    }
-
-    const { fullName, description, language, stars, updatedAt, latestRelease } = repo;
+    // Safely extract properties with defaults for missing data
+    const {
+      fullName = 'Unknown',
+      description = '',
+      language = '',
+      stars = 0,
+      forks = 0,
+      updatedAt = new Date().toISOString(),
+      latestRelease = null
+    } = repo;
     const isMuted = state.mutedRepos.includes(fullName);
     const isPinned = state.pinnedRepos.includes(fullName);
 
@@ -137,13 +122,13 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
           </div>
         </div>
         <div class="repo-actions">
-          <button class="pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${sanitizedFullName}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}">
+          <button class="pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${sanitizedFullName}" title="${isPinned ? 'Unpin - Remove from top of list' : 'Pin - Keep at top of list'}" aria-label="${isPinned ? 'Unpin repository' : 'Pin repository'}">
             ${getPinIcon(isPinned)}
           </button>
-          <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedFullName}" title="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
+          <button class="mute-btn ${isMuted ? 'muted' : ''}" data-repo="${sanitizedFullName}" title="${isMuted ? 'Unmute - Enable notifications' : 'Mute - Disable notifications'}" aria-label="${isMuted ? 'Unmute notifications' : 'Mute notifications'}">
             ${getMuteIcon(isMuted)}
           </button>
-          <button class="danger" data-repo="${sanitizedFullName}">Remove</button>
+          <button class="danger" data-repo="${sanitizedFullName}" title="Remove from watched repositories">Remove</button>
         </div>
       </li>
     `;
@@ -188,9 +173,6 @@ function getFilteredRepos(state) {
   if (state.searchQuery) {
     const query = state.searchQuery.toLowerCase();
     repos = repos.filter(repo => {
-      if (typeof repo === 'string') {
-        return repo.toLowerCase().includes(query);
-      }
       return repo.fullName.toLowerCase().includes(query) ||
              (repo.description && repo.description.toLowerCase().includes(query)) ||
              (repo.language && repo.language.toLowerCase().includes(query));
@@ -199,8 +181,7 @@ function getFilteredRepos(state) {
 
   if (state.hidePinnedRepos) {
     repos = repos.filter(repo => {
-      const fullName = typeof repo === 'string' ? repo : repo.fullName;
-      return !state.pinnedRepos.includes(fullName);
+      return !state.pinnedRepos.includes(repo.fullName);
     });
   }
 

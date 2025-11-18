@@ -37,39 +37,62 @@ class StateManager {
 
     this.subscribers = new Map();
     this.initialized = false;
+    this.initializationLock = null; // Promise-based lock
   }
 
   /**
    * Initialize state manager with data from storage
+   * Uses a promise-based lock to prevent concurrent initialization
    * @returns {Promise<void>}
    */
   async initialize() {
+    // If already initialized, return immediately
     if (this.initialized) return;
 
-    try {
-      // Load settings from storage
-      const settings = await getSyncItems(STORAGE_KEYS.SETTINGS);
-      const activityData = await getLocalItems(STORAGE_KEYS.ACTIVITY);
-
-      // Update state with loaded data
-      this.state = {
-        ...this.state,
-        watchedRepos: settings.watchedRepos || STORAGE_DEFAULTS.watchedRepos,
-        mutedRepos: settings.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
-        snoozedRepos: settings.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
-        filters: { ...STORAGE_DEFAULTS.filters, ...settings.filters },
-        notifications: { ...STORAGE_DEFAULTS.notifications, ...settings.notifications },
-        checkInterval: settings.checkInterval || STORAGE_DEFAULTS.checkInterval,
-        theme: settings.theme || STORAGE_DEFAULTS.theme,
-        allActivities: activityData.activities || STORAGE_DEFAULTS.activities,
-        readItems: activityData.readItems || STORAGE_DEFAULTS.readItems
-      };
-
-      this.initialized = true;
-    } catch (error) {
-      console.error('[StateManager] Failed to initialize state:', error);
-      throw error;
+    // If initialization is in progress, wait for it to complete
+    if (this.initializationLock) {
+      await this.initializationLock;
+      return;
     }
+
+    // Create initialization lock
+    this.initializationLock = (async () => {
+      try {
+        // Double-check initialized flag in case another context just finished
+        if (this.initialized) {
+          return;
+        }
+
+        // Load settings from storage
+        const settings = await getSyncItems(STORAGE_KEYS.SETTINGS);
+        const activityData = await getLocalItems(STORAGE_KEYS.ACTIVITY);
+
+        // Update state with loaded data
+        this.state = {
+          ...this.state,
+          watchedRepos: settings.watchedRepos || STORAGE_DEFAULTS.watchedRepos,
+          mutedRepos: settings.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
+          snoozedRepos: settings.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
+          filters: { ...STORAGE_DEFAULTS.filters, ...settings.filters },
+          notifications: { ...STORAGE_DEFAULTS.notifications, ...settings.notifications },
+          checkInterval: settings.checkInterval || STORAGE_DEFAULTS.checkInterval,
+          theme: settings.theme || STORAGE_DEFAULTS.theme,
+          allActivities: activityData.activities || STORAGE_DEFAULTS.activities,
+          readItems: activityData.readItems || STORAGE_DEFAULTS.readItems
+        };
+
+        this.initialized = true;
+      } catch (error) {
+        console.error('[StateManager] Failed to initialize state:', error);
+        throw error;
+      } finally {
+        // Release the lock
+        this.initializationLock = null;
+      }
+    })();
+
+    // Wait for initialization to complete
+    await this.initializationLock;
   }
 
   /**

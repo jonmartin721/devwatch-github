@@ -3,6 +3,8 @@
  * Converts technical errors into helpful user messages
  */
 
+import { escapeHtml } from './sanitize.js';
+
 /**
  * Error types with user-friendly messages
  */
@@ -149,12 +151,26 @@ export function getUserFriendlyError(error, response = null, context = {}) {
     }
   }
 
+  // Ensure technical details are always a string
+  let technical = '';
+  if (error) {
+    if (typeof error === 'string') {
+      technical = error;
+    } else if (error.message) {
+      technical = error.message;
+    } else if (error.toString && error.toString() !== '[object Object]') {
+      technical = error.toString();
+    } else {
+      technical = JSON.stringify(error);
+    }
+  }
+
   return {
     type: errorType,
     title: baseMessage.title,
     message,
     action: baseMessage.action,
-    technical: error?.message || error
+    technical
   };
 }
 
@@ -173,21 +189,33 @@ export function showError(elementId, error, response = null, context = {}, durat
   const userError = getUserFriendlyError(error, response, context);
   const errorId = `error-${Date.now()}`;
 
+  // Ensure all fields are strings before sanitizing
+  const title = String(userError.title || 'Error');
+  const message = String(userError.message || 'An unexpected error occurred');
+  const technical = userError.technical
+    ? (typeof userError.technical === 'object' ? JSON.stringify(userError.technical) : String(userError.technical))
+    : '';
+
+  // Sanitize all user-provided content to prevent XSS
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const safeTechnical = technical ? escapeHtml(technical) : '';
+
   // Create clickable toast-style error notification
   element.innerHTML = `
     <div class="error-toast" id="${errorId}" role="alert" aria-live="assertive">
-      <div class="error-summary" onclick="document.getElementById('${errorId}-details').classList.toggle('visible')">
+      <div class="error-summary" data-details-id="${errorId}-details">
         <svg class="error-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0114.082 15H1.918a1.75 1.75 0 01-1.543-2.575zm1.763.707a.25.25 0 00-.44 0L1.698 13.132a.25.25 0 00.22.368h12.164a.25.25 0 00.22-.368zm.53 3.996v2.5a.75.75 0 11-1.5 0v-2.5a.75.75 0 111.5 0zM9 11a1 1 0 11-2 0 1 1 0 012 0z"/>
         </svg>
-        <span class="error-brief">${userError.title}</span>
+        <span class="error-brief">${safeTitle}</span>
         <span class="error-expand">›</span>
       </div>
       <div class="error-details" id="${errorId}-details">
-        <p>${userError.message}</p>
-        ${userError.technical ? `<small class="error-technical">Details: ${userError.technical}</small>` : ''}
+        <p>${safeMessage}</p>
+        ${safeTechnical ? `<small class="error-technical">Details: ${safeTechnical}</small>` : ''}
         <div class="error-actions">
-          <button class="error-dismiss" onclick="document.getElementById('${elementId}').style.display='none'">Dismiss</button>
+          <button class="error-dismiss" data-element-id="${elementId}">Dismiss</button>
         </div>
       </div>
     </div>
@@ -195,6 +223,30 @@ export function showError(elementId, error, response = null, context = {}, durat
 
   element.style.display = 'block';
   element.classList.add('toast-notification');
+
+  // Add event listeners (CSP-compliant)
+  const summary = element.querySelector('.error-summary');
+  const dismissBtn = element.querySelector('.error-dismiss');
+
+  if (summary) {
+    summary.addEventListener('click', () => {
+      const detailsId = summary.dataset.detailsId;
+      const details = document.getElementById(detailsId);
+      if (details) {
+        details.classList.toggle('visible');
+      }
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      const elId = dismissBtn.dataset.elementId;
+      const el = document.getElementById(elId);
+      if (el) {
+        el.style.display = 'none';
+      }
+    });
+  }
 
   // Auto-hide after duration if specified
   if (duration > 0) {
@@ -207,12 +259,10 @@ export function showError(elementId, error, response = null, context = {}, durat
   }
 
   // Log technical details for debugging
-  console.error('User-friendly error displayed:', {
-    type: userError.type,
-    title: userError.title,
-    message: userError.message,
-    technical: userError.technical
-  });
+  console.error('[Error Handler]', userError.title + ':', userError.message);
+  if (userError.technical) {
+    console.error('[Error Details]', userError.technical);
+  }
 }
 
 /**
@@ -240,10 +290,12 @@ export function showSuccess(elementId, message, duration = 3000) {
   const element = document.getElementById(elementId);
   if (!element) return;
 
+  const safeMessage = escapeHtml(message);
+
   element.innerHTML = `
     <div class="success-content">
       <strong>Success</strong>
-      <p>${message}</p>
+      <p>${safeMessage}</p>
     </div>
   `;
 
@@ -266,13 +318,23 @@ export function showSuccess(elementId, message, duration = 3000) {
  */
 export async function handleApiResponse(response, context = 'API request') {
   if (!response.ok) {
-    let errorMessage = await response.text().catch(() => 'Unknown error');
+    let errorMessage = 'Unknown error';
 
     try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
+      // Read the response body as text first
+      const responseText = await response.text();
+
+      // Try to parse as JSON to extract message
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || responseText || errorMessage;
+      } catch {
+        // If not valid JSON, use the text directly
+        errorMessage = responseText || errorMessage;
+      }
     } catch {
-      // Keep the text error if JSON parsing fails
+      // If reading the response fails, use default message
+      errorMessage = 'Unknown error';
     }
 
     const error = new Error(errorMessage);

@@ -245,7 +245,10 @@ class ActivityListRenderer {
   render(activities, options = {}) {
     const {
       groupByRepo = true,
-      maxItems = UI_CONFIG.MAX_VISIBLE_ACTIVITIES
+      maxItems = UI_CONFIG.MAX_VISIBLE_ACTIVITIES,
+      collapsedRepos = new Set(),
+      pinnedRepos = [],
+      readItems = []
     } = options;
 
     // Limit activities to prevent performance issues
@@ -261,7 +264,12 @@ class ActivityListRenderer {
 
     // Schedule optimized render
     this.optimizer.scheduleRender(() => {
-      return this.generateActivityHTML(limitedActivities, { groupByRepo });
+      return this.generateActivityHTML(limitedActivities, {
+        groupByRepo,
+        collapsedRepos,
+        pinnedRepos,
+        readItems
+      });
     });
   }
 
@@ -283,7 +291,14 @@ class ActivityListRenderer {
    * @param {Object} options - Render options
    * @returns {string} Generated HTML
    */
-  generateActivityHTML(activities, { groupByRepo }) {
+  generateActivityHTML(activities, options = {}) {
+    const {
+      groupByRepo = true,
+      collapsedRepos = new Set(),
+      pinnedRepos = [],
+      readItems = []
+    } = options;
+
     if (activities.length === 0) {
       return `
         <div class="empty-state">
@@ -293,31 +308,60 @@ class ActivityListRenderer {
     }
 
     if (groupByRepo) {
-      return this.generateGroupedHTML(activities);
+      return this.generateGroupedHTML(activities, collapsedRepos, pinnedRepos, readItems);
     } else {
-      return this.generateFlatHTML(activities);
+      return this.generateFlatHTML(activities, readItems);
     }
   }
 
   /**
    * Generate grouped HTML by repository
    * @param {Array} activities - Activities to group
+   * @param {Set} collapsedRepos - Set of collapsed repository names
+   * @param {Array} pinnedRepos - Array of pinned repository names
+   * @param {Array} readItems - Array of read activity IDs
    * @returns {string} Generated HTML
    */
-  generateGroupedHTML(activities) {
-    const grouped = this.groupActivitiesByRepo(activities);
+  generateGroupedHTML(activities, collapsedRepos = new Set(), pinnedRepos = [], readItems = []) {
+    const grouped = this.groupActivitiesByRepo(activities, pinnedRepos);
     let html = '';
 
     for (const [repo, repoActivities] of grouped) {
+      const repoUnreadCount = repoActivities.filter(a => !readItems.includes(a.id)).length;
+      const isCollapsed = collapsedRepos.has(repo);
+      const isPinned = pinnedRepos.includes(repo);
+
       html += `
-        <div class="repo-section" data-repo="${escapeHtml(repo)}">
-          <h3 class="repo-header">
-            <span class="repo-name">${escapeHtml(repo)}</span>
-            <span class="repo-count">${repoActivities.length}</span>
-          </h3>
-          <div class="activities-list">
-            ${repoActivities.map(activity => this.generateSingleActivityHTML(activity)).join('')}
+        <div class="repo-group-header ${isPinned ? 'pinned' : ''}" data-repo="${escapeHtml(repo)}">
+          <div class="repo-group-title">
+            <button class="repo-collapse-btn" data-repo="${escapeHtml(repo)}" title="${isCollapsed ? 'Expand' : 'Collapse'}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${escapeHtml(repo)} activities">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="chevron ${isCollapsed ? 'collapsed' : ''}">
+                <path d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"/>
+              </svg>
+            </button>
+            <span class="repo-group-name">${escapeHtml(repo)}</span>
           </div>
+          <div class="repo-group-actions">
+            <button class="repo-pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${escapeHtml(repo)}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} ${escapeHtml(repo)} repository">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                ${isPinned
+                  ? '<path d="M4.456.734a1.75 1.75 0 012.826.504l.613 1.327a3.081 3.081 0 002.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.75.75 0 11-1.061 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 00-1.707-2.084l-1.327-.613a1.75 1.75 0 01-.504-2.826L4.456.734z"/>'
+                  : '<path d="M4.456.734a1.75 1.75 0 012.826.504l.613 1.327a3.081 3.081 0 002.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.75.75 0 11-1.061 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 00-1.707-2.084l-1.327-.613a1.75 1.75 0 01-.504-2.826L4.456.734zM5.92 1.866a.25.25 0 00-.404-.072L1.794 5.516a.25.25 0 00.072.404l1.328.613A4.582 4.582 0 015.73 9.63l.584 2.454a.25.25 0 00.42.12l5.47-5.47a.25.25 0 00-.12-.42L9.63 5.73a4.581 4.581 0 01-3.098-2.537L5.92 1.866z"/>'}
+              </svg>
+            </button>
+            ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
+            <button class="repo-snooze-btn" data-repo="${escapeHtml(repo)}" title="Snooze this repository" aria-label="Snooze ${escapeHtml(repo)} repository">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M.5 2.75A.75.75 0 011.25 2h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 01.5 2.75zm4.5 4a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 015 6.75zM2.25 11.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5zM11 7a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-5.5 1.5a.75.75 0 000 1.5h.5a.75.75 0 000-1.5h-.5z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="repo-activities ${isCollapsed ? 'collapsed' : ''}" data-repo="${escapeHtml(repo)}">
+          ${repoActivities.map(activity => {
+            const isRead = readItems.includes(activity.id);
+            return this.generateSingleActivityHTML(activity, isRead);
+          }).join('')}
         </div>
       `;
     }
@@ -328,12 +372,16 @@ class ActivityListRenderer {
   /**
    * Generate flat HTML for all activities
    * @param {Array} activities - Activities to render
+   * @param {Array} readItems - Array of read activity IDs
    * @returns {string} Generated HTML
    */
-  generateFlatHTML(activities) {
+  generateFlatHTML(activities, readItems = []) {
     return `
       <div class="activities-list">
-        ${activities.map(activity => this.generateSingleActivityHTML(activity)).join('')}
+        ${activities.map(activity => {
+          const isRead = readItems.includes(activity.id);
+          return this.generateSingleActivityHTML(activity, isRead);
+        }).join('')}
       </div>
     `;
   }
@@ -341,31 +389,48 @@ class ActivityListRenderer {
   /**
    * Generate HTML for a single activity
    * @param {Object} activity - Activity data
+   * @param {boolean} isRead - Whether activity is read
    * @returns {string} Activity HTML
    */
-  generateSingleActivityHTML(activity) {
-    const cached = this.itemCache.get(activity.id);
+  generateSingleActivityHTML(activity, isRead = false) {
+    const cached = this.itemCache.get(`${activity.id}-${isRead}`);
     if (cached && cached.timestamp > Date.now() - 60000) { // Cache for 1 minute
       return cached.html;
     }
 
+    // Sanitize all user-generated content
+    const sanitizedTitle = escapeHtml(activity.title);
+    const sanitizedAuthor = escapeHtml(activity.author);
+    const sanitizedRepo = escapeHtml(activity.repo);
+    const sanitizedType = escapeHtml(activity.type);
+    const sanitizedAvatar = activity.authorAvatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+    const sanitizedUrl = escapeHtml(activity.url);
+    const sanitizedId = escapeHtml(activity.id);
+
     const html = `
-      <div class="activity-item ${activity.type}" data-id="${activity.id}">
-        <div class="activity-header">
-          <span class="activity-type">${this.getActivityTypeLabel(activity.type)}</span>
-          <span class="activity-time">${this.formatTime(activity.createdAt)}</span>
-        </div>
+      <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${sanitizedId}" data-url="${sanitizedUrl}" role="button" tabindex="0" aria-label="Open ${sanitizedType}: ${sanitizedTitle} by ${sanitizedAuthor}">
+        <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
         <div class="activity-content">
-          <h4 class="activity-title">${escapeHtml(activity.title)}</h4>
-          ${activity.description ? `<p class="activity-description">${escapeHtml(activity.description)}</p>` : ''}
+          <div class="activity-header">
+            <span class="activity-type ${sanitizedType}">${sanitizedType}</span>
+            <span class="activity-repo">${sanitizedRepo}</span>
+          </div>
+          <div class="activity-title">${sanitizedTitle}</div>
+          <div class="activity-meta">
+            by ${sanitizedAuthor} • ${this.formatTime(activity.createdAt)}
+          </div>
         </div>
         <div class="activity-actions">
-          <a href="${activity.url}" target="_blank" rel="noopener noreferrer" class="activity-link">View</a>
+          <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+            </svg>
+          </button>
         </div>
       </div>
     `;
 
-    this.itemCache.set(activity.id, {
+    this.itemCache.set(`${activity.id}-${isRead}`, {
       html,
       timestamp: Date.now()
     });
@@ -376,19 +441,43 @@ class ActivityListRenderer {
   /**
    * Group activities by repository
    * @param {Array} activities - Activities to group
-   * @returns {Map} Grouped activities
+   * @param {Array} pinnedRepos - Array of pinned repository names
+   * @returns {Map} Grouped activities sorted with pinned repos first
    */
-  groupActivitiesByRepo(activities) {
-    const grouped = new Map();
+  groupActivitiesByRepo(activities, pinnedRepos = []) {
+    const groups = {};
 
+    // Group activities by repo
     for (const activity of activities) {
-      if (!grouped.has(activity.repo)) {
-        grouped.set(activity.repo, []);
+      if (!groups[activity.repo]) {
+        groups[activity.repo] = [];
       }
-      grouped.get(activity.repo).push(activity);
+      groups[activity.repo].push(activity);
     }
 
-    return grouped;
+    // Sort repos: pinned first, then by most recent activity
+    const sortedGroupsMap = new Map();
+    Object.keys(groups)
+      .sort((a, b) => {
+        const aIsPinned = pinnedRepos.includes(a);
+        const bIsPinned = pinnedRepos.includes(b);
+
+        // Pinned repos come first
+        if (aIsPinned && !bIsPinned) return -1;
+        if (!aIsPinned && bIsPinned) return 1;
+
+        // If both pinned or both not pinned, sort by most recent activity
+        const latestA = new Date(groups[a][0].createdAt);
+        const latestB = new Date(groups[b][0].createdAt);
+        return latestB - latestA;
+      })
+      .forEach(repo => {
+        // Sort activities within each repo by newest first
+        groups[repo].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        sortedGroupsMap.set(repo, groups[repo]);
+      });
+
+    return sortedGroupsMap;
   }
 
   /**

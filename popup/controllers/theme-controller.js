@@ -20,22 +20,36 @@ export async function updateDarkModeIcon() {
 
   const currentTheme = await getSyncItem('theme', 'light');
 
+  // Always hide system icon
   if (systemIcon) {
+    systemIcon.classList.add('hidden');
     systemIcon.style.display = 'none';
     systemIcon.style.visibility = 'hidden';
   }
 
+  // Show moon icon for light theme, hide for dark theme
   if (moonIcon) {
-    const moonDisplay = currentTheme === 'dark' ? 'none' : 'block';
-    const moonVisibility = currentTheme === 'dark' ? 'hidden' : 'visible';
-    moonIcon.style.display = moonDisplay;
-    moonIcon.style.visibility = moonVisibility;
+    if (currentTheme === 'dark') {
+      moonIcon.classList.add('hidden');
+      moonIcon.style.display = 'none';
+      moonIcon.style.visibility = 'hidden';
+    } else {
+      moonIcon.classList.remove('hidden');
+      moonIcon.style.display = 'block';
+      moonIcon.style.visibility = 'visible';
+    }
   }
 
+  // Show sun icon for dark theme, hide for light theme
   if (sunIcon) {
-    const sunDisplay = currentTheme === 'dark' ? 'block' : 'none';
-    const sunVisibility = currentTheme === 'dark' ? 'visible' : 'hidden';
-    sunIcon.style.display = sunDisplay;
-    sunIcon.style.visibility = sunVisibility;
+    if (currentTheme === 'dark') {
+      sunIcon.classList.remove('hidden');
+      sunIcon.style.display = 'block';
+      sunIcon.style.visibility = 'visible';
+    } else {
+      sunIcon.classList.add('hidden');
+      sunIcon.style.display = 'none';
+      sunIcon.style.visibility = 'hidden';
+    }
   }
 }

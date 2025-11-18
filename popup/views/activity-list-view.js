@@ -64,15 +64,19 @@ export function renderActivities(
     return;
   }
 
-  // Use optimized renderer if available, fallback to legacy rendering
+  // Use optimized renderer
   if (activityRenderer) {
     const unreadCount = filtered.filter(a => !state.readItems.includes(a.id)).length;
     const repoCount = new Set(filtered.map(a => a.repo)).size;
+    const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
 
     // Render with optimized renderer
     activityRenderer.render(filtered, {
       groupByRepo: true,
-      maxItems: 50
+      maxItems: 50,
+      collapsedRepos,
+      pinnedRepos,
+      readItems: state.readItems
     });
 
     // Add header with action buttons
@@ -80,19 +84,32 @@ export function renderActivities(
       <div class="list-header">
         <span>${unreadCount > 0 ? `${unreadCount} unread` : ''}</span>
         <div class="header-actions">
-          ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">Collapse all</button>` : ''}
+          ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
           ${unreadCount > 0 ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
         </div>
       </div>
     `;
 
-    // Prepend header to the container
+    // Update or add header to the container
     const existingHeader = list.querySelector('.list-header');
-    if (!existingHeader) {
+    if (existingHeader) {
+      existingHeader.outerHTML = header;
+    } else {
       list.insertAdjacentHTML('afterbegin', header);
     }
 
-    // Event listeners are already attached in the DOM generation
+    // Attach event listeners after rendering
+    attachEventListeners(
+      list,
+      markAsRead,
+      markAsReadWithAnimation,
+      handleMarkAllRead,
+      handleCollapseAll,
+      toggleRepoCollapse,
+      togglePinRepo,
+      snoozeRepo
+    );
+
     return;
   }
 
@@ -110,6 +127,115 @@ export function renderActivities(
     togglePinRepo,
     snoozeRepo
   );
+}
+
+/**
+ * Attaches event listeners to rendered activity list
+ * @param {HTMLElement} list - The activity list container
+ * @param {Function} markAsRead - Callback for marking item as read
+ * @param {Function} markAsReadWithAnimation - Callback for marking item as read with animation
+ * @param {Function} handleMarkAllRead - Callback for marking all as read
+ * @param {Function} handleCollapseAll - Callback for collapsing/expanding all repos
+ * @param {Function} toggleRepoCollapse - Callback for toggling repo collapse state
+ * @param {Function} togglePinRepo - Callback for toggling repo pin state
+ * @param {Function} snoozeRepo - Callback for snoozing a repo
+ */
+function attachEventListeners(
+  list,
+  markAsRead,
+  markAsReadWithAnimation,
+  handleMarkAllRead,
+  handleCollapseAll,
+  toggleRepoCollapse,
+  togglePinRepo,
+  snoozeRepo
+) {
+  // Header action button listeners
+  document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
+  document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
+
+  // Header click listeners for expand/collapse
+  list.querySelectorAll('.repo-group-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      // Don't trigger if clicking on buttons
+      if (e.target.closest('.repo-snooze-btn') || e.target.closest('.repo-pin-btn')) {
+        return;
+      }
+
+      const repo = header.dataset.repo;
+      toggleRepoCollapse(repo);
+    });
+  });
+
+  // Collapse button listeners
+  list.querySelectorAll('.repo-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      toggleRepoCollapse(repo);
+    });
+  });
+
+  // Pin button listeners
+  list.querySelectorAll('.repo-pin-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      togglePinRepo(repo);
+    });
+  });
+
+  // Snooze button listeners
+  list.querySelectorAll('.repo-snooze-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const repo = btn.dataset.repo;
+      snoozeRepo(repo);
+    });
+  });
+
+  // Activity item listeners
+  list.querySelectorAll('.activity-item').forEach(item => {
+    const content = item.querySelector('.activity-content');
+
+    // Shared handler for opening activity
+    const handleOpen = async () => {
+      const id = item.dataset.id;
+      const url = item.dataset.url;
+      markAsRead(id);
+
+      // Validate URL before opening to prevent javascript: and data: URLs
+      const opened = await safelyOpenUrl(url);
+      if (!opened) {
+        showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
+      }
+    };
+
+    // Click handler for content
+    content.addEventListener('click', handleOpen);
+
+    // Keyboard handler for the entire item (role="button")
+    item.addEventListener('keydown', (e) => {
+      // Activate on Enter or Space key
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleOpen();
+      }
+    });
+
+    // Mark as read button listeners
+    item.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const id = item.dataset.id;
+
+        if (action === 'mark-read') {
+          markAsReadWithAnimation(id, item);
+        }
+      });
+    });
+  });
 }
 
 /**

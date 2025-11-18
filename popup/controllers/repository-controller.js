@@ -141,9 +141,15 @@ export function markAsReadWithAnimation(id, itemElement, renderActivitiesCallbac
   itemElement.classList.add('removing');
 
   // Wait for animation to complete, then mark as read
-  setTimeout(() => {
-    markAsRead(id);
-    renderActivitiesCallback();
+  setTimeout(async () => {
+    try {
+      await markAsRead(id);
+      renderActivitiesCallback();
+    } catch (error) {
+      console.error('[markAsReadWithAnimation] Error:', error);
+      // Re-render anyway to remove animation class
+      renderActivitiesCallback();
+    }
   }, 300); // Match CSS transition duration
 }
 

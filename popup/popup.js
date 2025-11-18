@@ -80,7 +80,14 @@ if (typeof document !== 'undefined') {
         if (header) header.style.display = 'flex';
         if (toolbar) toolbar.style.display = 'flex';
         if (activityList) activityList.style.display = 'block';
-        
+
+        // Ensure skip button is hidden when not in onboarding
+        const footerSkipBtn = document.getElementById('footerSkipBtn');
+        if (footerSkipBtn) {
+          footerSkipBtn.classList.add('hidden');
+          footerSkipBtn.style.display = 'none';
+        }
+
         loadActivities();
       }
 
@@ -144,7 +151,7 @@ function setupEventListeners() {
 
     // If no saved theme, detect system preference
     if (theme === null) {
-      theme = window.matchMedia('(prefers-color-scheme: dark)') ? 'dark' : 'light';
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       // Save the detected system theme as the user's preference
       chrome.storage.sync.set({ theme });
     }
@@ -166,6 +173,17 @@ async function handleRefresh() {
   await handleRefreshController(() => loadActivities());
 }
 
+// Update repo count in header
+async function updateRepoCount() {
+  const result = await chrome.storage.sync.get(['watchedRepos']);
+  const watchedRepos = result.watchedRepos || [];
+  const count = watchedRepos.length;
+  const repoCountEl = document.getElementById('repoCount');
+  if (repoCountEl) {
+    repoCountEl.textContent = count === 0 ? 'Not watching any repos' : `Watching ${count} ${count === 1 ? 'repo' : 'repos'}`;
+  }
+}
+
 // Wrapper for loadActivities to pass callbacks and update global state
 async function loadActivities() {
   await loadActivitiesController(
@@ -173,6 +191,7 @@ async function loadActivities() {
     (repos) => { pinnedRepos = repos; },
     (repos) => { collapsedRepos = repos; }
   );
+  await updateRepoCount();
 }
 
 // Wrapper for renderActivities to pass all necessary callbacks

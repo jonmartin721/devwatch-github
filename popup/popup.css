@@ -44,7 +44,18 @@ body {
 
 /* Utility classes */
 .hidden {
-  display: none !important;
+  display: none;
+}
+
+.svg-inline {
+  vertical-align: text-bottom;
+  margin-right: 6px;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px;
 }
 
 .container {
@@ -66,6 +77,13 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.header-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
 }
 
 .header-refresh-btn {
@@ -92,6 +110,11 @@ header {
   font-size: 12px;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+.repo-count {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 h1 {
@@ -1445,10 +1468,42 @@ body.dark-mode .search-box input:focus-visible {
   transform: scale(0.95);
 }
 
+.add-repo-btn.loading {
+  background: var(--text-secondary);
+  cursor: wait;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.add-repo-btn.added {
+  background: #10b981;
+  cursor: default;
+  animation: successPop 0.3s ease-out;
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .add-repo-btn:disabled {
-  background: var(--success-text);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 1;
   transform: none;
   box-shadow: none;
 }

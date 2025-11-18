@@ -98,10 +98,10 @@ function setupEventListeners() {
   }
 
   // Import repos buttons
-  document.getElementById('importWatchedBtn').addEventListener('click', () => openImportModal('watched'));
-  document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred'));
-  document.getElementById('importParticipatingBtn').addEventListener('click', () => openImportModal('participating'));
-  document.getElementById('importMineBtn').addEventListener('click', () => openImportModal('mine'));
+  document.getElementById('importWatchedBtn').addEventListener('click', () => openImportModal('watched', state.watchedRepos));
+  document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred', state.watchedRepos));
+  document.getElementById('importParticipatingBtn').addEventListener('click', () => openImportModal('participating', state.watchedRepos));
+  document.getElementById('importMineBtn').addEventListener('click', () => openImportModal('mine', state.watchedRepos));
 
   // Import/Export settings buttons
   document.getElementById('importBtn').addEventListener('click', () => {
@@ -284,7 +284,15 @@ function setupEventListeners() {
   // Import modal event listeners
   document.getElementById('closeImportModal').addEventListener('click', closeImportModal);
   document.getElementById('cancelImportBtn').addEventListener('click', closeImportModal);
-  document.getElementById('confirmImportBtn').addEventListener('click', importSelectedRepos);
+  document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+    await importSelectedRepos(state.watchedRepos, async () => {
+      // Reload repos from storage to update state
+      const result = await chrome.storage.sync.get(['watchedRepos']);
+      state.watchedRepos = result.watchedRepos || [];
+      renderRepoListWrapper();
+      toastManager.show('Repositories imported successfully', 'success');
+    });
+  });
 
   document.getElementById('selectAllImport').addEventListener('change', (e) => {
     const cards = document.querySelectorAll('.repo-item.import-variant:not(.already-added)');
@@ -321,26 +329,6 @@ function setupEventListeners() {
     }
   });
 
-  // Restart onboarding button
-  document.getElementById('restartOnboardingBtn').addEventListener('click', async () => {
-    const onboardingManager = new OnboardingManager();
-    await onboardingManager.restartOnboarding();
-
-    // Clear any cached activities to force fresh start
-    await chrome.storage.local.remove(['activities', 'readItems']);
-
-    // Show success message
-    toastManager.show('Setup wizard restarted! Open the extension popup to begin.', 'success');
-
-    // Try to open the extension popup after a short delay
-    setTimeout(() => {
-      chrome.action.openPopup().catch(() => {
-        // If opening popup fails (which it might in some contexts),
-        // the user will need to manually click the extension icon
-        toastManager.info('Please click the extension icon to start the setup wizard');
-      });
-    }, 1000);
-  });
 }
 
 // Panel toggle functionality
@@ -493,17 +481,14 @@ async function loadSettings() {
       repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
       document.getElementById('addRepoBtn').disabled = true;
       document.getElementById('repoHelpText').textContent = 'Add a valid GitHub token above to start adding repositories';
-      document.getElementById('importReposSection').style.display = 'none';
+      const importSection = document.getElementById('importReposSection');
+      importSection.classList.add('hidden');
+      importSection.style.display = 'none';
     }
 
     state.watchedRepos = settings.watchedRepos || [];
     state.mutedRepos = settings.mutedRepos || [];
     state.pinnedRepos = settings.pinnedRepos || [];
-
-    // Migrate old string format to new object format
-    if (githubToken && state.watchedRepos.some(r => typeof r === 'string')) {
-      await migrateRepoFormat(githubToken);
-    }
 
     renderRepoListWrapper();
 
@@ -551,47 +536,6 @@ async function loadSettings() {
     state.mutedRepos = state.mutedRepos || [];
     state.pinnedRepos = state.pinnedRepos || [];
     renderRepoListWrapper();
-  }
-}
-
-async function migrateRepoFormat() {
-  let needsMigration = false;
-  const oldRepos = state.watchedRepos.filter(r => typeof r === 'string');
-
-  if (oldRepos.length > 0) {
-    needsMigration = true;
-    console.log(`Migrating ${oldRepos.length} repositories to new format...`);
-
-    for (const repoName of oldRepos) {
-      try {
-        const result = await validateRepo(repoName);
-        if (result.valid) {
-          // Replace string with object
-          const index = state.watchedRepos.findIndex(r => r === repoName);
-          if (index !== -1) {
-            state.watchedRepos[index] = result.metadata;
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to migrate ${repoName}:`, error);
-      }
-    }
-  }
-
-  // Add addedAt to repos that don't have it (set to now to avoid old notifications)
-  const reposWithoutAddedAt = state.watchedRepos.filter(r => typeof r === 'object' && !r.addedAt);
-  if (reposWithoutAddedAt.length > 0) {
-    needsMigration = true;
-    const now = new Date().toISOString();
-    reposWithoutAddedAt.forEach(repo => {
-      repo.addedAt = now;
-    });
-  }
-
-  if (needsMigration) {
-    // Save migrated repos
-    await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
-    console.log('Migration complete');
   }
 }
 
@@ -686,7 +630,11 @@ async function addRepo() {
   statusEl.className = 'repo-validation-status success';
 
   try {
-    state.watchedRepos.push(validationResult);
+    // Add timestamp to track when repo was added (for filtering old activities)
+    state.watchedRepos.push({
+      ...validationResult,
+      addedAt: new Date().toISOString()
+    });
 
     // Reset to last page to show the newly added repo
     const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
@@ -790,15 +738,7 @@ async function validateRepo(repo) {
       metadata: {
         ...basicResult.metadata,
         latestRelease
-      },
-      // Legacy compatibility fields
-      name: basicResult.metadata.name,
-      fullName: basicResult.metadata.fullName,
-      description: basicResult.metadata.description,
-      language: basicResult.metadata.language,
-      stars: basicResult.metadata.stars,
-      forks: basicResult.metadata.forks,
-      updatedAt: basicResult.metadata.updatedAt
+      }
     };
   } catch (error) {
     // If release fetch fails, return basic validation result
@@ -807,24 +747,13 @@ async function validateRepo(repo) {
       metadata: {
         ...basicResult.metadata,
         latestRelease: null
-      },
-      // Legacy compatibility fields
-      name: basicResult.metadata.name,
-      fullName: basicResult.metadata.fullName,
-      description: basicResult.metadata.description,
-      language: basicResult.metadata.language,
-      stars: basicResult.metadata.stars,
-      forks: basicResult.metadata.forks,
-      updatedAt: basicResult.metadata.updatedAt
+      }
     };
   }
 }
 
 async function removeRepo(repoFullName) {
-  state.watchedRepos = state.watchedRepos.filter(r => {
-    const fullName = typeof r === 'string' ? r : r.fullName;
-    return fullName !== repoFullName;
-  });
+  state.watchedRepos = state.watchedRepos.filter(r => r.fullName !== repoFullName);
 
   // Adjust current page if we deleted the last item on a page
   const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
@@ -876,8 +805,7 @@ function getFilteredRepos() {
   // Filter out pinned repos if hide pinned is enabled
   if (state.hidePinnedRepos) {
     repos = repos.filter(repo => {
-      const fullName = extractRepoName(repo);
-      return !state.pinnedRepos.includes(fullName);
+      return !state.pinnedRepos.includes(repo.fullName);
     });
   }
 
@@ -887,11 +815,10 @@ function getFilteredRepos() {
   }
 
   return repos.filter(repo => {
-    const fullName = extractRepoName(repo);
-    const description = typeof repo === 'string' ? '' : repo.description;
-    const language = typeof repo === 'string' ? '' : repo.language;
+    const description = repo.description || '';
+    const language = repo.language || '';
 
-    return fullName.toLowerCase().includes(state.searchQuery) ||
+    return repo.fullName.toLowerCase().includes(state.searchQuery) ||
            description.toLowerCase().includes(state.searchQuery) ||
            language.toLowerCase().includes(state.searchQuery);
   });
@@ -946,7 +873,6 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleMuteRepo,
     getFilteredRepos,
     renderRepoList,
-    migrateRepoFormat,
     formatNumber,
     formatDate: formatDateVerbose,  // Export verbose formatter for tests
     exportSettings,
@@ -973,7 +899,6 @@ export {
   cleanupRepoNotifications,
   getFilteredRepos,
   renderRepoList,
-  migrateRepoFormat,
   formatNumber,
   formatDateVerbose as formatDate,  // Export verbose formatter for tests
   exportSettings,
