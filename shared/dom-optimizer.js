@@ -144,7 +144,17 @@ class DOMOptimizer {
     }
 
     // Update classes efficiently
-    if (currentElement.className !== newElement.className) {
+    // Handle SVG elements differently (they use className.baseVal)
+    if (currentElement instanceof SVGElement) {
+      if (currentElement.getAttribute('class') !== newElement.getAttribute('class')) {
+        const newClass = newElement.getAttribute('class');
+        if (newClass) {
+          currentElement.setAttribute('class', newClass);
+        } else {
+          currentElement.removeAttribute('class');
+        }
+      }
+    } else if (currentElement.className !== newElement.className) {
       currentElement.className = newElement.className;
     }
   }
@@ -340,6 +350,7 @@ class ActivityListRenderer {
               </svg>
             </button>
             <span class="repo-group-name">${escapeHtml(repo)}</span>
+            <span class="repo-count">${repoActivities.length}</span>
           </div>
           <div class="repo-group-actions">
             <button class="repo-pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${escapeHtml(repo)}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} ${escapeHtml(repo)} repository">
@@ -403,19 +414,22 @@ class ActivityListRenderer {
     const sanitizedAuthor = escapeHtml(activity.author);
     const sanitizedRepo = escapeHtml(activity.repo);
     const sanitizedType = escapeHtml(activity.type);
+    const sanitizedTypeLabel = escapeHtml(this.getActivityTypeLabel(activity.type));
+    const sanitizedDescription = activity.description ? escapeHtml(activity.description) : '';
     const sanitizedAvatar = activity.authorAvatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
     const sanitizedUrl = escapeHtml(activity.url);
     const sanitizedId = escapeHtml(activity.id);
 
     const html = `
-      <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${sanitizedId}" data-url="${sanitizedUrl}" role="button" tabindex="0" aria-label="Open ${sanitizedType}: ${sanitizedTitle} by ${sanitizedAuthor}">
+      <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${sanitizedId}" data-url="${sanitizedUrl}" role="button" tabindex="0" aria-label="Open ${sanitizedTypeLabel}: ${sanitizedTitle} by ${sanitizedAuthor}">
         <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
         <div class="activity-content">
           <div class="activity-header">
-            <span class="activity-type ${sanitizedType}">${sanitizedType}</span>
+            <span class="activity-type ${sanitizedType}">${sanitizedTypeLabel}</span>
             <span class="activity-repo">${sanitizedRepo}</span>
           </div>
           <div class="activity-title">${sanitizedTitle}</div>
+          ${sanitizedDescription ? `<p class="activity-description">${sanitizedDescription}</p>` : ''}
           <div class="activity-meta">
             by ${sanitizedAuthor} • ${this.formatTime(activity.createdAt)}
           </div>

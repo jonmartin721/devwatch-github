@@ -92,7 +92,6 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
       description = '',
       language = '',
       stars = 0,
-      forks = 0,
       updatedAt = new Date().toISOString(),
       latestRelease = null
     } = repo;

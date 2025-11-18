@@ -166,7 +166,7 @@ describe('Options Page - Repository Management', () => {
   describe('validateRepo', () => {
     beforeEach(() => {
       // Mock token storage for validateRepo tests
-      chrome.storage.sync.get.mockImplementation((keys, callback) => {
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
         if (keys.includes('githubToken')) {
           const result = { githubToken: 'test-token' };
           if (callback) callback(result);

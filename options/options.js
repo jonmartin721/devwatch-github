@@ -1,10 +1,8 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
 import { getToken, setToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
-import { extractRepoName } from '../shared/repository-utils.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
-import { OnboardingManager } from '../shared/onboarding.js';
 import { fetchGitHubRepoFromNpm } from '../shared/api/npm-api.js';
 import { NotificationManager } from '../shared/ui/notification-manager.js';
 

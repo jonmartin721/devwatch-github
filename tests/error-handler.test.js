@@ -196,11 +196,7 @@ describe('Error Handler', () => {
       const error = new Error('Technical details');
       showError('errorMessage', error);
 
-      expect(console.error).toHaveBeenCalledWith('User-friendly error displayed:', expect.objectContaining({
-        type: 'unknown',
-        title: 'Unexpected Error',
-        technical: 'Technical details'
-      }));
+      expect(console.error).toHaveBeenCalledWith('[Error Details]', 'Technical details');
     });
 
     it('should handle missing element gracefully', () => {

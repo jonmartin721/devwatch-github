@@ -500,7 +500,7 @@ describe('ActivityListRenderer', () => {
       const html2 = renderer.generateSingleActivityHTML(activity);
 
       expect(html1).toBe(html2);
-      expect(renderer.itemCache.has('125')).toBe(true);
+      expect(renderer.itemCache.has('125-false')).toBe(true);
     });
   });
 
@@ -545,7 +545,7 @@ describe('ActivityListRenderer', () => {
 
       const html = renderer.generateActivityHTML(activities, { groupByRepo: true });
 
-      expect(html).toContain('repo-section');
+      expect(html).toContain('repo-group-header');
       expect(html).toContain('test/repo');
       expect(html).toContain('PR 1');
     });

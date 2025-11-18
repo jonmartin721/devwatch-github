@@ -37,9 +37,13 @@ export function getLocalItem(key, defaultValue = null) {
   if (!isChromeExtension()) {
     return Promise.resolve(defaultValue);
   }
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.storage.local.get([key], (result) => {
-      resolve(result[key] !== undefined ? result[key] : defaultValue);
+      if (chrome.runtime && chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result[key] !== undefined ? result[key] : defaultValue);
+      }
     });
   });
 }
@@ -53,9 +57,13 @@ export function getSyncItems(keys) {
   if (!isChromeExtension()) {
     return Promise.resolve({});
   }
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.storage.sync.get(keys, (result) => {
-      resolve(result);
+      if (chrome.runtime && chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result);
+      }
     });
   });
 }
@@ -69,9 +77,13 @@ export function getLocalItems(keys) {
   if (!isChromeExtension()) {
     return Promise.resolve({});
   }
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.storage.local.get(keys, (result) => {
-      resolve(result);
+      if (chrome.runtime && chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result);
+      }
     });
   });
 }

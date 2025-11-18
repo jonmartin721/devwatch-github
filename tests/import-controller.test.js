@@ -1,4 +1,4 @@
-import { jest, describe, test, beforeEach, expect, afterEach } from '@jest/globals';
+import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 
 // Mock dependencies
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
@@ -15,7 +15,7 @@ jest.unstable_mockModule('../shared/sanitize.js', () => ({
 }));
 
 jest.unstable_mockModule('../shared/utils.js', () => ({
-  formatDateVerbose: jest.fn((date) => 'recently')
+  formatDateVerbose: jest.fn(() => 'recently')
 }));
 
 jest.unstable_mockModule('../shared/icons.js', () => ({
@@ -103,7 +103,7 @@ describe('import-controller', () => {
     global.chrome = {
       storage: {
         sync: {
-          set: jest.fn((data) => Promise.resolve())
+          set: jest.fn(() => Promise.resolve())
         }
       }
     };
@@ -225,7 +225,7 @@ describe('import-controller', () => {
         headers: new Map()
       });
 
-      const watchedRepos = ['owner/repo1'];
+      const watchedRepos = [{ fullName: 'owner/repo1' }];
 
       await openImportModal('starred', watchedRepos);
 
@@ -659,9 +659,9 @@ describe('import-controller', () => {
         headers: new Map()
       });
 
-      // Mix of string and object formats
+      // Repos in object format
       const watchedRepos = [
-        'owner/repo1',
+        { fullName: 'owner/repo1' },
         { fullName: 'owner/repo2' }
       ];
 

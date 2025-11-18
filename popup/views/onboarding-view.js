@@ -1,5 +1,7 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
+import { getToken } from '../../shared/storage-helpers.js';
+import { createHeaders } from '../../shared/github-api.js';
 
 // Create onboarding manager instance
 const onboardingManager = new OnboardingManager();
@@ -607,27 +609,57 @@ function attachRepoButtonListeners() {
       btn.classList.add('loading');
       btn.textContent = '...';
 
-      // Save repo to storage with metadata and timestamp
-      const result = await chrome.storage.sync.get(['watchedRepos']);
-      const repos = result.watchedRepos || [];
+      try {
+        // Fetch full repo metadata from GitHub API
+        const token = await getToken();
+        const headers = createHeaders(token);
+        const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
-      // Check if repo already exists
-      const repoExists = repos.some(r => r.fullName === repo);
+        if (response.ok) {
+          const data = await response.json();
 
-      if (!repoExists) {
-        repos.push({
-          fullName: repo,
-          name: repo.split('/')[1],
-          addedAt: new Date().toISOString()
-        });
-        await chrome.storage.sync.set({ watchedRepos: repos });
+          // Save repo to storage with full metadata
+          const result = await chrome.storage.sync.get(['watchedRepos']);
+          const repos = result.watchedRepos || [];
+
+          // Check if repo already exists
+          const repoExists = repos.some(r => r.fullName === repo);
+
+          if (!repoExists) {
+            repos.push({
+              fullName: data.full_name,
+              name: data.name,
+              description: data.description || 'No description provided',
+              language: data.language || 'Unknown',
+              stars: data.stargazers_count || 0,
+              forks: data.forks_count || 0,
+              updatedAt: data.updated_at,
+              addedAt: new Date().toISOString()
+            });
+            await chrome.storage.sync.set({ watchedRepos: repos });
+          }
+
+          // Show success state
+          btn.classList.remove('loading');
+          btn.classList.add('added');
+          btn.disabled = true;
+          btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>';
+        } else {
+          // Handle error
+          btn.classList.remove('loading');
+          btn.textContent = '✗';
+          setTimeout(() => {
+            btn.textContent = '+';
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Error adding repository:', error);
+        btn.classList.remove('loading');
+        btn.textContent = '✗';
+        setTimeout(() => {
+          btn.textContent = '+';
+        }, 2000);
       }
-
-      // Show success state
-      btn.classList.remove('loading');
-      btn.classList.add('added');
-      btn.disabled = true;
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>';
     });
   });
 }
@@ -696,13 +728,20 @@ function setupReposStepListeners() {
       const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
       if (response.ok) {
+        const data = await response.json();
+
         const result = await chrome.storage.sync.get(['watchedRepos']);
         const repos = result.watchedRepos || [];
         const repoExists = repos.some(r => r.fullName === repo);
         if (!repoExists) {
           repos.push({
-            fullName: repo,
-            name: repo.split('/')[1],
+            fullName: data.full_name,
+            name: data.name,
+            description: data.description || 'No description provided',
+            language: data.language || 'Unknown',
+            stars: data.stargazers_count || 0,
+            forks: data.forks_count || 0,
+            updatedAt: data.updated_at,
             addedAt: new Date().toISOString()
           });
           await chrome.storage.sync.set({ watchedRepos: repos });
