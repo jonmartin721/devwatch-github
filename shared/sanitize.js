@@ -23,6 +23,25 @@ export function escapeHtml(unsafe) {
 }
 
 /**
+ * Unescapes HTML entities back to original characters
+ * Used to decode data that was escaped for safe HTML insertion
+ * @param {string} escaped - HTML-escaped string
+ * @returns {string} - Unescaped string
+ */
+export function unescapeHtml(escaped) {
+  if (typeof escaped !== 'string') {
+    return '';
+  }
+
+  return escaped
+    .replace(/&#039;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&');
+}
+
+/**
  * Validates and sanitizes a URL for use in src attributes (e.g., images)
  * Only allows HTTPS URLs from trusted domains
  * @param {string} url - URL to validate

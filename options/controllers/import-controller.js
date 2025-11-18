@@ -1,6 +1,6 @@
 import { getToken } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
-import { escapeHtml } from '../../shared/sanitize.js';
+import { escapeHtml, unescapeHtml } from '../../shared/sanitize.js';
 import { formatDateVerbose } from '../../shared/utils.js';
 import { STAR_ICON, createSvg } from '../../shared/icons.js';
 
@@ -83,7 +83,9 @@ export async function openImportModal(type, watchedRepos) {
 
   modal.classList.add('show');
   document.getElementById('importLoadingState').style.display = 'flex';
-  document.getElementById('importReposList').style.display = 'none';
+  const reposList = document.getElementById('importReposList');
+  reposList.classList.add('hidden');
+  reposList.style.display = 'none';
   document.getElementById('importErrorState').style.display = 'none';
 
   setupModalFocusTrap(modal);
@@ -97,7 +99,7 @@ export async function openImportModal(type, watchedRepos) {
     const repos = await fetchReposFromGitHub(type, token);
 
     const alreadyAdded = new Set(
-      watchedRepos.map(r => (typeof r === 'string' ? r : r.fullName).toLowerCase())
+      (watchedRepos || []).map(r => r.fullName.toLowerCase())
     );
 
     importModalState.repos = repos.map(repo => ({
@@ -108,7 +110,9 @@ export async function openImportModal(type, watchedRepos) {
     importModalState.filteredRepos = [...importModalState.repos];
 
     document.getElementById('importLoadingState').style.display = 'none';
-    document.getElementById('importReposList').style.display = 'block';
+    const reposList = document.getElementById('importReposList');
+    reposList.classList.remove('hidden');
+    reposList.style.display = 'block';
     renderImportReposList();
   } catch (error) {
     document.getElementById('importLoadingState').style.display = 'none';
@@ -122,6 +126,8 @@ async function fetchReposFromGitHub(type, token) {
   let allRepos = [];
   let page = 1;
   const perPage = 100;
+  const MAX_PAGES = 100; // Prevent infinite loops (10,000 repos max)
+  const MAX_REPOS = 10000; // Hard limit on total repos
 
   const endpoints = {
     watched: 'https://api.github.com/user/subscriptions',
@@ -136,8 +142,22 @@ async function fetchReposFromGitHub(type, token) {
   }
 
   let hasMorePages = true;
-  while (hasMorePages) {
-    const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}per_page=${perPage}&page=${page}`, {
+  let startTime = Date.now();
+  const TIMEOUT_MS = 60000; // 60 second timeout
+
+  while (hasMorePages && page <= MAX_PAGES && allRepos.length < MAX_REPOS) {
+    // Check for timeout to prevent hanging
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      console.warn('[Import] Pagination timeout reached, stopping at', allRepos.length, 'repos');
+      break;
+    }
+
+    // Build URL safely with URLSearchParams
+    const urlObj = new URL(url);
+    urlObj.searchParams.set('per_page', perPage.toString());
+    urlObj.searchParams.set('page', page.toString());
+
+    const response = await fetch(urlObj.toString(), {
       headers
     });
 
@@ -152,7 +172,7 @@ async function fetchReposFromGitHub(type, token) {
     }
 
     const repos = await response.json();
-    if (repos.length === 0) {
+    if (!Array.isArray(repos) || repos.length === 0) {
       hasMorePages = false;
       break;
     }
@@ -168,12 +188,22 @@ async function fetchReposFromGitHub(type, token) {
 
     allRepos.push(...transformed);
 
+    // Stop if we've hit the max repos limit
+    if (allRepos.length >= MAX_REPOS) {
+      console.warn('[Import] Maximum repo limit reached:', MAX_REPOS);
+      break;
+    }
+
     const linkHeader = response.headers.get('Link');
     if (!linkHeader || !linkHeader.includes('rel="next"')) {
       hasMorePages = false;
     } else {
       page++;
     }
+  }
+
+  if (page > MAX_PAGES) {
+    console.warn('[Import] Maximum page limit reached:', MAX_PAGES);
   }
 
   return allRepos;
@@ -200,7 +230,7 @@ function renderImportReposList() {
   countEl.textContent = importModalState.filteredRepos.length;
 
   if (importModalState.filteredRepos.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">No repositories found</p>';
+    container.innerHTML = '<p class="empty-message">No repositories found</p>';
     return;
   }
 
@@ -215,9 +245,10 @@ function renderImportReposList() {
     const sanitizedFullName = escapeHtml(repo.fullName);
     const sanitizedDescription = escapeHtml(repo.description || '');
     const sanitizedLanguage = escapeHtml(repo.language || '');
+    const sanitizedRepoData = escapeHtml(JSON.stringify(repo));
 
     return `
-      <li class="repo-item import-variant ${isDisabled ? 'already-added' : ''}" ${!isDisabled ? 'tabindex="0"' : ''} data-repo='${JSON.stringify(repo)}'>
+      <li class="repo-item import-variant ${isDisabled ? 'already-added' : ''}" ${!isDisabled ? 'tabindex="0"' : ''} data-repo="${sanitizedRepoData}">
         <div class="repo-content">
           <div class="repo-name">${sanitizedFullName}</div>
           <div class="repo-description">${sanitizedDescription}</div>
@@ -276,7 +307,11 @@ export function updateSelectedCount() {
 
 export async function importSelectedRepos(watchedRepos, onReposAdded) {
   const selectedCards = document.querySelectorAll('.repo-item.import-variant.selected:not(.already-added)');
-  const reposToImport = Array.from(selectedCards).map(card => JSON.parse(card.dataset.repo));
+  const reposToImport = Array.from(selectedCards).map(card => {
+    const escapedData = card.dataset.repo;
+    const unescapedData = unescapeHtml(escapedData);
+    return JSON.parse(unescapedData);
+  });
 
   if (reposToImport.length === 0) {
     return;
