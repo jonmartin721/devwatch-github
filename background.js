@@ -5,6 +5,7 @@ import { safelyOpenUrl } from './shared/security.js';
 
 const ALARM_NAME = 'checkGitHub';
 const DEFAULT_INTERVAL = 15;
+let alarmSetupInProgress = false; // Lock to prevent concurrent setup
 
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Setup alarm when extension is installed
@@ -31,9 +32,20 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
 }
 
 function setupAlarm(intervalMinutes) {
+  // Prevent concurrent alarm setup
+  if (alarmSetupInProgress) {
+    console.log('[DevWatch] Alarm setup already in progress, skipping');
+    return;
+  }
+
+  alarmSetupInProgress = true;
+
   chrome.alarms.clear(ALARM_NAME, () => {
     chrome.alarms.create(ALARM_NAME, {
       periodInMinutes: intervalMinutes
+    }, () => {
+      alarmSetupInProgress = false;
+      console.log(`[DevWatch] Alarm set for ${intervalMinutes} minute intervals`);
     });
   });
 }
@@ -106,7 +118,6 @@ async function checkGitHubActivity() {
     const newActivities = [];
 
     for (const repo of watchedRepos) {
-      // Handle both string format (legacy) and object format (new)
       const repoName = extractRepoName(repo);
 
       // Skip muted and snoozed repos
@@ -162,24 +173,52 @@ async function fetchRepoActivity(repo, token, since, filters) {
 
   async function fetchWithRateLimit(url) {
     try {
+      // Check stored rate limit BEFORE making request
+      const storedRateLimit = await getLocalItems(['rateLimit']);
+      if (storedRateLimit.rateLimit) {
+        const { remaining, reset } = storedRateLimit.rateLimit;
+
+        // If rate limit is exhausted, check if it has reset
+        if (remaining !== undefined && remaining <= 0) {
+          const now = Date.now();
+          if (reset && now < reset) {
+            const minutesUntilReset = Math.ceil((reset - now) / 1000 / 60);
+            const error = new Error(`Rate limit exceeded. Resets in ${minutesUntilReset} minutes.`);
+            error.rateLimitExceeded = true;
+            error.resetTime = reset;
+            throw error;
+          }
+          // If reset time has passed, proceed with request
+        }
+      }
+
       const response = await fetch(url, { headers });
 
-      // Track rate limits
+      // Track rate limits after successful request
       const remaining = response.headers.get('X-RateLimit-Remaining');
       const limit = response.headers.get('X-RateLimit-Limit');
       const reset = response.headers.get('X-RateLimit-Reset');
 
-      if (remaining && limit) {
-        await setLocalItem('rateLimit', {
-          remaining: parseInt(remaining),
-          limit: parseInt(limit),
-          reset: parseInt(reset) * 1000
-        });
+      if (remaining !== null && limit !== null) {
+        try {
+          await setLocalItem('rateLimit', {
+            remaining: parseInt(remaining),
+            limit: parseInt(limit),
+            reset: parseInt(reset) * 1000
+          });
+        } catch (storageError) {
+          console.warn('[DevWatch] Failed to store rate limit:', storageError);
+          // Continue even if storage fails
+        }
       }
 
       handleApiResponse(response, repo);
       return response;
     } catch (fetchError) {
+      // Re-throw rate limit errors as-is
+      if (fetchError.rateLimitExceeded) {
+        throw fetchError;
+      }
       console.error(`Network error fetching ${url}:`, fetchError.message);
       throw new Error(`Network error: ${fetchError.message}`);
     }
@@ -278,7 +317,12 @@ async function cleanExpiredSnoozes(snoozedRepos) {
 
   // Update storage if any snoozes expired
   if (activeSnoozes.length !== snoozedRepos.length) {
-    await chrome.storage.sync.set({ snoozedRepos: activeSnoozes });
+    try {
+      await chrome.storage.sync.set({ snoozedRepos: activeSnoozes });
+    } catch (error) {
+      console.error('[DevWatch] Failed to clean expired snoozes:', error);
+      // Continue with active snoozes even if storage write fails
+    }
   }
 
   return activeSnoozes;
@@ -295,32 +339,65 @@ async function cleanupOldUnmutedEntries(unmutedRepos) {
 
   // Update storage if we removed old entries
   if (recentEntries.length !== unmutedRepos.length) {
-    await chrome.storage.sync.set({ unmutedRepos: recentEntries });
+    try {
+      await chrome.storage.sync.set({ unmutedRepos: recentEntries });
+    } catch (error) {
+      console.error('[DevWatch] Failed to cleanup old unmuted entries:', error);
+      // Continue with filtered entries even if storage write fails
+    }
   }
 
   return recentEntries;
 }
 
 async function storeActivities(newActivities) {
-  const { activities = [] } = await getLocalItems(['activities']);
-  const { mutedRepos, snoozedRepos } = await getFilteringSettings();
+  try {
+    const { activities = [] } = await getLocalItems(['activities']);
+    const { mutedRepos, snoozedRepos } = await getFilteringSettings();
 
-  // Clean up expired snoozes
-  const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);
+    // Clean up expired snoozes
+    const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);
 
-  // Get list of repos to exclude
-  const excludedRepos = getExcludedRepos(mutedRepos, activeSnoozedRepos);
+    // Get list of repos to exclude
+    const excludedRepos = getExcludedRepos(mutedRepos, activeSnoozedRepos);
 
-  // Merge new activities, avoiding duplicates
-  const existingIds = new Set(activities.map(a => a.id));
-  const uniqueNew = newActivities.filter(a => !existingIds.has(a.id));
+    // Merge new activities, avoiding duplicates
+    const existingIds = new Set(activities.map(a => a.id));
+    const uniqueNew = newActivities.filter(a => !existingIds.has(a.id));
 
-  // Filter out activities from excluded repos
-  const allActivities = [...uniqueNew, ...activities];
-  const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
+    // Filter out activities from excluded repos
+    const allActivities = [...uniqueNew, ...activities];
+    const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
 
-  const updated = filtered.slice(0, 100);
-  await setLocalItem('activities', updated);
+    const updated = filtered.slice(0, 100);
+
+    // Try to store, with error handling for quota exceeded
+    try {
+      await setLocalItem('activities', updated);
+    } catch (storageError) {
+      console.error('[DevWatch] Storage error:', storageError.message);
+
+      if (storageError.message.includes('quota')) {
+        // Try to free up space by reducing to 50 items
+        const reduced = filtered.slice(0, 50);
+        try {
+          await setLocalItem('activities', reduced);
+          console.warn('[DevWatch] Reduced activities to 50 due to quota limits');
+        } catch (retryError) {
+          // If still failing, try with just 25 items
+          const minimal = filtered.slice(0, 25);
+          await setLocalItem('activities', minimal);
+          console.warn('[DevWatch] Reduced activities to 25 due to quota limits');
+        }
+      } else {
+        // Re-throw non-quota errors
+        throw storageError;
+      }
+    }
+  } catch (error) {
+    console.error('[DevWatch] Failed to store activities:', error);
+    // Don't throw - let the check continue even if storage fails
+  }
 }
 
 async function updateBadge() {
@@ -384,55 +461,117 @@ function showNotifications(activities, notificationSettings = {}) {
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Allow manual check from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Validate request object
+    if (!request || typeof request.action !== 'string') {
+      sendResponse({ success: false, error: 'Invalid request' });
+      return false;
+    }
+
+    // Handle different message types with consistent async/error handling
     if (request.action === 'checkNow') {
-      checkGitHubActivity().then(() => sendResponse({ success: true }));
-      return true;
+      checkGitHubActivity()
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+          console.error('[DevWatch] Error in checkNow handler:', error);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Required for async response
     }
 
     if (request.action === 'clearBadge') {
-      chrome.action.setBadgeText({ text: '' });
-      sendResponse({ success: true });
+      try {
+        chrome.action.setBadgeText({ text: '' });
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('[DevWatch] Error in clearBadge handler:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+      return true; // Keep consistent async pattern
     }
 
     if (request.action === 'markAsRead') {
+      if (!request.id) {
+        sendResponse({ success: false, error: 'Missing id parameter' });
+        return false;
+      }
+
       chrome.storage.local.get(['readItems'], (result) => {
-        const readItems = result.readItems || [];
-        if (!readItems.includes(request.id)) {
-          readItems.push(request.id);
-          chrome.storage.local.set({ readItems }, () => {
-            updateBadge();
+        try {
+          const readItems = result.readItems || [];
+          if (!readItems.includes(request.id)) {
+            readItems.push(request.id);
+            chrome.storage.local.set({ readItems }, () => {
+              if (chrome.runtime.lastError) {
+                console.error('[DevWatch] Storage error in markAsRead:', chrome.runtime.lastError);
+                sendResponse({ success: false, error: chrome.runtime.lastError.message });
+              } else {
+                updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
+                sendResponse({ success: true });
+              }
+            });
+          } else {
             sendResponse({ success: true });
-          });
-        } else {
-          sendResponse({ success: true });
+          }
+        } catch (error) {
+          console.error('[DevWatch] Error in markAsRead handler:', error);
+          sendResponse({ success: false, error: error.message });
         }
       });
       return true;
     }
 
     if (request.action === 'markAsUnread') {
+      if (!request.id) {
+        sendResponse({ success: false, error: 'Missing id parameter' });
+        return false;
+      }
+
       chrome.storage.local.get(['readItems'], (result) => {
-        const readItems = result.readItems || [];
-        const updated = readItems.filter(id => id !== request.id);
-        chrome.storage.local.set({ readItems: updated }, () => {
-          updateBadge();
-          sendResponse({ success: true });
-        });
+        try {
+          const readItems = result.readItems || [];
+          const updated = readItems.filter(id => id !== request.id);
+          chrome.storage.local.set({ readItems: updated }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('[DevWatch] Storage error in markAsUnread:', chrome.runtime.lastError);
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
+              sendResponse({ success: true });
+            }
+          });
+        } catch (error) {
+          console.error('[DevWatch] Error in markAsUnread handler:', error);
+          sendResponse({ success: false, error: error.message });
+        }
       });
       return true;
     }
 
     if (request.action === 'markAllAsRead') {
       chrome.storage.local.get(['activities'], (result) => {
-        const activities = result.activities || [];
-        const allIds = activities.map(a => a.id);
-        chrome.storage.local.set({ readItems: allIds }, () => {
-          updateBadge();
-          sendResponse({ success: true });
-        });
+        try {
+          const activities = result.activities || [];
+          const allIds = activities.map(a => a.id);
+          chrome.storage.local.set({ readItems: allIds }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('[DevWatch] Storage error in markAllAsRead:', chrome.runtime.lastError);
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
+              sendResponse({ success: true });
+            }
+          });
+        } catch (error) {
+          console.error('[DevWatch] Error in markAllAsRead handler:', error);
+          sendResponse({ success: false, error: error.message });
+        }
       });
       return true;
     }
+
+    // Unknown action
+    sendResponse({ success: false, error: 'Unknown action' });
+    return false;
   });
 }
 
