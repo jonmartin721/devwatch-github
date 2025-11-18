@@ -77,9 +77,9 @@ describe('Error Handler', () => {
       const error = getUserFriendlyError(new Error('Invalid token'));
 
       expect(error.type).toBe('auth');
-      expect(error.title).toBe('Authentication Error');
-      expect(error.message).toContain('invalid or has expired');
-      expect(error.action).toBe('Update Token');
+      expect(error.title).toBe('Token Expired');
+      expect(error.message).toContain('expired or is invalid');
+      expect(error.action).toBe('Go to Settings');
     });
 
     it('should return user-friendly network error', () => {

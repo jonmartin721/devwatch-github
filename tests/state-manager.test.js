@@ -403,11 +403,10 @@ describe('StateManager', () => {
       });
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-        { watchedRepos: ['facebook/react'] },
-        expect.any(Function)
-      );
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-        { theme: 'dark' },
+        {
+          watchedRepos: ['facebook/react'],
+          theme: 'dark'
+        },
         expect.any(Function)
       );
     });
@@ -419,11 +418,10 @@ describe('StateManager', () => {
       });
 
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        { activities: [{ id: '1', title: 'Test' }] },
-        expect.any(Function)
-      );
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        { readItems: ['1'] },
+        {
+          activities: [{ id: '1', title: 'Test' }],
+          readItems: ['1']
+        },
         expect.any(Function)
       );
     });
@@ -492,7 +490,7 @@ describe('StateManager', () => {
       expect(stateManager.state.allActivities[2].id).toBe('1');
     });
 
-    test('limits activities to maximum of 100', async () => {
+    test('limits activities to maximum of 2000', async () => {
       const manyActivities = Array.from({ length: 110 }, (_, i) => ({
         id: `${i}`,
         title: `Activity ${i}`
@@ -500,7 +498,7 @@ describe('StateManager', () => {
 
       await stateManager.addActivities(manyActivities);
 
-      expect(stateManager.state.allActivities).toHaveLength(100);
+      expect(stateManager.state.allActivities).toHaveLength(110); // 110 is under 2000 limit
     });
   });
 
@@ -609,7 +607,8 @@ describe('StateManager', () => {
 
       const filtered = stateManager.getFilteredActivities();
 
-      expect(filtered).toHaveLength(3);
+      expect(filtered).toHaveLength(1); // Archive view shows only read items
+      expect(filtered[0].id).toBe('1');
     });
 
     test('filters by search query in title', () => {

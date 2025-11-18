@@ -15,17 +15,23 @@ import { setState } from '../../shared/state-manager.js';
  * @param {Function} renderActivitiesCallback - Callback to render activities after loading
  * @param {Function} setPinnedReposCallback - Callback to update pinned repos
  * @param {Function} setCollapsedReposCallback - Callback to update collapsed repos
+ * @param {Object} options - Loading options
+ * @param {boolean} options.skipLoadingIndicator - Don't show loading state if true (for refresh)
  */
 export async function loadActivities(
   renderActivitiesCallback,
   setPinnedReposCallback,
-  setCollapsedReposCallback
+  setCollapsedReposCallback,
+  options = {}
 ) {
+  const { skipLoadingIndicator = false } = options;
   const list = document.getElementById('activityList');
 
   // Check offline status first
   if (isOffline()) {
-    list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading cached data...</div>';
+    if (!skipLoadingIndicator) {
+      list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading cached data...</div>';
+    }
     showOfflineStatus('errorMessage', true);
 
     try {
@@ -49,26 +55,32 @@ export async function loadActivities(
         renderActivitiesCallback();
         return;
       } else {
-        list.innerHTML = `
-          <div class="empty-state">
-            <div class="offline-empty">
-              <div class="offline-icon">📡</div>
-              <p>No cached data available</p>
-              <small>Check your connection and try again</small>
+        if (!skipLoadingIndicator) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <div class="offline-empty">
+                <div class="offline-icon">📡</div>
+                <p>No cached data available</p>
+                <small>Check your connection and try again</small>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
         return;
       }
     } catch (error) {
-      list.innerHTML = '<div class="empty-state"><p>Unable to load cached data</p></div>';
+      if (!skipLoadingIndicator) {
+        list.innerHTML = '<div class="empty-state"><p>Unable to load cached data</p></div>';
+      }
       showError('errorMessage', error, null, { action: 'load cached activities' }, 0);
       return;
     }
   }
 
   // Online mode - proceed normally
-  list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading...</div>';
+  if (!skipLoadingIndicator) {
+    list.innerHTML = '<div class="loading" role="status" aria-live="polite">Loading...</div>';
+  }
   showOfflineStatus('errorMessage', false);
   clearError('errorMessage');
 
@@ -104,7 +116,9 @@ export async function loadActivities(
       showStoredError(data.lastError);
     }
   } catch (error) {
-    list.innerHTML = '<div class="empty-state"><p>Unable to load activities</p></div>';
+    if (!skipLoadingIndicator) {
+      list.innerHTML = '<div class="empty-state"><p>Unable to load activities</p></div>';
+    }
     showError('errorMessage', error, null, { action: 'load activities' }, 0);
   }
 }
@@ -121,7 +135,8 @@ export async function handleRefresh(loadActivitiesCallback) {
   try {
     clearError('errorMessage');
     await chrome.runtime.sendMessage({ action: 'checkNow' });
-    await loadActivitiesCallback();
+    // Pass skipLoadingIndicator to avoid clearing the existing feed
+    await loadActivitiesCallback(null, null, null, { skipLoadingIndicator: true });
   } catch (error) {
     showError('errorMessage', error, null, { action: 'refresh activities' }, 5000);
   } finally {

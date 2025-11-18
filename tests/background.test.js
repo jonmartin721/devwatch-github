@@ -312,7 +312,7 @@ describe('Background Service Worker', () => {
       expect(savedActivities).toHaveLength(2);
     });
 
-    test('maintains maximum of 100 activities', async () => {
+    test('maintains maximum of 2000 activities', async () => {
 
       // Create 100 existing activities
       const existingActivities = Array.from({ length: 100 }, (_, i) => ({
@@ -331,8 +331,8 @@ describe('Background Service Worker', () => {
       await storeActivities(newActivities);
 
       const savedActivities = chrome.storage.local.set.mock.calls[0][0].activities;
-      expect(savedActivities).toHaveLength(100);
-      // New activities are prepended, then limited to 100
+      expect(savedActivities).toHaveLength(102);
+      // New activities are prepended, total is under 2000 limit
       expect(savedActivities[0].id).toBe('new-1');
       expect(savedActivities[1].id).toBe('new-2');
     });

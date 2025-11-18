@@ -89,6 +89,30 @@ export async function snoozeRepo(repo, loadActivitiesCallback) {
 }
 
 /**
+ * Snoozes a repository with animation effect
+ * @param {string} repo - Repository name
+ * @param {HTMLElement} repoHeaderElement - The repository header DOM element
+ * @param {HTMLElement} repoActivitiesElement - The repository activities DOM element
+ * @param {Function} loadActivitiesCallback - Callback to reload activities after animation
+ */
+export function snoozeRepoWithAnimation(repo, repoHeaderElement, repoActivitiesElement, loadActivitiesCallback) {
+  // Add removing animation class to both elements
+  repoHeaderElement.classList.add('removing');
+  repoActivitiesElement.classList.add('removing');
+
+  // Wait for animation to complete, then snooze the repo
+  setTimeout(async () => {
+    try {
+      await snoozeRepo(repo, loadActivitiesCallback);
+    } catch (error) {
+      console.error('[snoozeRepoWithAnimation] Error:', error);
+      // Reload activities anyway to remove animation classes
+      await loadActivitiesCallback();
+    }
+  }, 300); // Match CSS transition duration
+}
+
+/**
  * Toggles read/unread state of an activity
  * @param {string} id - Activity ID
  * @param {Function} renderActivitiesCallback - Callback to re-render activities

@@ -375,7 +375,7 @@ describe('ActivityListRenderer', () => {
 
       const key = renderer.generateRenderKey(activities, options);
 
-      expect(key).toBe('1,2|groupByRepo:true');
+      expect(key).toBe('1,2|repos:|groupByRepo:true');
     });
 
     test('generates different keys for different activities', () => {

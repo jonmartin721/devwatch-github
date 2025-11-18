@@ -44,7 +44,7 @@ body {
 
 /* Utility classes */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .svg-inline {
@@ -338,6 +338,18 @@ h1 {
   top: 0;
   z-index: 10;
   cursor: pointer;
+  transition: opacity 0.3s, transform 0.3s, max-height 0.3s, padding 0.3s, margin 0.3s, border-width 0.3s;
+}
+
+.repo-group-header.removing {
+  opacity: 0;
+  transform: translateX(20px) scale(0.95);
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom-width: 0;
+  overflow: hidden;
 }
 
 .repo-group-header:hover {
@@ -480,6 +492,15 @@ h1 {
   opacity: 1;
 }
 
+.repo-activities.removing {
+  opacity: 0;
+  transform: translateX(20px) scale(0.95);
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
 .repo-activities.collapsed {
   max-height: 0;
   opacity: 0;
@@ -548,6 +569,7 @@ h1 {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  align-self: center;
 }
 
 .action-btn {

@@ -19,6 +19,7 @@ import {
   toggleRepoCollapse as toggleRepoCollapseController,
   togglePinRepo as togglePinRepoController,
   snoozeRepo as snoozeRepoController,
+  snoozeRepoWithAnimation as snoozeRepoWithAnimationController,
   markAsRead,
   markAsReadWithAnimation,
   handleMarkAllRead as handleMarkAllReadController,
@@ -185,11 +186,12 @@ async function updateRepoCount() {
 }
 
 // Wrapper for loadActivities to pass callbacks and update global state
-async function loadActivities() {
+async function loadActivities(options = {}) {
   await loadActivitiesController(
     () => renderActivities(),
     (repos) => { pinnedRepos = repos; },
-    (repos) => { collapsedRepos = repos; }
+    (repos) => { collapsedRepos = repos; },
+    options
   );
   await updateRepoCount();
 }
@@ -206,7 +208,7 @@ function renderActivities() {
     () => handleCollapseAll(),
     (repo) => toggleRepoCollapse(repo),
     (repo) => togglePinRepo(repo),
-    (repo) => snoozeRepo(repo)
+    (repo) => handleSnoozeRepo(repo)
   );
 
   // Update ARIA attributes after rendering
@@ -219,12 +221,12 @@ function toggleSearch() {
   const searchBtn = document.getElementById('searchBtn');
   const searchInput = document.getElementById('searchInput');
 
-  if (searchBox.style.display === 'none' || !searchBox.style.display) {
-    searchBox.style.display = 'block';
+  if (searchBox.classList.contains('hidden')) {
+    searchBox.classList.remove('hidden');
     searchBtn.classList.add('active');
     searchInput.focus();
   } else {
-    searchBox.style.display = 'none';
+    searchBox.classList.add('hidden');
     searchBtn.classList.remove('active');
     setState({ searchQuery: '' });
     searchInput.value = '';
@@ -259,6 +261,20 @@ async function togglePinRepo(repo) {
 // Wrapper for snoozeRepo
 async function snoozeRepo(repo) {
   await snoozeRepoController(repo, () => loadActivities());
+}
+
+// Wrapper for snoozeRepoWithAnimation
+async function handleSnoozeRepo(repo) {
+  // Find the DOM elements for this repo
+  const repoHeader = document.querySelector(`.repo-group-header[data-repo="${repo}"]`);
+  const repoActivities = document.querySelector(`.repo-activities[data-repo="${repo}"]`);
+
+  if (repoHeader && repoActivities) {
+    await snoozeRepoWithAnimationController(repo, repoHeader, repoActivities, () => loadActivities());
+  } else {
+    // Fallback to non-animated snooze if elements not found
+    await snoozeRepoController(repo, () => loadActivities());
+  }
 }
 
 // Wrapper for handleMarkAllRead
@@ -317,6 +333,7 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleRepoCollapse,
     togglePinRepo,
     snoozeRepo,
+    handleSnoozeRepo,
     toggleDarkMode,
     updateDarkModeIcon,
     showError,
@@ -334,6 +351,7 @@ export {
   toggleRepoCollapse,
   togglePinRepo,
   snoozeRepo,
+  handleSnoozeRepo,
   toggleDarkMode,
   updateDarkModeIcon,
   showError,

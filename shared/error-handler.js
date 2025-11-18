@@ -29,9 +29,9 @@ const ERROR_MESSAGES = {
     action: 'Try Again'
   },
   [ERROR_TYPES.AUTHENTICATION]: {
-    title: 'Authentication Error',
-    message: 'Your GitHub token appears to be invalid or has expired. Please update your token in settings.',
-    action: 'Update Token'
+    title: 'Token Expired',
+    message: 'Your GitHub token has expired or is invalid. Tokens expire after 90 days by default. Please create a new token and update it in settings.',
+    action: 'Go to Settings'
   },
   [ERROR_TYPES.RATE_LIMIT]: {
     title: 'Rate Limit Exceeded',
@@ -215,6 +215,7 @@ export function showError(elementId, error, response = null, context = {}, durat
         <p>${safeMessage}</p>
         ${safeTechnical ? `<small class="error-technical">Details: ${safeTechnical}</small>` : ''}
         <div class="error-actions">
+          ${userError.type === ERROR_TYPES.AUTHENTICATION ? '<button class="error-action-btn" id="openSettingsBtn">Open Settings</button>' : ''}
           <button class="error-dismiss" data-element-id="${elementId}">Dismiss</button>
         </div>
       </div>
@@ -245,6 +246,14 @@ export function showError(elementId, error, response = null, context = {}, durat
       if (el) {
         el.style.display = 'none';
       }
+    });
+  }
+
+  // Add settings button listener for auth errors
+  const settingsBtn = element.querySelector('#openSettingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
     });
   }
 

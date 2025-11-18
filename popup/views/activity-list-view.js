@@ -1,4 +1,4 @@
-import { stateManager, useState } from '../../shared/state-manager.js';
+import { stateManager, useState, setState } from '../../shared/state-manager.js';
 import { CHEVRON_DOWN_ICON, SNOOZE_ICON, getPinIcon, createSvg } from '../../shared/icons.js';
 import { showError } from '../../shared/error-handler.js';
 import { safelyOpenUrl } from '../../shared/security.js';
@@ -36,12 +36,23 @@ export function renderActivities(
 
   if (filtered.length === 0) {
     let emptyMessage = 'No recent activity';
-    if (!state.showArchive) emptyMessage = 'No new activity';
-    if (state.searchQuery) emptyMessage = 'No matching activity';
+    let fullMessage = '';
 
-    // Always make "options" a link to add repos section
-    const optionsText = `<a href="#" id="optionsLink" class="options-link">options</a>`;
-    const fullMessage = `Go to ${optionsText} to watch more repositories.`;
+    if (state.showArchive) {
+      // Archive-specific empty state
+      emptyMessage = 'Archive is empty';
+      fullMessage = 'Items you mark as read will appear here. They\'re kept for easy reference and automatically cleaned up based on your Feed Management settings.';
+    } else if (state.searchQuery) {
+      // Search-specific empty state
+      emptyMessage = 'No matching activity';
+      const optionsText = `<a href="#" id="optionsLink" class="options-link">options</a>`;
+      fullMessage = `Go to ${optionsText} to watch more repositories.`;
+    } else {
+      // Regular empty state
+      emptyMessage = 'No new activity';
+      const optionsText = `<a href="#" id="optionsLink" class="options-link">options</a>`;
+      fullMessage = `Go to ${optionsText} to watch more repositories.`;
+    }
 
     list.innerHTML = `
       <div class="empty-state">
@@ -50,16 +61,18 @@ export function renderActivities(
       </div>
     `;
 
-    // Add click listener for options link
-    const optionsLink = document.getElementById('optionsLink');
-    if (optionsLink) {
-      optionsLink.addEventListener('click', async (e) => {
-        e.preventDefault();
+    // Add click listener for options link (only present in non-archive states)
+    if (!state.showArchive) {
+      const optionsLink = document.getElementById('optionsLink');
+      if (optionsLink) {
+        optionsLink.addEventListener('click', async (e) => {
+          e.preventDefault();
 
-        // Open options page with hash and query parameter
-        const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
-        await chrome.tabs.create({ url: optionsUrl });
-      });
+          // Open options page with hash and query parameter
+          const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
+          await chrome.tabs.create({ url: optionsUrl });
+        });
+      }
     }
     return;
   }
@@ -70,7 +83,7 @@ export function renderActivities(
     const repoCount = new Set(filtered.map(a => a.repo)).size;
     const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
 
-    // Render with optimized renderer
+    // Render with optimized renderer (returns true if HTML was updated)
     activityRenderer.render(filtered, {
       groupByRepo: true,
       maxItems: 50,
@@ -79,26 +92,41 @@ export function renderActivities(
       readItems: state.readItems
     });
 
-    // Add header with action buttons
-    const header = `
-      <div class="list-header">
-        <span>${unreadCount > 0 ? `${unreadCount} unread` : ''}</span>
-        <div class="header-actions">
-          ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
-          ${unreadCount > 0 ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
-        </div>
-      </div>
-    `;
+    // Add header with action buttons (only if there's something to show)
+    const showCollapseAll = repoCount > 1;
+    const showMarkAllRead = unreadCount > 0 && !state.showArchive;
+    const showUnreadCount = unreadCount > 0 && !state.showArchive;
+    const showClearArchive = state.showArchive && filtered.length > 0;
+    const archivedCount = state.showArchive ? filtered.length : 0;
+    const shouldShowHeader = showCollapseAll || showMarkAllRead || showUnreadCount || showClearArchive;
 
-    // Update or add header to the container
     const existingHeader = list.querySelector('.list-header');
-    if (existingHeader) {
-      existingHeader.outerHTML = header;
-    } else {
-      list.insertAdjacentHTML('afterbegin', header);
+
+    if (shouldShowHeader) {
+      const header = `
+        <div class="list-header">
+          <span>${showUnreadCount ? `${unreadCount} unread` : showClearArchive ? `${archivedCount} archived` : ''}</span>
+          <div class="header-actions">
+            ${showCollapseAll ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
+            ${showMarkAllRead ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
+            ${showClearArchive ? `<button id="clearArchiveBtn" class="text-btn">Clear archive</button>` : ''}
+          </div>
+        </div>
+      `;
+
+      if (existingHeader) {
+        existingHeader.outerHTML = header;
+      } else {
+        list.insertAdjacentHTML('afterbegin', header);
+      }
+    } else if (existingHeader) {
+      // Remove header if it exists but shouldn't be shown
+      existingHeader.remove();
     }
 
-    // Attach event listeners after rendering
+    // Always attach event listeners using event delegation
+    // Event delegation works regardless of whether DOM was re-rendered
+    // and prevents duplicate listeners by replacing existing ones
     attachEventListeners(
       list,
       markAsRead,
@@ -130,7 +158,8 @@ export function renderActivities(
 }
 
 /**
- * Attaches event listeners to rendered activity list
+ * Attaches event listeners to rendered activity list using event delegation
+ * This ensures listeners work even when DOM optimizer skips re-rendering
  * @param {HTMLElement} list - The activity list container
  * @param {Function} markAsRead - Callback for marking item as read
  * @param {Function} markAsReadWithAnimation - Callback for marking item as read with animation
@@ -150,92 +179,164 @@ function attachEventListeners(
   togglePinRepo,
   snoozeRepo
 ) {
-  // Header action button listeners
+  console.log('Attaching event listeners with delegation');
+
+  // Header action button listeners (using document.getElementById for buttons outside list)
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const collapseBtn = document.getElementById('collapseAllBtn');
+  const clearArchiveBtn = document.getElementById('clearArchiveBtn');
+
+  // Remove existing listeners to prevent duplicates
+  markAllBtn?.replaceWith(markAllBtn.cloneNode(true));
+  collapseBtn?.replaceWith(collapseBtn.cloneNode(true));
+  clearArchiveBtn?.replaceWith(clearArchiveBtn.cloneNode(true));
+
+  // Re-add listeners to fresh elements
   document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
   document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
+  document.getElementById('clearArchiveBtn')?.addEventListener('click', async () => {
+    // Clear all archived items by removing them from readItems
+    const { setState } = await import('../../shared/state-manager.js');
+    await setState({ readItems: [] });
+  });
 
-  // Header click listeners for expand/collapse
-  list.querySelectorAll('.repo-group-header').forEach(header => {
-    header.addEventListener('click', (e) => {
-      // Don't trigger if clicking on buttons
-      if (e.target.closest('.repo-snooze-btn') || e.target.closest('.repo-pin-btn')) {
+  // Remove existing event delegation listener if present
+  const existingListener = list._delegationListener;
+  if (existingListener) {
+    list.removeEventListener('click', existingListener);
+  }
+
+  // Create unified event delegation handler
+  const delegationHandler = (e) => {
+    // Handle repo group header clicks (for expand/collapse)
+    const repoHeader = e.target.closest('.repo-group-header');
+    if (repoHeader) {
+      // Don't trigger if clicking on buttons, spans with specific classes, or SVG inside buttons
+      if (e.target.closest('.repo-snooze-btn') ||
+          e.target.closest('.repo-pin-btn') ||
+          e.target.closest('.repo-collapse-btn') ||
+          e.target.classList.contains('repo-unread-count') ||
+          e.target.classList.contains('repo-count')) {
         return;
       }
 
-      const repo = header.dataset.repo;
-      toggleRepoCollapse(repo);
-    });
-  });
-
-  // Collapse button listeners
-  list.querySelectorAll('.repo-collapse-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      toggleRepoCollapse(repo);
-    });
-  });
-
-  // Pin button listeners
-  list.querySelectorAll('.repo-pin-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      togglePinRepo(repo);
-    });
-  });
-
-  // Snooze button listeners
-  list.querySelectorAll('.repo-snooze-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      snoozeRepo(repo);
-    });
-  });
-
-  // Activity item listeners
-  list.querySelectorAll('.activity-item').forEach(item => {
-    const content = item.querySelector('.activity-content');
-
-    // Shared handler for opening activity
-    const handleOpen = async () => {
-      const id = item.dataset.id;
-      const url = item.dataset.url;
-      markAsRead(id);
-
-      // Validate URL before opening to prevent javascript: and data: URLs
-      const opened = await safelyOpenUrl(url);
-      if (!opened) {
-        showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
+      const repo = repoHeader.dataset.repo;
+      if (repo) {
+        console.log('Header click for repo:', repo);
+        toggleRepoCollapse(repo);
       }
-    };
+      return;
+    }
 
-    // Click handler for content
-    content.addEventListener('click', handleOpen);
-
-    // Keyboard handler for the entire item (role="button")
-    item.addEventListener('keydown', (e) => {
-      // Activate on Enter or Space key
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleOpen();
+    // Handle collapse button clicks
+    const collapseBtn = e.target.closest('.repo-collapse-btn');
+    if (collapseBtn) {
+      e.stopPropagation();
+      const repo = collapseBtn.dataset.repo;
+      if (repo) {
+        console.log('Collapse button click for repo:', repo);
+        toggleRepoCollapse(repo);
       }
-    });
+      return;
+    }
 
-    // Mark as read button listeners
-    item.querySelectorAll('.action-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Handle pin button clicks
+    const pinBtn = e.target.closest('.repo-pin-btn');
+    if (pinBtn) {
+      e.stopPropagation();
+      const repo = pinBtn.dataset.repo;
+      if (repo) {
+        console.log('Pin button click for repo:', repo);
+        togglePinRepo(repo);
+      }
+      return;
+    }
+
+    // Handle snooze button clicks
+    const snoozeBtn = e.target.closest('.repo-snooze-btn');
+    if (snoozeBtn) {
+      e.stopPropagation();
+      const repo = snoozeBtn.dataset.repo;
+      if (repo) {
+        console.log('Snooze button click for repo:', repo);
+        snoozeRepo(repo);
+      }
+      return;
+    }
+
+    // Handle activity item clicks
+    const activityItem = e.target.closest('.activity-item');
+    if (activityItem) {
+      // Handle action button clicks (mark as read)
+      const actionBtn = e.target.closest('.action-btn');
+      if (actionBtn) {
         e.stopPropagation();
-        const action = btn.dataset.action;
-        const id = item.dataset.id;
+        const action = actionBtn.dataset.action;
+        const id = activityItem.dataset.id;
 
         if (action === 'mark-read') {
-          markAsReadWithAnimation(id, item);
+          console.log('Mark as read click for item:', id);
+          markAsReadWithAnimation(id, activityItem);
+        }
+        return;
+      }
+
+      // Handle content clicks (open activity)
+      const content = e.target.closest('.activity-content');
+      if (content) {
+        const url = activityItem.dataset.url;
+        console.log('Content click for URL:', url);
+
+        // Validate URL before opening to prevent javascript: and data: URLs
+        safelyOpenUrl(url).then(opened => {
+          if (!opened) {
+            showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
+          }
+        });
+      }
+      return;
+    }
+
+    // Handle options link in empty state
+    if (e.target.closest('#optionsLink')) {
+      e.preventDefault();
+      chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#repositories?showAdd=true') });
+    }
+  };
+
+  // Add the delegation listener to the list container
+  list.addEventListener('click', delegationHandler);
+
+  // Store reference to prevent duplicate listeners
+  list._delegationListener = delegationHandler;
+
+  // Add keyboard support for activity items (role="button")
+  const keydownHandler = (e) => {
+    if (e.target.classList.contains('activity-item') &&
+        (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      const url = e.target.dataset.url;
+      console.log('Keyboard activation for URL:', url);
+
+      safelyOpenUrl(url).then(opened => {
+        if (!opened) {
+          showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
         }
       });
-    });
-  });
+    }
+  };
+
+  // Remove existing keyboard listener if present
+  const existingKeydownListener = list._keydownListener;
+  if (existingKeydownListener) {
+    list.removeEventListener('keydown', existingKeydownListener);
+  }
+
+  // Add keyboard event delegation
+  list.addEventListener('keydown', keydownHandler);
+  list._keydownListener = keydownHandler;
+
+  console.log('Event delegation listeners attached successfully');
 }
 
 /**
@@ -261,20 +362,31 @@ function legacyRenderActivities(
   const repoCount = new Set(filtered.map(a => a.repo)).size;
   const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
 
-  const header = `
-    <div class="list-header">
-      <span>${unreadCount > 0 ? `${unreadCount} unread` : ''}</span>
-      <div class="header-actions">
-        ${repoCount > 1 ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
-        ${unreadCount > 0 ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
+  // Only render header if there's something to show
+  const showCollapseAll = repoCount > 1;
+  const showMarkAllRead = unreadCount > 0 && !state.showArchive;
+  const showUnreadCount = unreadCount > 0 && !state.showArchive;
+  const showClearArchive = state.showArchive && filtered.length > 0;
+  const archivedCount = state.showArchive ? filtered.length : 0;
+  const shouldShowHeader = showCollapseAll || showMarkAllRead || showUnreadCount || showClearArchive;
+
+  let htmlContent = '';
+
+  if (shouldShowHeader) {
+    htmlContent += `
+      <div class="list-header">
+        <span>${showUnreadCount ? `${unreadCount} unread` : showClearArchive ? `${archivedCount} archived` : ''}</span>
+        <div class="header-actions">
+          ${showCollapseAll ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
+          ${showMarkAllRead ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
+          ${showClearArchive ? `<button id="clearArchiveBtn" class="text-btn">Clear archive</button>` : ''}
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  }
 
   // Group activities by repository
   const grouped = groupByRepo(filtered, pinnedRepos);
-
-  let htmlContent = header;
 
   // Render each repo group
   Object.keys(grouped).forEach(repo => {
@@ -313,12 +425,20 @@ function legacyRenderActivities(
   // Event listeners
   document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
   document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
+  document.getElementById('clearArchiveBtn')?.addEventListener('click', async () => {
+    // Clear all archived items by removing them from readItems
+    await setState({ readItems: [] });
+  });
 
   // Header click listeners for expand/collapse
   list.querySelectorAll('.repo-group-header').forEach(header => {
     header.addEventListener('click', (e) => {
-      // Don't trigger if clicking on buttons
-      if (e.target.closest('.repo-snooze-btn')) {
+      // Don't trigger if clicking on buttons or SVG inside buttons
+      const target = e.target;
+      if (target.closest('.repo-snooze-btn') ||
+          target.closest('.repo-pin-btn') ||
+          target.closest('.repo-collapse-btn') ||
+          target.classList.contains('repo-unread-count')) {
         return;
       }
 
@@ -359,9 +479,7 @@ function legacyRenderActivities(
 
     // Shared handler for opening activity
     const handleOpen = async () => {
-      const id = item.dataset.id;
       const url = item.dataset.url;
-      markAsRead(id);
 
       // Validate URL before opening to prevent javascript: and data: URLs
       const opened = await safelyOpenUrl(url);

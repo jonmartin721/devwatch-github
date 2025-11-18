@@ -4,6 +4,7 @@
  */
 
 import { UI_CONFIG } from './config.js';
+import { SNOOZE_ICON } from './icons.js';
 
 /**
  * Basic DOM renderer with simple caching to avoid unnecessary re-renders
@@ -251,6 +252,7 @@ class ActivityListRenderer {
    * Render activities list with efficient updates
    * @param {Array<Object>} activities - Activities to render
    * @param {Object} options - Rendering options
+   * @returns {boolean} True if HTML was updated, false if skipped
    */
   render(activities, options = {}) {
     const {
@@ -267,20 +269,20 @@ class ActivityListRenderer {
     // Check if we need to re-render
     const renderKey = this.generateRenderKey(limitedActivities, options);
     if (this.lastRenderedData === renderKey) {
-      return; // No changes needed
+      return false; // No changes needed, event listeners should NOT be re-attached
     }
 
     this.lastRenderedData = renderKey;
 
-    // Schedule optimized render
-    this.optimizer.scheduleRender(() => {
-      return this.generateActivityHTML(limitedActivities, {
-        groupByRepo,
-        collapsedRepos,
-        pinnedRepos,
-        readItems
-      });
+    // Render synchronously to ensure DOM is ready for event listeners
+    const html = this.generateActivityHTML(limitedActivities, {
+      groupByRepo,
+      collapsedRepos,
+      pinnedRepos,
+      readItems
     });
+    this.container.innerHTML = html;
+    return true; // HTML was updated, event listeners should be re-attached
   }
 
   /**
@@ -291,8 +293,24 @@ class ActivityListRenderer {
    */
   generateRenderKey(activities, options) {
     const activityIds = activities.map(a => a.id).join(',');
-    const optionKeys = Object.keys(options).sort().map(k => `${k}:${options[k]}`).join(',');
-    return `${activityIds}|${optionKeys}`;
+
+    // Include repository structure in the key to detect when repos are added/removed
+    const repos = [...new Set(activities.map(a => a.repo))].sort().join(',');
+
+    // Handle Set objects in options (like collapsedRepos)
+    const processedOptions = {};
+    Object.keys(options).forEach(k => {
+      if (options[k] instanceof Set) {
+        processedOptions[k] = [...options[k]].sort().join(',');
+      } else if (Array.isArray(options[k])) {
+        processedOptions[k] = [...options[k]].sort().join(',');
+      } else {
+        processedOptions[k] = options[k];
+      }
+    });
+
+    const optionKeys = Object.keys(processedOptions).sort().map(k => `${k}:${processedOptions[k]}`).join(',');
+    return `${activityIds}|repos:${repos}|${optionKeys}`;
   }
 
   /**
@@ -363,7 +381,7 @@ class ActivityListRenderer {
             ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
             <button class="repo-snooze-btn" data-repo="${escapeHtml(repo)}" title="Snooze this repository" aria-label="Snooze ${escapeHtml(repo)} repository">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M.5 2.75A.75.75 0 011.25 2h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 01.5 2.75zm4.5 4a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 015 6.75zM2.25 11.5a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5zM11 7a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-5.5 1.5a.75.75 0 000 1.5h.5a.75.75 0 000-1.5h-.5z"/>
+                ${SNOOZE_ICON}
               </svg>
             </button>
           </div>
@@ -435,11 +453,11 @@ class ActivityListRenderer {
           </div>
         </div>
         <div class="activity-actions">
-          <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
+          ${!isRead ? `<button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
             </svg>
-          </button>
+          </button>` : ''}
         </div>
       </div>
     `;

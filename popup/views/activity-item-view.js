@@ -33,9 +33,9 @@ export function renderActivityItem(activity) {
         </div>
       </div>
       <div class="activity-actions">
-        <button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
+        ${!isRead ? `<button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
           ${createSvg(CHECK_ICON, 16, 16)}
-        </button>
+        </button>` : ''}
       </div>
     </div>
   `;

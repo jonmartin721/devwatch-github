@@ -3,7 +3,7 @@
  * Provides consistent state handling across popup, options, and background scripts
  */
 
-import { getSyncItems, getLocalItems, setSyncItem, setLocalItem } from './storage-helpers.js';
+import { getSyncItems, getLocalItems } from './storage-helpers.js';
 import { STORAGE_KEYS, STORAGE_DEFAULTS } from './storage-helpers.js';
 
 /**

@@ -46,6 +46,61 @@ if (typeof document !== 'undefined') {
 
 // Theme listener imported from controllers/theme-controller.js
 
+function setupTabNavigation() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  // Function to switch tabs
+  function switchTab(tabName) {
+    // Update buttons
+    tabButtons.forEach(btn => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive);
+    });
+
+    // Update panels
+    tabPanels.forEach(panel => {
+      panel.classList.toggle('active', panel.dataset.tab === tabName);
+    });
+
+    // Save to localStorage
+    localStorage.setItem('activeTab', tabName);
+
+    // Update URL hash without scrolling
+    history.replaceState(null, null, `#${tabName}`);
+  }
+
+  // Add click listeners to tab buttons
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      switchTab(button.dataset.tab);
+    });
+  });
+
+  // Add click listeners to clickable setup steps
+  const clickableSetupSteps = document.querySelectorAll('.setup-step.clickable');
+  clickableSetupSteps.forEach(step => {
+    step.addEventListener('click', () => {
+      const tabName = step.dataset.tab;
+      if (tabName) {
+        switchTab(tabName);
+      }
+    });
+  });
+
+  // Initialize active tab from localStorage or URL hash
+  const hash = window.location.hash.substring(1);
+  const savedTab = localStorage.getItem('activeTab');
+  const initialTab = hash || savedTab || 'setup';
+
+  // Check if the hash/saved tab is valid
+  const validTabs = ['setup', 'repositories', 'filters', 'preferences', 'advanced', 'help'];
+  const tabToActivate = validTabs.includes(initialTab) ? initialTab : 'setup';
+
+  switchTab(tabToActivate);
+}
+
 function handleUrlParameters() {
   // Check for URL parameters to enhance user experience
   const urlParams = new URLSearchParams(window.location.search);
@@ -62,21 +117,48 @@ function handleUrlParameters() {
     }, 100);
   }
 
-  // Handle hash navigation to scroll to specific section
+  // Map old section hashes to tabs for backwards compatibility
+  const sectionToTabMap = {
+    'token': 'setup',
+    'repositories': 'repositories',
+    'filters': 'filters',
+    'feed-management': 'preferences',
+    'appearance': 'preferences',
+    'interval': 'preferences',
+    'snooze': 'preferences',
+    'import-export': 'advanced'
+  };
+
+  // Handle hash navigation - if it's an old section hash, switch to appropriate tab
   if (hash) {
-    setTimeout(() => {
-      // Extract just the hash part without query parameters
-      const hashParts = hash.split('?');
-      const cleanHash = hashParts[0];
-      const targetSection = document.querySelector(cleanHash);
-      if (targetSection) {
-        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 200);
+    const cleanHash = hash.substring(1).split('?')[0];
+    const targetTab = sectionToTabMap[cleanHash];
+
+    if (targetTab) {
+      // Switch to the tab containing this section
+      setTimeout(() => {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const targetButton = Array.from(tabButtons).find(btn => btn.dataset.tab === targetTab);
+        if (targetButton) {
+          targetButton.click();
+
+          // Then scroll to the section within that tab
+          setTimeout(() => {
+            const targetSection = document.getElementById(cleanHash);
+            if (targetSection) {
+              targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 100);
+        }
+      }, 150);
+    }
   }
 }
 
 function setupEventListeners() {
+  // Tab navigation
+  setupTabNavigation();
+
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
 
@@ -234,6 +316,39 @@ function setupEventListeners() {
     });
   });
 
+  // Auto-save itemExpiryHours changes
+  const itemExpiryEnabledCheckbox = document.getElementById('itemExpiryEnabled');
+  const itemExpiryHoursInput = document.getElementById('itemExpiryHours');
+  const itemExpiryInputRow = document.getElementById('itemExpiryInputRow');
+
+  itemExpiryEnabledCheckbox.addEventListener('change', async (e) => {
+    const isEnabled = e.target.checked;
+    if (isEnabled) {
+      itemExpiryInputRow.style.display = 'block';
+      const hours = parseInt(itemExpiryHoursInput.value) || 24;
+      itemExpiryHoursInput.value = hours;
+      await chrome.storage.sync.set({ itemExpiryHours: hours });
+      toastManager.info(`Auto-removal enabled: items older than ${hours} hours will be removed`);
+    } else {
+      itemExpiryInputRow.style.display = 'none';
+      await chrome.storage.sync.set({ itemExpiryHours: null });
+      toastManager.info('Auto-removal disabled');
+    }
+  });
+
+  itemExpiryHoursInput.addEventListener('change', async (e) => {
+    let hours = parseInt(e.target.value);
+    if (isNaN(hours) || hours < 1) {
+      hours = 1;
+      e.target.value = 1;
+    } else if (hours > 168) {
+      hours = 168;
+      e.target.value = 168;
+    }
+    await chrome.storage.sync.set({ itemExpiryHours: hours });
+    toastManager.info(`Auto-removal time changed to ${hours} hours`);
+  });
+
   // Auto-save filter and notification changes
   ['filterPrs', 'filterIssues', 'filterReleases', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
     document.getElementById(id).addEventListener('change', async (e) => {
@@ -326,6 +441,11 @@ function setupEventListeners() {
       closeImportModal();
     }
   });
+
+  // Data Management buttons
+  document.getElementById('clearCacheBtn').addEventListener('click', clearCacheData);
+  document.getElementById('clearAllDataBtn').addEventListener('click', clearAllData);
+  document.getElementById('resetSettingsBtn').addEventListener('click', resetSettings);
 
 }
 
@@ -448,7 +568,8 @@ async function loadSettings() {
       'snoozeHours',
       'filters',
       'notifications',
-      'theme'
+      'theme',
+      'itemExpiryHours'
     ]);
 
     const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
@@ -520,6 +641,14 @@ async function loadSettings() {
     const themeRadio = document.getElementById(`theme-${theme}`);
     if (themeRadio) {
       themeRadio.checked = true;
+    }
+
+    // Load itemExpiryHours setting
+    const itemExpiryEnabled = settings.itemExpiryHours !== null && settings.itemExpiryHours !== undefined;
+    document.getElementById('itemExpiryEnabled').checked = itemExpiryEnabled;
+    if (itemExpiryEnabled) {
+      document.getElementById('itemExpiryHours').value = settings.itemExpiryHours;
+      document.getElementById('itemExpiryInputRow').style.display = 'block';
     }
 
     // Update notification toggle states after loading settings
@@ -874,12 +1003,93 @@ if (typeof module !== 'undefined' && module.exports) {
     formatNumber,
     formatDate: formatDateVerbose,  // Export verbose formatter for tests
     exportSettings,
-    handleImportFile
+    handleImportFile,
+    clearCacheData,
+    clearAllData,
+    resetSettings
   };
 }
 
 // Snooze functions are now imported from controllers/snooze-controller.js
 
+// Data Management Functions
+/**
+ * Clear cache data (activities only, preserves settings and repos)
+ */
+async function clearCacheData() {
+  try {
+    await setLocalItem('activities', []);
+    await setLocalItem('readItems', []);
+
+    // Reset badge count
+    chrome.runtime.sendMessage({ action: 'clearBadge' });
+
+    toastManager.success('Cache cleared successfully');
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+    toastManager.error('Failed to clear cache');
+  }
+}
+
+/**
+ * Clear all data (activities and activity history, preserves settings and repos)
+ */
+async function clearAllData() {
+  // Show confirmation dialog
+  const confirmed = confirm(
+    'This will clear all cached data and activity history, but preserve your settings and repositories.\n\nAre you sure you want to continue?'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    // Clear local storage (activities, readItems, collapsedRepos, etc.)
+    await chrome.storage.local.clear();
+
+    // Reset badge count
+    chrome.runtime.sendMessage({ action: 'clearBadge' });
+
+    toastManager.success('All data cleared successfully');
+  } catch (error) {
+    console.error('Error clearing all data:', error);
+    toastManager.error('Failed to clear data');
+  }
+}
+
+/**
+ * Reset all settings to defaults (clears everything)
+ */
+async function resetSettings() {
+  // Show confirmation dialog
+  const confirmed = confirm(
+    'This will reset ALL settings to defaults and clear your GitHub token and repositories.\n\nThis action cannot be undone. Are you sure?'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    // Clear all storage (both sync and local)
+    await chrome.storage.sync.clear();
+    await chrome.storage.local.clear();
+
+    // Reset badge count
+    chrome.runtime.sendMessage({ action: 'clearBadge' });
+
+    toastManager.success('Settings reset to defaults');
+
+    // Reload the page to show default state
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  } catch (error) {
+    console.error('Error resetting settings:', error);
+    toastManager.error('Failed to reset settings');
+  }
+}
 
 // Auto-refresh snoozed repos list every 5 minutes
 setInterval(async () => {
@@ -900,5 +1110,8 @@ export {
   formatNumber,
   formatDateVerbose as formatDate,  // Export verbose formatter for tests
   exportSettings,
-  handleImportFile
+  handleImportFile,
+  clearCacheData,
+  clearAllData,
+  resetSettings
 };

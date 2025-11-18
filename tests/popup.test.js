@@ -59,11 +59,11 @@ describe('Popup Main Functions', () => {
       const searchBox = document.getElementById('searchBox');
       const searchBtn = document.getElementById('searchBtn');
 
-      searchBox.style.display = 'none';
+      searchBox.classList.add('hidden');
 
       toggleSearch();
 
-      expect(searchBox.style.display).toBe('block');
+      expect(searchBox.classList.contains('hidden')).toBe(false);
       expect(searchBtn.classList.contains('active')).toBe(true);
     });
 
@@ -72,13 +72,13 @@ describe('Popup Main Functions', () => {
       const searchBtn = document.getElementById('searchBtn');
       const searchInput = document.getElementById('searchInput');
 
-      searchBox.style.display = 'block';
+      searchBox.classList.remove('hidden');
       searchBtn.classList.add('active');
       searchInput.value = 'test query';
 
       toggleSearch();
 
-      expect(searchBox.style.display).toBe('none');
+      expect(searchBox.classList.contains('hidden')).toBe(true);
       expect(searchBtn.classList.contains('active')).toBe(false);
       expect(searchInput.value).toBe('');
     });
@@ -88,7 +88,7 @@ describe('Popup Main Functions', () => {
       const searchInput = document.getElementById('searchInput');
       searchInput.focus = jest.fn();
 
-      searchBox.style.display = 'none';
+      searchBox.classList.add('hidden');
 
       toggleSearch();
 
