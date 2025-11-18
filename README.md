@@ -108,6 +108,7 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 - **GitHub Token**: Secure storage of your personal access token
 - **Watched Repositories**: Add/remove repositories, import from GitHub
 - **Activity Filters**: Choose what types of activity to monitor
+- **Feed Management**: Control how long items are stored (up to 2000 items, optional time-based expiry)
 - **Check Interval**: Configure how often to check for updates
 - **Notifications**: Toggle browser notifications on/off
 - **Theme**: Choose dark, light, or system theme
@@ -124,7 +125,7 @@ Here's what using the extension looks like day-to-day:
 5. Review and comment on the PR
 6. When you return to the extension, it's marked as read
 
-The extension keeps the last 100 items in your local history, so you can always check something you saw earlier. Badge count updates automatically as you read items.
+The extension keeps up to 2000 items in your local history, so you can always check something you saw earlier. Badge count updates automatically as you read items.
 
 ## Accessibility
 
@@ -162,6 +163,19 @@ Your GitHub token stays on your machine in Chrome's encrypted storage. The exten
 - **No Third Parties** - Zero external servers or analytics services
 - **Minimal Permissions** - Token used exclusively for fetching repository activity
 - **Open Source** - Review the entire codebase, raise issues, or submit fixes
+
+## Data Storage
+
+The extension stores up to **2000 activity items** locally in Chrome storage. This limit ensures the extension stays performant while providing plenty of history.
+
+### Feed Management
+You can optionally configure automatic expiry of old items:
+- **Auto-removal**: Enable time-based expiry to automatically remove items older than a specified time
+- **Configurable Duration**: Set expiry time from 1 to 168 hours (1 week)
+- **Applies to All Items**: When enabled, both feed and archived items older than the threshold are removed
+- **Manual Control**: Clear archive manually anytime with the "Clear Archive" button
+
+Items are automatically removed when they exceed the 2000 item limit (keeping the most recent) or when they're older than your configured expiry time (if enabled).
 
 ## Rate Limiting
 

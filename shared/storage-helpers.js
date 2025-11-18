@@ -199,7 +199,8 @@ export const STORAGE_KEYS = {
     'mutedRepos',
     'snoozedRepos',
     'checkInterval',
-    'theme'
+    'theme',
+    'itemExpiryHours'
   ],
   ACTIVITY: [
     'activities',
@@ -239,7 +240,8 @@ export const STORAGE_DEFAULTS = {
   theme: 'system',
   activities: [],
   readItems: [],
-  pinnedRepos: []
+  pinnedRepos: [],
+  itemExpiryHours: null // null means disabled, otherwise number of hours
 };
 
 /**
@@ -258,7 +260,8 @@ export async function getSettings() {
     mutedRepos: result.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
     snoozedRepos: result.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
     checkInterval: result.checkInterval || STORAGE_DEFAULTS.checkInterval,
-    theme: result.theme || STORAGE_DEFAULTS.theme
+    theme: result.theme || STORAGE_DEFAULTS.theme,
+    itemExpiryHours: result.itemExpiryHours !== undefined ? result.itemExpiryHours : STORAGE_DEFAULTS.itemExpiryHours
   };
 }
 

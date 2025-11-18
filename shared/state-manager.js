@@ -29,6 +29,7 @@ class StateManager {
       notifications: { ...STORAGE_DEFAULTS.notifications },
       checkInterval: STORAGE_DEFAULTS.checkInterval,
       theme: STORAGE_DEFAULTS.theme,
+      itemExpiryHours: STORAGE_DEFAULTS.itemExpiryHours,
 
       // Loading/Error State
       isLoading: false,
@@ -77,6 +78,7 @@ class StateManager {
           notifications: { ...STORAGE_DEFAULTS.notifications, ...settings.notifications },
           checkInterval: settings.checkInterval || STORAGE_DEFAULTS.checkInterval,
           theme: settings.theme || STORAGE_DEFAULTS.theme,
+          itemExpiryHours: settings.itemExpiryHours !== undefined ? settings.itemExpiryHours : STORAGE_DEFAULTS.itemExpiryHours,
           allActivities: activityData.activities || STORAGE_DEFAULTS.activities,
           readItems: activityData.readItems || STORAGE_DEFAULTS.readItems
         };
@@ -187,7 +189,7 @@ class StateManager {
     const persistPromises = [];
 
     // Persist settings that go to sync storage
-    const syncKeys = ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme'];
+    const syncKeys = ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'];
     const syncUpdates = {};
 
     syncKeys.forEach(key => {
@@ -196,9 +198,20 @@ class StateManager {
       }
     });
 
+    // Batch all sync updates into a single write operation to avoid quota issues
     if (Object.keys(syncUpdates).length > 0) {
-      for (const [key, value] of Object.entries(syncUpdates)) {
-        persistPromises.push(setSyncItem(key, value));
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        persistPromises.push(
+          new Promise((resolve, reject) => {
+            chrome.storage.sync.set(syncUpdates, () => {
+              if (chrome.runtime && chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve();
+              }
+            });
+          })
+        );
       }
     }
 
@@ -212,9 +225,20 @@ class StateManager {
       }
     });
 
+    // Batch all local updates into a single write operation to avoid quota issues
     if (Object.keys(localUpdates).length > 0) {
-      for (const [key, value] of Object.entries(localUpdates)) {
-        persistPromises.push(setLocalItem(key, value));
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        persistPromises.push(
+          new Promise((resolve, reject) => {
+            chrome.storage.local.set(localUpdates, () => {
+              if (chrome.runtime && chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve();
+              }
+            });
+          })
+        );
       }
     }
 
@@ -253,8 +277,8 @@ class StateManager {
     const currentActivities = this.getState('allActivities');
     const newActivities = [...activities, ...currentActivities];
 
-    // Keep only the most recent activities
-    const maxActivities = 100;
+    // Keep only the most recent activities (2000 limit to stay under Chrome storage quota)
+    const maxActivities = 2000;
     const trimmedActivities = newActivities.slice(0, maxActivities);
 
     await this.setState({ allActivities: trimmedActivities });
@@ -305,19 +329,33 @@ class StateManager {
       currentFilter,
       searchQuery,
       showArchive,
-      readItems
+      readItems,
+      itemExpiryHours
     } = this.state;
 
     let filtered = allActivities;
+
+    // Filter by time-based expiry (if enabled)
+    if (itemExpiryHours !== null && itemExpiryHours > 0) {
+      const expiryThreshold = Date.now() - (itemExpiryHours * 60 * 60 * 1000);
+      filtered = filtered.filter(activity => {
+        const activityTime = new Date(activity.createdAt).getTime();
+        return activityTime >= expiryThreshold;
+      });
+    }
 
     // Filter by type
     if (currentFilter !== 'all') {
       filtered = filtered.filter(activity => activity.type === currentFilter);
     }
 
-    // Filter by read status
-    if (!showArchive) {
-      const readSet = new Set(readItems);
+    // Filter by read status (archive view shows ONLY read items, feed view shows ONLY unread items)
+    const readSet = new Set(readItems);
+    if (showArchive) {
+      // Archive view: show only read items
+      filtered = filtered.filter(activity => readSet.has(activity.id));
+    } else {
+      // Feed view: show only unread items
       filtered = filtered.filter(activity => !readSet.has(activity.id));
     }
 
