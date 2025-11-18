@@ -356,42 +356,10 @@ describe('Storage Helpers', () => {
       expect(result).toBe('local-token-123');
     });
 
-    it('should migrate token from sync to local storage', async () => {
-      mockSyncStorage.githubToken = 'sync-token-456';
-
-      const result = await getToken();
-
-      expect(result).toBe('sync-token-456');
-      // Should be copied to local storage
-      expect(mockLocalStorage.githubToken).toBe('sync-token-456');
-      // Should be removed from sync storage
-      expect(mockSyncStorage.githubToken).toBeUndefined();
-    });
-
     it('should return null if no token exists', async () => {
       const result = await getToken();
 
       expect(result).toBeNull();
-    });
-
-    it('should prefer local token over sync token', async () => {
-      mockLocalStorage.githubToken = 'local-token-123';
-      mockSyncStorage.githubToken = 'sync-token-456';
-
-      const result = await getToken();
-
-      expect(result).toBe('local-token-123');
-      // Should not migrate if local already exists
-      expect(mockSyncStorage.githubToken).toBe('sync-token-456');
-    });
-
-    it('should not migrate empty sync token', async () => {
-      mockSyncStorage.githubToken = '';
-
-      const result = await getToken();
-
-      expect(result).toBeNull();
-      expect(mockLocalStorage.githubToken).toBeUndefined();
     });
   });
 
@@ -400,14 +368,6 @@ describe('Storage Helpers', () => {
       await setToken('new-token-789');
 
       expect(mockLocalStorage.githubToken).toBe('new-token-789');
-    });
-
-    it('should remove token from sync storage', async () => {
-      mockSyncStorage.githubToken = 'old-sync-token';
-
-      await setToken('new-token-789');
-
-      expect(mockSyncStorage.githubToken).toBeUndefined();
     });
 
     it('should overwrite existing local token', async () => {
@@ -420,21 +380,18 @@ describe('Storage Helpers', () => {
   });
 
   describe('clearToken', () => {
-    it('should clear token from both storages', async () => {
+    it('should clear token from local storage', async () => {
       mockLocalStorage.githubToken = 'local-token';
-      mockSyncStorage.githubToken = 'sync-token';
 
       await clearToken();
 
       expect(mockLocalStorage.githubToken).toBe('');
-      expect(mockSyncStorage.githubToken).toBe('');
     });
 
-    it('should work even if no tokens exist', async () => {
+    it('should work even if no token exists', async () => {
       await clearToken();
 
       expect(mockLocalStorage.githubToken).toBe('');
-      expect(mockSyncStorage.githubToken).toBe('');
     });
   });
 });

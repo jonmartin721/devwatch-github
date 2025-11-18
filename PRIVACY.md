@@ -1,6 +1,6 @@
 # Privacy Policy for GitHub Devwatch
 
-**Last Updated: November 15, 2025**
+**Last Updated: November 17, 2025**
 
 ## Overview
 
@@ -121,6 +121,7 @@ This extension is not directed at children under 13. We do not knowingly collect
 If you have questions about this privacy policy or the extension:
 
 - Open an issue on GitHub: https://github.com/jonmartin721/devwatch-github/issues
+- Developer: Jonathan Martinez
 
 ## Open Source
 

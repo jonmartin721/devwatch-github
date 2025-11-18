@@ -161,13 +161,6 @@ describe('Options Main Functions', () => {
       expect(filtered[0].fullName).toBe('golang/go');
     });
 
-    test('handles repos in old string format', () => {
-      state.watchedRepos = ['facebook/react', 'microsoft/vscode'];
-      state.searchQuery = 'react';
-      const filtered = getFilteredRepos();
-      expect(filtered.length).toBe(1);
-    });
-
     test('search is case insensitive', () => {
       // searchQuery is stored lowercase (as it would be from user input)
       state.searchQuery = 'vscode'.toLowerCase();

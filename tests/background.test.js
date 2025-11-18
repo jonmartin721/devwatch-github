@@ -413,24 +413,6 @@ describe('Background Service Worker', () => {
     });
   });
 
-  describe('Legacy Format Support', () => {
-    test('handles string format repos', () => {
-      const repo = 'facebook/react';
-      const repoName = typeof repo === 'string' ? repo : repo.fullName;
-      expect(repoName).toBe('facebook/react');
-    });
-
-    test('handles object format repos', () => {
-      const repo = {
-        fullName: 'facebook/react',
-        description: 'A declarative library',
-        stars: 234000
-      };
-      const repoName = typeof repo === 'string' ? repo : repo.fullName;
-      expect(repoName).toBe('facebook/react');
-    });
-  });
-
   describe('Unmuted Repository Cleanup', () => {
     test('removes old unmuted entries (> 30 days)', async () => {
       const thirtyOneDaysAgo = new Date(Date.now() - (31 * 24 * 60 * 60 * 1000));

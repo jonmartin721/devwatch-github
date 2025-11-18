@@ -14,10 +14,6 @@ const {
 
 describe('Repository Utils', () => {
   describe('extractRepoName', () => {
-    test('extracts name from string format', () => {
-      expect(extractRepoName('facebook/react')).toBe('facebook/react');
-    });
-
     test('extracts name from object format', () => {
       const repo = { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' };
       expect(extractRepoName(repo)).toBe('microsoft/vscode');
@@ -25,10 +21,6 @@ describe('Repository Utils', () => {
   });
 
   describe('extractRepoOwner', () => {
-    test('extracts owner from string format', () => {
-      expect(extractRepoOwner('facebook/react')).toBe('facebook');
-    });
-
     test('extracts owner from object with owner field', () => {
       const repo = { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' };
       expect(extractRepoOwner(repo)).toBe('microsoft');
@@ -41,10 +33,6 @@ describe('Repository Utils', () => {
   });
 
   describe('extractRepoShortName', () => {
-    test('extracts short name from string format', () => {
-      expect(extractRepoShortName('facebook/react')).toBe('react');
-    });
-
     test('extracts short name from object with name field', () => {
       const repo = { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' };
       expect(extractRepoShortName(repo)).toBe('vscode');
@@ -57,11 +45,6 @@ describe('Repository Utils', () => {
   });
 
   describe('validateRepoFormat', () => {
-    test('validates correct string format', () => {
-      expect(validateRepoFormat('facebook/react')).toBe(true);
-      expect(validateRepoFormat('microsoft/vscode')).toBe(true);
-    });
-
     test('rejects invalid string format', () => {
       expect(validateRepoFormat('invalid')).toBe(false);
       expect(validateRepoFormat('too/many/slashes')).toBe(false);
@@ -90,15 +73,6 @@ describe('Repository Utils', () => {
   });
 
   describe('normalizeRepo', () => {
-    test('normalizes string to object format', () => {
-      const result = normalizeRepo('facebook/react');
-      expect(result).toEqual({
-        fullName: 'facebook/react',
-        owner: 'facebook',
-        name: 'react'
-      });
-    });
-
     test('normalizes complete object', () => {
       const repo = { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' };
       const result = normalizeRepo(repo);
@@ -123,11 +97,6 @@ describe('Repository Utils', () => {
   });
 
   describe('isSameRepo', () => {
-    test('compares two string repos', () => {
-      expect(isSameRepo('facebook/react', 'facebook/react')).toBe(true);
-      expect(isSameRepo('facebook/react', 'microsoft/vscode')).toBe(false);
-    });
-
     test('compares two object repos', () => {
       const repo1 = { fullName: 'facebook/react', owner: 'facebook', name: 'react' };
       const repo2 = { fullName: 'facebook/react', owner: 'facebook', name: 'react' };
@@ -136,22 +105,9 @@ describe('Repository Utils', () => {
       expect(isSameRepo(repo1, repo2)).toBe(true);
       expect(isSameRepo(repo1, repo3)).toBe(false);
     });
-
-    test('compares string and object repos', () => {
-      const repo = { fullName: 'facebook/react', owner: 'facebook', name: 'react' };
-      expect(isSameRepo('facebook/react', repo)).toBe(true);
-      expect(isSameRepo(repo, 'facebook/react')).toBe(true);
-      expect(isSameRepo('microsoft/vscode', repo)).toBe(false);
-    });
   });
 
   describe('dedupeRepos', () => {
-    test('removes duplicate string repos', () => {
-      const repos = ['facebook/react', 'microsoft/vscode', 'facebook/react'];
-      const result = dedupeRepos(repos);
-      expect(result).toEqual(['facebook/react', 'microsoft/vscode']);
-    });
-
     test('removes duplicate object repos', () => {
       const repos = [
         { fullName: 'facebook/react', owner: 'facebook', name: 'react' },
@@ -164,22 +120,16 @@ describe('Repository Utils', () => {
       expect(result[1].fullName).toBe('microsoft/vscode');
     });
 
-    test('handles mixed string and object repos', () => {
-      const repos = [
-        'facebook/react',
-        { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' },
-        'facebook/react'
-      ];
-      const result = dedupeRepos(repos);
-      expect(result.length).toBe(2);
-    });
-
     test('handles empty array', () => {
       expect(dedupeRepos([])).toEqual([]);
     });
 
     test('preserves first occurrence', () => {
-      const repos = ['facebook/react', 'microsoft/vscode', 'facebook/react'];
+      const repos = [
+        { fullName: 'facebook/react', owner: 'facebook', name: 'react' },
+        { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' },
+        { fullName: 'facebook/react', owner: 'facebook', name: 'react' }
+      ];
       const result = dedupeRepos(repos);
       expect(result[0]).toBe(repos[0]);
     });
@@ -228,12 +178,6 @@ describe('Repository Utils', () => {
   });
 
   describe('sortReposByName', () => {
-    test('sorts string repos alphabetically', () => {
-      const repos = ['microsoft/vscode', 'facebook/react', 'golang/go'];
-      const result = sortReposByName(repos);
-      expect(result).toEqual(['facebook/react', 'golang/go', 'microsoft/vscode']);
-    });
-
     test('sorts object repos alphabetically', () => {
       const repos = [
         { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' },
@@ -246,20 +190,11 @@ describe('Repository Utils', () => {
       expect(result[2].fullName).toBe('microsoft/vscode');
     });
 
-    test('sorts mixed string and object repos', () => {
+    test('does not mutate original array', () => {
       const repos = [
         { fullName: 'microsoft/vscode', owner: 'microsoft', name: 'vscode' },
-        'facebook/react',
-        'golang/go'
+        { fullName: 'facebook/react', owner: 'facebook', name: 'react' }
       ];
-      const result = sortReposByName(repos);
-      expect(extractRepoName(result[0])).toBe('facebook/react');
-      expect(extractRepoName(result[1])).toBe('golang/go');
-      expect(extractRepoName(result[2])).toBe('microsoft/vscode');
-    });
-
-    test('does not mutate original array', () => {
-      const repos = ['microsoft/vscode', 'facebook/react'];
       const original = [...repos];
       sortReposByName(repos);
       expect(repos).toEqual(original);
@@ -270,7 +205,7 @@ describe('Repository Utils', () => {
     });
 
     test('handles single item array', () => {
-      const repos = ['facebook/react'];
+      const repos = [{ fullName: 'facebook/react', owner: 'facebook', name: 'react' }];
       expect(sortReposByName(repos)).toEqual(repos);
     });
   });

@@ -4,10 +4,12 @@ node_modules/
 coverage/
 dist/
 *.zip
+temp-package/
 .env
 .vscode/
 *.crx
 *.pem
+scripts/package-extension.sh
 
 # Local dev notes
 CLAUDE.md

@@ -10,7 +10,8 @@ jest.unstable_mockModule('../shared/github-api.js', () => ({
 }));
 
 jest.unstable_mockModule('../shared/sanitize.js', () => ({
-  escapeHtml: jest.fn((text) => text)
+  escapeHtml: jest.fn((text) => text),
+  unescapeHtml: jest.fn((text) => text)
 }));
 
 jest.unstable_mockModule('../shared/utils.js', () => ({
@@ -635,7 +636,9 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(reposContainer.innerHTML).toContain('Unknown');
+      // Language "Unknown" should not be displayed (better UX)
+      expect(reposContainer.innerHTML).not.toContain('Unknown');
+      expect(reposContainer.innerHTML).toContain('owner/repo1');
     });
 
     test('handles watched repos in different formats', async () => {

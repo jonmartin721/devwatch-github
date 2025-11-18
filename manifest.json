@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "GitHub Devwatch",
   "version": "1.0.0",
-  "description": "Stay updated with GitHub activity across your repositories",
+  "description": "Monitor pull requests, issues, and releases across multiple GitHub repositories. Get instant notifications and never miss important activity.",
+  "author": "Jonathan Martinez",
   "permissions": [
     "storage",
     "alarms",

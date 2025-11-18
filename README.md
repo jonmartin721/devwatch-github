@@ -1,30 +1,24 @@
 # GitHub Devwatch for Chrome
 
-<div align="center">
-
-**Stay on top of GitHub activity across all your repositories**
+Track GitHub activity across multiple repos. Get notifications for new PRs, issues, and releases without constantly refreshing.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chrome.google.com/webstore)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/jonma/devwatch-github/workflows/CI/badge.svg)](https://github.com/jonma/devwatch-github/actions)
+[![CI](https://github.com/jonmartin721/devwatch-github/workflows/CI/badge.svg)](https://github.com/jonmartin721/devwatch-github/actions)
 [![Tests](https://img.shields.io/badge/tests-316%20passing-brightgreen)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-58%25-brightgreen)](tests/)
 
-*Keep track of PRs, issues, and releases without constantly refreshing GitHub pages*
+## Key Features
 
-</div>
+- **Guided Setup** - 2-minute wizard walks you through token creation and repo selection
+- **Browser Notifications** - Get notified about new PRs, issues, and releases
+- **Multi-Repo Monitoring** - Watch up to 50 repositories from one interface
+- **Configurable Updates** - Check every 5, 15, 30, or 60 minutes
+- **Activity Filtering** - Search and filter by repo and activity type
+- **Badge Counts** - Unread count on the extension icon
+- **Secure & Private** - Your token stays local, zero third-party data sharing
 
-## ✨ Key Features
-
-- **🚀 Guided Setup Wizard** - Interactive onboarding walks you through the entire setup process
-- **🔔 Smart Notifications** - Get browser notifications for new PRs, issues, and releases
-- **📊 Multi-Repo Monitoring** - Watch up to 50 repositories from a single interface
-- **⚡ Real-time Updates** - Configurable check intervals (5, 15, 30, or 60 minutes)
-- **🎯 Activity Filtering** - Filter by repository and activity type with search
-- **🏷️ Badge Counts** - See unread activity count directly on the extension icon
-- **🔒 Secure & Private** - Token stored securely, no third-party data sharing
-
-## 📸 Screenshots
+## Screenshots
 
 ### Guided Setup Wizard
 <div align="center">
@@ -56,7 +50,7 @@
   </tr>
 </table>
 
-## 🚀 Installation
+## Installation
 
 ### From Chrome Web Store (Recommended)
 
@@ -81,7 +75,7 @@ cd devwatch-github
 
 3. Click the extension icon and follow the setup wizard
 
-## ⚙️ Quick Setup
+## Quick Setup
 
 ### First-Time Setup
 When you first install the extension, an **interactive setup wizard** guides you through:
@@ -101,7 +95,7 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 - Badge count shows unread items at a glance
 - Manage repositories and preferences anytime in Settings
 
-## 🎯 How to Use
+## How to Use
 
 ### Popup Interface
 - **Tabs**: Filter between All/PRs/Issues/Releases
@@ -119,7 +113,20 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 - **Theme**: Choose dark, light, or system theme
 - **Backup/Restore**: Export and import your settings
 
-## ♿ Accessibility
+## Typical Workflow
+
+Here's what using the extension looks like day-to-day:
+
+1. You're working and get a notification: "2 new activities in your-org/api-server"
+2. Click the extension icon to see the feed
+3. See "Pull Request #145: Add OAuth2 authentication" (3 minutes ago)
+4. Click the item to open it in GitHub
+5. Review and comment on the PR
+6. When you return to the extension, it's marked as read
+
+The extension keeps the last 100 items in your local history, so you can always check something you saw earlier. Badge count updates automatically as you read items.
+
+## Accessibility
 
 GitHub Devwatch is built with accessibility in mind to ensure everyone can use it effectively:
 
@@ -146,28 +153,23 @@ GitHub Devwatch is built with accessibility in mind to ensure everyone can use i
 
 For accessibility issues or suggestions, please [open an issue](https://github.com/jonmartin721/devwatch-github/issues).
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
-Your privacy and security are top priorities:
+Your GitHub token stays on your machine in Chrome's encrypted storage. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
 
-- **Local Storage Only** - Your GitHub token is stored locally using Chrome's encrypted sync storage
-- **API-Only Communication** - The extension only communicates with GitHub's official API
-- **No Third Parties** - No data is sent to external servers or analytics services
-- **Minimal Permissions** - Token is used exclusively for fetching repository activity
-- **Open Source** - Full transparency - you can review the entire codebase and suggest changes, and raise/fix issues if you see them
+- **Local Storage Only** - Token stored locally using Chrome's encrypted sync storage
+- **API-Only Communication** - Only talks to GitHub's official API
+- **No Third Parties** - Zero external servers or analytics services
+- **Minimal Permissions** - Token used exclusively for fetching repository activity
+- **Open Source** - Review the entire codebase, raise issues, or submit fixes
 
-## 📊 Rate Limiting
-GitHub's API has very relaxed rate limits that this extension benefits from and optimizes for:
+## Rate Limiting
 
-- **5,000 requests/hour** for authenticated users (compared to 60 for unauthenticated)
-- **Default interval**: 15 minutes (well within rate limits)
-- **Efficient checking**: Each repo typically uses 1-3 API requests per check
-- **Smart batching**: Groups requests to minimize API usage
+GitHub gives authenticated users 5,000 API requests per hour. Each repo check uses 1-3 requests, so even checking 50 repos every 15 minutes keeps you well under the limit.
 
-You can safely monitor dozens of repositories without approaching GitHub's limits. 
-We do limit the maximum number of repositories to 50 to make sure you don't reach that limit however.
+The extension defaults to checking every 15 minutes. You can change this to 5, 30, or 60 minutes in settings. The 50-repo limit is just to keep things reasonable - you won't hit GitHub's rate limits even at that level.
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 ```
@@ -208,9 +210,9 @@ npm test
 3. Load as unpacked extension in Chrome
 4. Make changes and reload the extension from `chrome://extensions/`
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are very welcome! Please feel free to submit issues or pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions welcome! Submit issues or pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### How to Contribute
 - **Bug Reports**: Use GitHub Issues with clear reproduction steps
@@ -218,16 +220,16 @@ Contributions are very welcome! Please feel free to submit issues or pull reques
 - **Pull Requests**: Fork, branch, and submit with clear commit messages
 - **Code Style**: Follow existing patterns and use ESLint configuration
 
-## 📚 Documentation
+## Documentation
 
 - [**Privacy Policy**](PRIVACY.md) - How we handle your data
 - [**Changelog**](CHANGELOG.md) - Version history and release notes
 - [**License**](LICENSE) - MIT License
 - [**Contributing Guidelines**](CONTRIBUTING.md) - How to contribute
 
-## 🗺️ Roadmap
+## Roadmap
 
-Future features being considered (that you could help with!):
+Features I'm considering (no promises on timeline - this is a side project):
 - **Comment notifications** - Track new comments on issues and PRs
 - **Mention tracking** - Get notified when you're mentioned
 - **Multiple GitHub accounts** - Switch between different accounts
@@ -236,13 +238,15 @@ Future features being considered (that you could help with!):
 - **Dashboard view** - Full-page dashboard for all activity
 - **Integration with other platforms** - GitLab, Bitbucket support
 
-## 📄 License
+If any of these sound useful, open an issue or submit a PR!
+
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
 Copyright (c) 2025 Jonathan Martin
 
-## 🙋‍♂️ Support
+## Support
 
 - **Report issues**: [GitHub Issues](https://github.com/jonmartin721/devwatch-github/issues)
 - **Feature requests**: [GitHub Discussions](https://github.com/jonmartin721/devwatch-github/discussions)
@@ -250,8 +254,6 @@ Copyright (c) 2025 Jonathan Martin
 ---
 
 <div align="center">
-
-**Built for developers who want to stay productive**
 
 [⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if you find it useful!
 

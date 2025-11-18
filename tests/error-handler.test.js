@@ -296,8 +296,7 @@ describe('Error Handler', () => {
       const mockResponse = {
         ok: false,
         status: 400,
-        text: jest.fn().mockResolvedValue('Error text'),
-        json: jest.fn().mockResolvedValue({ message: 'JSON error message' })
+        text: jest.fn().mockResolvedValue('{"message":"JSON error message"}')
       };
 
       await expect(handleApiResponse(mockResponse, 'test operation')).rejects.toThrow('JSON error message');
