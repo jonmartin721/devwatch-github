@@ -115,15 +115,15 @@ async function checkGitHubActivity() {
 
     const enabledFilters = filters || { prs: true, issues: true, releases: true };
     const globalLastCheck = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const newActivities = [];
 
-    for (const repo of watchedRepos) {
+    // Fetch all repos in parallel for better performance
+    const fetchPromises = watchedRepos.map(async (repo) => {
       const repoName = extractRepoName(repo);
 
       // Skip muted and snoozed repos
       if (excludedRepos.has(repoName)) {
         console.log(`[DevWatch] Skipping ${repoName} (muted or snoozed)`);
-        continue;
+        return [];
       }
 
       // Use repo's addedAt timestamp if it exists and is newer than global lastCheck
@@ -147,10 +147,25 @@ async function checkGitHubActivity() {
       }
 
       console.log(`[DevWatch] Fetching activity for ${repoName} since ${checkDate.toISOString()}`);
-      const activities = await fetchRepoActivity(repoName, githubToken, checkDate, enabledFilters);
-      console.log(`[DevWatch] Found ${activities.length} new activities in ${repoName}`);
-      newActivities.push(...activities);
-    }
+
+      try {
+        const activities = await fetchRepoActivity(repoName, githubToken, checkDate, enabledFilters);
+        console.log(`[DevWatch] Found ${activities.length} new activities in ${repoName}`);
+        return activities;
+      } catch (error) {
+        // fetchRepoActivity should handle its own errors, but catch unexpected ones
+        console.error(`[DevWatch] Unexpected error fetching ${repoName}:`, error);
+        return [];
+      }
+    });
+
+    // Use allSettled to ensure one failing repo doesn't break the entire check
+    const results = await Promise.allSettled(fetchPromises);
+
+    // Extract successful results and flatten activities
+    const newActivities = results
+      .filter(result => result.status === 'fulfilled')
+      .flatMap(result => result.value);
 
     console.log(`[DevWatch] Total new activities: ${newActivities.length}`);
 
@@ -369,7 +384,8 @@ async function storeActivities(newActivities) {
     const allActivities = [...uniqueNew, ...activities];
     const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
 
-    const updated = filtered.slice(0, 100);
+    // Keep up to 2000 items (same limit as state manager)
+    const updated = filtered.slice(0, 2000);
 
     // Try to store, with error handling for quota exceeded
     try {
