@@ -606,40 +606,30 @@
     <div class="tab-panel" data-tab="help">
     <section class="section">
       <div class="help-hero">
-        <svg class="help-logo" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        <svg class="help-logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Git branch diagram (scaled up to use more space) -->
+          <circle cx="35" cy="35" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
+          <circle cx="35" cy="93" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
+          <circle cx="93" cy="93" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
+
+          <!-- Branch lines -->
+          <line x1="35" y1="49" x2="35" y2="79" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          <path d="M 35 64 Q 50 64 64 79 L 79 93" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- Filled centers -->
+          <circle cx="35" cy="35" r="7" fill="currentColor"/>
+          <circle cx="35" cy="93" r="7" fill="currentColor"/>
+          <circle cx="93" cy="93" r="7" fill="currentColor"/>
+
+          <!-- Notification badge -->
+          <circle cx="100" cy="28" r="18" fill="#ef4444"/>
         </svg>
         <h2>GitHub DevWatch</h2>
         <p class="help-tagline">Monitor your favorite repositories and stay updated with real-time GitHub activity</p>
       </div>
 
-      <div class="help-features">
-        <div class="feature-card">
-          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-          </svg>
-          <h3>Real-time Notifications</h3>
-          <p>Get instant browser notifications for new pull requests, issues, and releases</p>
-        </div>
-
-        <div class="feature-card">
-          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-          </svg>
-          <h3>Customizable Filters</h3>
-          <p>Choose which activity types to track and get notified about</p>
-        </div>
-
-        <div class="feature-card">
-          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-          </svg>
-          <h3>Multi-Repository Support</h3>
-          <p>Monitor unlimited repositories with pin, mute, and snooze features</p>
-        </div>
-      </div>
-
-      <div class="help-resources">
+  
+    <div class="help-resources">
         <h3>Resources & Support</h3>
         <div class="resource-grid">
           <a href="https://github.com/jonmartin721/devwatch-github#readme" target="_blank" rel="noopener noreferrer" class="resource-link">

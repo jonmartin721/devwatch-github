@@ -1,0 +1,53 @@
+name: Release Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Extension
+        run: npm run validate
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release Zip
+        run: |
+          zip -r devwatch-github-v${{ steps.get_version.outputs.VERSION }}.zip \
+            manifest.json \
+            background.js \
+            popup \
+            options \
+            icons \
+            shared \
+            LICENSE \
+            README.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: devwatch-github-v${{ steps.get_version.outputs.VERSION }}.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false

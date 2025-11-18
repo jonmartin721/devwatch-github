@@ -28,6 +28,17 @@ global.chrome = {
       remove: jest.fn(() => {
         return Promise.resolve();
       })
+    },
+    session: {
+      get: jest.fn((keys, callback) => {
+        if (callback) callback({});
+      }),
+      set: jest.fn((items, callback) => {
+        if (callback) callback();
+      }),
+      remove: jest.fn(() => {
+        return Promise.resolve();
+      })
     }
   }
 };
@@ -35,19 +46,23 @@ global.chrome = {
 // Mock fetch
 global.fetch = jest.fn();
 
-// Import functions from npm-api.js
-import { fetchGitHubRepoFromNpm } from '../shared/api/npm-api.js';
 
-// Import functions from repository-controller.js
-import { trackRepoUnmuted } from '../options/controllers/repository-controller.js';
 
-// Import functions from options.js
-import {
+// Mock crypto-utils using unstable_mockModule
+jest.unstable_mockModule('../shared/crypto-utils.js', () => ({
+  encryptData: jest.fn(() => Promise.resolve({ iv: [], data: [] })),
+  decryptData: jest.fn(() => Promise.resolve('decrypted-token'))
+}));
+
+// Import functions dynamically after mocking
+const { fetchGitHubRepoFromNpm } = await import('../shared/api/npm-api.js');
+const { trackRepoUnmuted } = await import('../options/controllers/repository-controller.js');
+const {
   validateRepo,
   cleanupRepoNotifications,
   formatNumber,
   formatDate
-} from '../options/options.js';
+} = await import('../options/options.js');
 
 describe('Options Page - Repository Management', () => {
   beforeEach(() => {
@@ -167,12 +182,12 @@ describe('Options Page - Repository Management', () => {
     beforeEach(() => {
       // Mock token storage for validateRepo tests
       chrome.storage.local.get.mockImplementation((keys, callback) => {
+        const result = {};
         if (keys.includes('githubToken')) {
-          const result = { githubToken: 'test-token' };
-          if (callback) callback(result);
-          return Promise.resolve(result);
+          result.githubToken = 'test-token';
         }
-        return Promise.resolve({});
+        if (callback) callback(result);
+        return Promise.resolve(result);
       });
     });
 

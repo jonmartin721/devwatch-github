@@ -3,7 +3,18 @@
  */
 
 import { jest } from '@jest/globals';
-import {
+
+// Mock crypto-utils using unstable_mockModule for ESM support
+const mockEncryptData = jest.fn(() => Promise.resolve({ iv: [1, 2, 3], data: [4, 5, 6] }));
+const mockDecryptData = jest.fn(() => Promise.resolve('decrypted-token'));
+
+jest.unstable_mockModule('../shared/crypto-utils.js', () => ({
+  encryptData: mockEncryptData,
+  decryptData: mockDecryptData
+}));
+
+// Dynamic import after mocking
+const {
   getSyncItem,
   getLocalItem,
   getSyncItems,
@@ -14,13 +25,16 @@ import {
   getToken,
   setToken,
   clearToken
-} from '../shared/storage-helpers.js';
+} = await import('../shared/storage-helpers.js');
 
 describe('Storage Helpers', () => {
   let mockSyncStorage;
   let mockLocalStorage;
 
   beforeEach(() => {
+    // Reset mocks
+    jest.clearAllMocks();
+    
     // Mock storage with in-memory objects
     mockSyncStorage = {};
     mockLocalStorage = {};
@@ -349,11 +363,15 @@ describe('Storage Helpers', () => {
 
   describe('getToken', () => {
     it('should return token from local storage if it exists', async () => {
-      mockLocalStorage.githubToken = 'local-token-123';
+      // Mock encrypted token in local storage
+      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
+      // Mock decryptData to return a specific token
+      mockDecryptData.mockResolvedValueOnce('decrypted-token');
 
       const result = await getToken();
 
-      expect(result).toBe('local-token-123');
+      expect(result).toBe('decrypted-token');
+      expect(mockDecryptData).toHaveBeenCalled();
     });
 
     it('should return null if no token exists', async () => {
@@ -367,33 +385,36 @@ describe('Storage Helpers', () => {
     it('should set token in local storage', async () => {
       await setToken('new-token-789');
 
-      expect(mockLocalStorage.githubToken).toBe('new-token-789');
+      // Should store encrypted data
+      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
+      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
     });
 
     it('should overwrite existing local token', async () => {
-      mockLocalStorage.githubToken = 'old-local-token';
+      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
 
       await setToken('new-token-789');
 
-      expect(mockLocalStorage.githubToken).toBe('new-token-789');
+      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
+      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
     });
   });
 
   describe('clearToken', () => {
     it('should clear token from local storage', async () => {
-      mockLocalStorage.githubToken = 'local-token';
+      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
+      mockLocalStorage.githubToken = 'legacy-token';
 
       await clearToken();
 
-      expect(mockLocalStorage.githubToken).toBe('');
+      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
+      expect(mockLocalStorage.githubToken).toBeNull();
     });
 
     it('should work even if no token exists', async () => {
       await clearToken();
 
-      expect(mockLocalStorage.githubToken).toBe('');
+      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
     });
   });
 });
-
-export {};

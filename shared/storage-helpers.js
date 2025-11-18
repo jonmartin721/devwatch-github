@@ -1,6 +1,7 @@
 /**
  * Chrome storage helper functions with promisified APIs
  */
+import { encryptData, decryptData } from './crypto-utils.js';
 
 /**
  * Check if running in Chrome extension context
@@ -163,30 +164,80 @@ export function getExcludedRepos(mutedRepos = [], snoozedRepos = []) {
 }
 
 /**
- * Get GitHub token from local storage
- * For security, tokens are stored in local storage (not synced across devices)
+ * Get GitHub token
+ * Tries session storage first (decrypted cache), then local storage (encrypted)
  * @returns {Promise<string|null>} Token or null
  */
 export async function getToken() {
-  return await getLocalItem('githubToken');
+  // 1. Try session storage first (fast path, decrypted)
+  if (isChromeExtension() && chrome.storage.session) {
+    const session = await new Promise(resolve => {
+      chrome.storage.session.get(['githubToken'], result => resolve(result.githubToken));
+    });
+    if (session) return session;
+  }
+
+  // 2. Try local storage (encrypted)
+  const encrypted = await getLocalItem('encryptedGithubToken');
+  
+  // Legacy fallback: check for unencrypted token and migrate if found
+  if (!encrypted) {
+    const legacyToken = await getLocalItem('githubToken');
+    if (legacyToken) {
+      await setToken(legacyToken); // This will encrypt and store it
+      await setLocalItem('githubToken', null); // Clear legacy
+      return legacyToken;
+    }
+    return null;
+  }
+
+  // 3. Decrypt and cache in session storage
+  const token = await decryptData(encrypted);
+  if (token && isChromeExtension() && chrome.storage.session) {
+    await new Promise(resolve => {
+      chrome.storage.session.set({ githubToken: token }, resolve);
+    });
+  }
+
+  return token;
 }
 
 /**
- * Set GitHub token in local storage
- * For security, tokens are stored in local storage (not synced across devices)
+ * Set GitHub token
+ * Encrypts before storing in local storage, caches decrypted in session storage
  * @param {string} token - GitHub token to store
  * @returns {Promise<void>}
  */
 export async function setToken(token) {
-  await setLocalItem('githubToken', token);
+  if (!token) {
+    await clearToken();
+    return;
+  }
+
+  // 1. Cache in session storage (decrypted)
+  if (isChromeExtension() && chrome.storage.session) {
+    await new Promise(resolve => {
+      chrome.storage.session.set({ githubToken: token }, resolve);
+    });
+  }
+
+  // 2. Encrypt and store in local storage
+  const encrypted = await encryptData(token);
+  await setLocalItem('encryptedGithubToken', encrypted);
 }
 
 /**
- * Clear GitHub token from local storage
+ * Clear GitHub token from all storage
  * @returns {Promise<void>}
  */
 export async function clearToken() {
-  await setLocalItem('githubToken', '');
+  if (isChromeExtension() && chrome.storage.session) {
+    await new Promise(resolve => {
+      chrome.storage.session.remove(['githubToken'], resolve);
+    });
+  }
+  await setLocalItem('encryptedGithubToken', null);
+  await setLocalItem('githubToken', null); // Clear legacy if exists
 }
 
 // Storage configuration objects for batch operations
