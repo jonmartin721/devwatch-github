@@ -58,7 +58,6 @@ describe('Popup Main Functions', () => {
     test('shows search box when hidden', () => {
       const searchBox = document.getElementById('searchBox');
       const searchBtn = document.getElementById('searchBtn');
-      const searchInput = document.getElementById('searchInput');
 
       searchBox.style.display = 'none';
 

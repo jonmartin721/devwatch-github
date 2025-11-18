@@ -41,7 +41,6 @@ global.chrome = {
 
 // Import functions we need from popup
 import { OnboardingManager } from '../shared/onboarding.js';
-import { handleNextStep, renderReposStep } from '../popup/views/onboarding-view.js';
 
 let _handleNextStep;
 let _renderReposStep;

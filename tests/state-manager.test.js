@@ -173,7 +173,7 @@ describe('StateManager', () => {
     test('throws error when storage fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      chrome.storage.sync.get = jest.fn((keys, callback) => {
+      chrome.storage.sync.get = jest.fn(() => {
         throw new Error('Storage error');
       });
 
@@ -429,7 +429,7 @@ describe('StateManager', () => {
     });
 
     test('handles function updates', async () => {
-      const updateFn = (state) => ({ watchedRepos: ['facebook/react'] });
+      const updateFn = () => ({ watchedRepos: ['facebook/react'] });
 
       await stateManager.persistState(updateFn);
 

@@ -12,7 +12,7 @@ global.chrome = {
         // Always call callback if provided
         if (callback) callback();
       }),
-      remove: jest.fn((keys) => {
+      remove: jest.fn(() => {
         return Promise.resolve();
       })
     },
@@ -25,7 +25,7 @@ global.chrome = {
         // Always call callback if provided
         if (callback) callback();
       }),
-      remove: jest.fn((keys) => {
+      remove: jest.fn(() => {
         return Promise.resolve();
       })
     }

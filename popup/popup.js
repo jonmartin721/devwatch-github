@@ -100,7 +100,7 @@ function setupEventListeners() {
   document.getElementById('refreshBtn').addEventListener('click', handleRefresh);
 
   if (darkModeBtn) {
-    darkModeBtn.addEventListener('click', (e) => {
+    darkModeBtn.addEventListener('click', () => {
       toggleDarkMode();
     });
   }

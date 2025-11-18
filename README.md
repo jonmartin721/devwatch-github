@@ -10,8 +10,6 @@
 [![Tests](https://img.shields.io/badge/tests-316%20passing-brightgreen)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-58%25-brightgreen)](tests/)
 
-![Demo GIF](screenshots/demo.gif)
-
 *Keep track of PRs, issues, and releases without constantly refreshing GitHub pages*
 
 </div>

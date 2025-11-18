@@ -4,7 +4,6 @@ const {
   toggleRepoCollapse,
   togglePinRepo,
   snoozeRepo,
-  markAsRead,
   handleMarkAllRead
 } = await import('../popup/controllers/repository-controller.js');
 

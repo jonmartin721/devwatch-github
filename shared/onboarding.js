@@ -200,9 +200,7 @@ export class OnboardingManager {
                             }
                         }
 
-                        // For other HTTP errors, log and continue to retry
-                        const errorText = await response.text();
-
+                        // For other HTTP errors, continue to retry
                         // Retry logic for HTTP errors
                         if (retryCount < maxRetries - 1) {
                             const delay = baseDelay * Math.pow(2, retryCount);
