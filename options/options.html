@@ -8,24 +8,52 @@
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>GitHub Devwatch Settings</h1>
-      <p class="subtitle">Configure your GitHub Devwatch. All changes are saved immediately.</p>
-    </header>
-
-    <nav class="settings-nav" role="navigation" aria-label="Settings sections">
-      <h3>Quick Navigation</h3>
-      <ul class="nav-links">
-        <li><a href="#token">GitHub Token</a></li>
-        <li><a href="#repositories">Repositories</a></li>
-        <li><a href="#filters">Activity Filters & Notifications</a></li>
-        <li><a href="#appearance">Appearance</a></li>
-        <li><a href="#interval">Check Interval</a></li>
-        <li><a href="#snooze">Snooze Duration</a></li>
-        <li><a href="#import-export">Import/Export</a></li>
-      </ul>
+    <nav class="tab-navigation" role="navigation" aria-label="Settings tabs">
+      <div class="sidebar-header">
+        <h2>Settings</h2>
+      </div>
+      <button class="tab-button active" data-tab="setup" aria-selected="true">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+        </svg>
+        <span>Setup</span>
+      </button>
+      <button class="tab-button" data-tab="repositories" aria-selected="false">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+        </svg>
+        <span>Repositories</span>
+      </button>
+      <button class="tab-button" data-tab="filters" aria-selected="false">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+        <span>Activity Filters</span>
+      </button>
+      <button class="tab-button" data-tab="preferences" aria-selected="false">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+        <span>Appearance & Behavior</span>
+      </button>
+      <button class="tab-button" data-tab="advanced" aria-selected="false">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span>Advanced</span>
+      </button>
+      <button class="tab-button" data-tab="help" aria-selected="false">
+        <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Help</span>
+      </button>
     </nav>
 
+    <div class="content-wrapper">
+    <!-- Tab Panel 1: Setup -->
+    <div class="tab-panel active" data-tab="setup">
     <section class="section" id="token">
       <h2>GitHub Personal Access Token</h2>
         <div class="form-row">
@@ -36,28 +64,87 @@
           </div>
           <span id="tokenStatus" class="token-status" aria-live="polite"></span>
           <p id="token-help" class="help-text">
-            <a href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitHub%20Devwatch%20Extension" target="_blank" aria-label="Create GitHub token with recommended permissions">Create a token with recommended permissions</a> or
+            <a href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitHub%20Devwatch%20Extension&expiration=90" target="_blank" aria-label="Create GitHub token with recommended permissions">Create a token with recommended permissions</a> or
             manually create one with <code>repo</code> (or <code>public_repo</code> for public repos only) and <code>read:user</code> scopes.
           </p>
+          <div class="info-box info-box-compact">
+            <p class="help-text">
+              <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Tokens expire after 90 days by default. You'll need to create a new token when yours expires, or select "No expiration" when creating your token (not recommended for security).</span>
+            </p>
+          </div>
         </div>
     </section>
 
-  
+    <section class="section">
+      <h2>Getting Started</h2>
+      <p class="help-text">Follow these steps to set up GitHub DevWatch</p>
+
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Create a GitHub Token</h3>
+            <p>Click the link above to create a personal access token with the required permissions. This allows the extension to fetch your repository activity.</p>
+          </div>
+        </div>
+
+        <div class="setup-step clickable" data-tab="repositories">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Add Repositories</h3>
+            <p>Go to the <strong>Repositories</strong> tab to add repositories you want to monitor. You can add them manually or import from your GitHub account.</p>
+          </div>
+        </div>
+
+        <div class="setup-step clickable" data-tab="filters">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Configure Filters</h3>
+            <p>Visit the <strong>Activity Filters</strong> tab to choose which types of activity you want to see (Pull Requests, Issues, Releases) and enable notifications.</p>
+          </div>
+        </div>
+
+        <div class="setup-step clickable" data-tab="help">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>View Help & Changelog</h3>
+            <p>Visit the <strong>Help</strong> tab to find documentation, support resources, and the changelog to see what's new in the latest version.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box info-box-compact">
+        <p class="help-text">
+          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span><strong>Tip:</strong> DevWatch checks for new activity every 15 minutes by default. You'll see a badge on the extension icon when there's new activity to review.</span>
+        </p>
+      </div>
+    </section>
+    </div>
+
+    <!-- Tab Panel 2: Repositories -->
+    <div class="tab-panel" data-tab="repositories">
     <section class="section" id="repositories">
       <h2>Watched Repositories</h2>
       <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
 
       <div class="repo-features-info info-box">
-        <p class="help-text">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <strong>Pin:</strong> Keep repositories at the top of your list for quick access
-          <br>
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <span><strong>Pin:</strong> Keep repositories at the top of your feed for quick access. Pinned repos always appear above other repositories in the popup.</span>
+        </p>
+        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px;">
+          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)
+          <span><strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)</span>
         </p>
       </div>
 
@@ -156,7 +243,10 @@
         <button id="nextPage" disabled>Next</button>
       </div>
     </section>
+    </div>
 
+    <!-- Tab Panel 3: Activity Filters -->
+    <div class="tab-panel" data-tab="filters">
     <section class="section" id="filters">
       <h2>Activity Filters & Notifications</h2>
       <p class="help-text">Choose which types of activity to show and get notified about</p>
@@ -252,17 +342,62 @@
           <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <strong>Activity Filters:</strong> Enable categories to show them in your activity feed
-          <br>
+          <span><strong>Activity Filters:</strong> Enable categories to show them in your activity feed</span>
+        </p>
+        <p class="help-text">
           <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <strong>Notifications:</strong> Enable browser notifications (requires the category to be enabled first)
+          <span><strong>Notifications:</strong> Enable browser notifications (requires the category to be enabled first)</span>
         </p>
       </div>
     </section>
+    </div>
 
-    
+    <!-- Tab Panel 4: Appearance & Behavior -->
+    <div class="tab-panel" data-tab="preferences">
+    <section class="section" id="feed-management">
+      <h2>Feed Management</h2>
+      <p class="help-text">Control how long activity items are stored in your feed and archive</p>
+
+      <div class="feed-management-card">
+        <div class="card-header">
+          <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="activity-info">
+            <h3>Auto-Remove Old Items</h3>
+            <p>Automatically clean up items after a specified time period</p>
+          </div>
+        </div>
+        <div class="card-controls">
+          <label class="activity-toggle">
+            <input type="checkbox" id="itemExpiryEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="expiry-settings" id="itemExpiryInputRow" style="display: none;">
+        <div class="info-box" style="margin-bottom: 16px;">
+          <p class="help-text" style="margin: 0;">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            When enabled, items older than the specified time will be removed from both the feed and archive. A maximum of 2000 items are kept regardless of age.
+          </p>
+        </div>
+
+        <label for="itemExpiryHours" style="display: block; font-weight: 500; margin-bottom: 12px; font-size: 14px; color: var(--text-primary);">Remove items older than</label>
+        <div class="number-input-group">
+          <input type="number" id="itemExpiryHours" min="1" max="168" placeholder="24" aria-describedby="expiry-help" class="styled-number-input">
+          <span class="input-suffix">hours</span>
+        </div>
+        <p id="expiry-help" class="help-text" style="margin-top: 10px; font-size: 12px;">Enter a value between 1 and 168 hours (7 days)</p>
+      </div>
+    </section>
+
+
     <section class="section" id="appearance">
       <h2>Appearance</h2>
       <p class="help-text">Choose your preferred color scheme</p>
@@ -369,6 +504,74 @@
         </div>
       </div>
     </section>
+    </div>
+
+    <!-- Tab Panel 5: Advanced -->
+    <div class="tab-panel" data-tab="advanced">
+    <section class="section" id="data-management">
+      <h2>Data Management</h2>
+      <p class="help-text">Manage your extension data, cache, and settings</p>
+
+      <div class="data-management-cards">
+        <div class="data-card">
+          <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+          </svg>
+          <div class="data-info">
+            <h3>Clear Cache</h3>
+            <p>Remove cached activity data. This won't affect your settings or repositories.</p>
+          </div>
+          <button class="data-action-btn" id="clearCacheBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
+            </svg>
+            Clear
+          </button>
+        </div>
+
+        <div class="data-card danger-card">
+          <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          <div class="data-info">
+            <h3>Clear All Data</h3>
+            <p>Remove all cached data and activity history. Settings and repos are preserved.</p>
+          </div>
+          <button class="data-action-btn danger-btn" id="clearAllDataBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
+            </svg>
+            Clear All
+          </button>
+        </div>
+
+        <div class="data-card danger-card">
+          <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <div class="data-info">
+            <h3>Reset to Defaults</h3>
+            <p>Reset all settings to default values. Your token and repositories will be cleared.</p>
+          </div>
+          <button class="data-action-btn danger-btn" id="resetSettingsBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-top: 24px;">
+        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px;">
+          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span><strong>Warning:</strong> Clearing data or resetting settings cannot be undone. Use the Export feature below to backup your configuration first.</span>
+        </p>
+      </div>
+    </section>
 
     <section class="section" id="import-export">
       <h2>Import/Export Settings</h2>
@@ -397,59 +600,102 @@
         Your GitHub token is never exported for security
       </p>
     </section>
+    </div>
 
+    <!-- Tab Panel 6: Help -->
+    <div class="tab-panel" data-tab="help">
+    <section class="section">
+      <div class="help-hero">
+        <svg class="help-logo" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <h2>GitHub DevWatch</h2>
+        <p class="help-tagline">Monitor your favorite repositories and stay updated with real-time GitHub activity</p>
+      </div>
 
-    <!-- Footer -->
-    <footer class="settings-footer">
-      <div class="footer-content">
-        <div class="footer-section">
-          <h4>GitHub DevWatch</h4>
-          <p>Monitor your favorite repositories and stay updated with GitHub activity.</p>
+      <div class="help-features">
+        <div class="feature-card">
+          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <h3>Real-time Notifications</h3>
+          <p>Get instant browser notifications for new pull requests, issues, and releases</p>
         </div>
-        <div class="footer-links">
-          <div class="footer-column">
-            <h5>Resources</h5>
-            <ul>
-              <li><a href="https://github.com/jonmartin721/devwatch-github#readme" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" class="svg-inline" aria-hidden="true">
-                  <path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0114.25 13H8.06l-2.573 2.573A1.458 1.458 0 013 14.543V13H1.75A1.75 1.75 0 010 11.25zM1.75 1.5a.25.25 0 00-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 01.75.75v2.19l2.72-2.72a.749.749 0 01.53-.22h6.5a.25.25 0 00.25-.25v-9.5a.25.25 0 00-.25-.25zm7 2.25v2.5a.75.75 0 01-1.5 0v-2.5a.75.75 0 011.5 0zM9 9a1 1 0 11-2 0 1 1 0 012 0z"/>
-                </svg>
-                Documentation & Help
-              </a></li>
-              <li><a href="https://github.com/jonmartin721/devwatch-github" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#0969da" class="svg-inline" aria-hidden="true">
-                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.09-.45.38-.87.69-1.06-1.77-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                </svg>
-                GitHub Repository
-              </a></li>
-              <li><a href="https://github.com/jonmartin721/devwatch-github/issues" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#cf222e" class="svg-inline" aria-hidden="true">
-                  <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
-                  <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 011.5 8z"/>
-                </svg>
-                Report Issues
-              </a></li>
-              <li><a href="https://github.com/jonmartin721/devwatch-github/releases" target="_blank" rel="noopener noreferrer">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="#1a7f37" class="svg-inline" aria-hidden="true">
-                  <path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25ZM3.5 4.75v.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-.5a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25ZM3.75 7.5a.25.25 0 0 0-.25.25v.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-.5a.25.25 0 0 0-.25-.25Zm-.25 3.25v.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-.5a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25Z"/>
-                </svg>
-                Changelog & Updates
-              </a></li>
-            </ul>
-          </div>
+
+        <div class="feature-card">
+          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+          </svg>
+          <h3>Customizable Filters</h3>
+          <p>Choose which activity types to track and get notified about</p>
+        </div>
+
+        <div class="feature-card">
+          <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <h3>Multi-Repository Support</h3>
+          <p>Monitor unlimited repositories with pin, mute, and snooze features</p>
         </div>
       </div>
-      <div class="footer-bottom">
+
+      <div class="help-resources">
+        <h3>Resources & Support</h3>
+        <div class="resource-grid">
+          <a href="https://github.com/jonmartin721/devwatch-github#readme" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <svg class="resource-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <div class="resource-content">
+              <h4>Documentation</h4>
+              <p>Complete setup guide, features overview, and FAQ</p>
+            </div>
+          </a>
+
+          <a href="https://github.com/jonmartin721/devwatch-github" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <svg class="resource-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <div class="resource-content">
+              <h4>Source Code</h4>
+              <p>View the code, contribute, or fork the project</p>
+            </div>
+          </a>
+
+          <a href="https://github.com/jonmartin721/devwatch-github/issues" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <svg class="resource-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div class="resource-content">
+              <h4>Report Issues</h4>
+              <p>Found a bug or have a feature request? Let us know</p>
+            </div>
+          </a>
+
+          <a href="https://github.com/jonmartin721/devwatch-github/releases" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <svg class="resource-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <div class="resource-content">
+              <h4>Changelog</h4>
+              <p>See what's new in the latest version</p>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="help-footer">
         <p>
           Made with
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="#e34c26" class="svg-inline-centered" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="#e34c26" class="heart-icon" aria-hidden="true">
             <path d="M8 14.25l-.71-.71C4.18 10.43 1.5 8.25 1.5 5.75 1.5 4.03 2.95 2.5 4.75 2.5c1.05 0 2.05.4 2.75 1.1L8 4.1l.5-.5c.7-.7 1.7-1.1 2.75-1.1 1.8 0 3.25 1.53 3.25 3.25 0 2.5-2.68 4.68-5.79 7.79l-.71.71z"/>
           </svg>
-          for the GitHub community.
-          <a href="https://github.com/jonmartin721/devwatch-github" target="_blank" rel="noopener noreferrer">View source code</a>.
+          for the GitHub community
         </p>
       </div>
-    </footer>
+    </section>
+    </div>
+    </div>
   </div>
 
   <!-- Import Repos Modal -->
