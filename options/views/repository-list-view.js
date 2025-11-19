@@ -19,10 +19,9 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
   const paginationControls = document.getElementById('paginationControls');
 
   if (state.watchedRepos.length === 0) {
-    const toggleSearchBtn = document.getElementById('toggleSearchBtn');
-    const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
-    if (toggleSearchBtn) toggleSearchBtn.style.display = 'none';
+    const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
     if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'none';
+    updateRepoCountBadge(0);
 
     list.innerHTML = `
       <div class="empty-repos-card">
@@ -47,10 +46,9 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
     return;
   }
 
-  const toggleSearchBtn = document.getElementById('toggleSearchBtn');
-  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
-  if (toggleSearchBtn) toggleSearchBtn.style.display = 'flex';
+  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
   if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'flex';
+  updateRepoCountBadge(state.watchedRepos.length);
 
   const filteredRepos = getFilteredRepos(state);
 
@@ -185,4 +183,11 @@ function getFilteredRepos(state) {
   }
 
   return repos;
+}
+
+function updateRepoCountBadge(count) {
+  const badge = document.getElementById('repoCountBadge');
+  if (badge) {
+    badge.textContent = count;
+  }
 }

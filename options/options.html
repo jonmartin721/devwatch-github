@@ -54,40 +54,53 @@
     <div class="content-wrapper">
     <!-- Tab Panel 1: Setup -->
     <div class="tab-panel active" data-tab="setup">
-    <section class="section" id="token">
-      <h2>GitHub Personal Access Token</h2>
-        <div class="form-row">
-          <label for="githubToken">Token</label>
-          <div class="token-input-wrapper">
-            <input type="password" id="githubToken" placeholder="ghp_..." aria-describedby="token-help" autocomplete="off">
-            <button id="clearTokenBtn" class="danger hidden" aria-label="Clear stored GitHub token">Clear Token</button>
-          </div>
-          <span id="tokenStatus" class="token-status" aria-live="polite"></span>
-          <p id="token-help" class="help-text">
-            <a href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitHub%20Devwatch%20Extension&expiration=90" target="_blank" aria-label="Create GitHub token with recommended permissions">Create a token with recommended permissions</a> or
-            manually create one with <code>repo</code> (or <code>public_repo</code> for public repos only) and <code>read:user</code> scopes.
-          </p>
-          <div class="info-box info-box-compact">
-            <p class="help-text">
-              <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <span>Tokens expire after 90 days by default. You'll need to create a new token when yours expires, or select "No expiration" when creating your token (not recommended for security).</span>
-            </p>
-          </div>
-        </div>
-    </section>
-
     <section class="section">
       <h2>Getting Started</h2>
       <p class="help-text">Follow these steps to set up GitHub DevWatch</p>
 
       <div class="setup-steps">
-        <div class="setup-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h3>Create a GitHub Token</h3>
-            <p>Click the link above to create a personal access token with the required permissions. This allows the extension to fetch your repository activity.</p>
+        <div class="setup-step setup-step-primary">
+          <div class="step-all-content">
+            <div class="step-header-section">
+              <div class="step-number">1</div>
+              <div class="step-title-section">
+                <h3>Create a GitHub Token</h3>
+                <p>This allows the extension to fetch your repository activity securely.</p>
+              </div>
+            </div>
+
+            <div class="token-form-section">
+              <label for="githubToken" class="token-form-label">GitHub Personal Access Token</label>
+              <div class="token-input-wrapper">
+                <input type="password" id="githubToken" placeholder="ghp_..." aria-describedby="token-help" autocomplete="off">
+                <button id="clearTokenBtn" class="danger hidden" aria-label="Clear stored GitHub token">Clear Token</button>
+              </div>
+              <span id="tokenStatus" class="token-status" aria-live="polite"></span>
+            </div>
+
+            <p id="token-help" class="help-text">
+              <a href="https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitHub%20Devwatch%20Extension&expiration=90" target="_blank" aria-label="Create GitHub token with recommended permissions" class="help-link-primary">→ Create a token with recommended permissions</a> or
+              manually create one with <code>repo</code> and <code>read:user</code> scopes.
+            </p>
+
+            <div class="step-info-boxes">
+              <div class="info-box info-box-compact">
+                <p class="help-text">
+                  <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                  </svg>
+                  <span><strong>Security:</strong> Your token is encrypted with AES-256 encryption and stored securely on your device. It's never transmitted to third parties.</span>
+                </p>
+              </div>
+              <div class="info-box info-box-compact">
+                <p class="help-text">
+                  <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <span><strong>Expiration:</strong> Tokens expire after 90 days by default. You'll need to create a new token when yours expires, or select "No expiration" when creating your token (not recommended for security).</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -130,53 +143,20 @@
     <!-- Tab Panel 2: Repositories -->
     <div class="tab-panel" data-tab="repositories">
     <section class="section" id="repositories">
-      <h2>Watched Repositories</h2>
-      <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
-
-      <div class="repo-features-info info-box">
-        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      <!-- Add New Repository Card -->
+      <div class="repo-section-card add-repo-card">
+        <div class="repo-section-header">
+          <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <span><strong>Pin:</strong> Keep repositories at the top of your feed for quick access. Pinned repos always appear above other repositories in the popup.</span>
-        </p>
-        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px;">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)</span>
-        </p>
-      </div>
-
-      <!-- Action Buttons Container -->
-      <div class="repo-action-buttons">
-        <div class="action-buttons-left">
-          <button id="toggleAddBtn" class="action-btn" aria-label="Toggle add repository form">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-            </svg>
-            <span>Add</span>
-          </button>
-          <button id="toggleSearchBtn" class="action-btn" aria-label="Toggle search repositories">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-            </svg>
-            <span>Search</span>
-          </button>
+          <div class="repo-section-title">
+            <h2>Add New Repository</h2>
+            <p class="help-text" id="repoHelpText">Add a valid GitHub token above to start adding repositories</p>
+          </div>
         </div>
-        <div class="action-buttons-right">
-          <button id="hidePinnedToggleBtn" class="action-btn" aria-label="Toggle hide pinned repositories">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-            </svg>
-            <span>Hide Pinned</span>
-          </button>
-        </div>
-      </div>
 
-      <!-- Add Repository Panel (Hidden by default) -->
-      <div class="repo-panel" id="addRepoPanel">
+      <!-- Add Repository Form (Always Visible) -->
+      <div id="addRepoPanel">
         <div class="add-repo-form" role="form" aria-label="Add new repository">
           <label for="repoInput" class="repo-input-label">Repository:</label>
           <div class="repo-input-wrapper">
@@ -220,8 +200,29 @@
           </div>
         </div>
       </div>
+      </div>
 
-      <!-- Search Repository Panel (Hidden by default) -->
+      <!-- Your Watched Repositories Card -->
+      <div class="repo-section-card watched-repos-card">
+        <div class="repo-section-header">
+          <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <div class="repo-section-title">
+            <h2>Your Watched Repositories <span class="repo-count-badge" id="repoCountBadge">0</span></h2>
+          </div>
+          <div class="repo-section-actions">
+            <button id="hidePinnedToggleBtn2" class="action-btn" aria-label="Toggle hide pinned repositories">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+              </svg>
+              <span>Hide Pinned</span>
+            </button>
+          </div>
+        </div>
+
+      <!-- Search Repository Panel -->
       <div class="repo-panel" id="searchRepoPanel">
         <div class="repo-search-controls">
           <div class="search-input-wrapper">
@@ -241,6 +242,22 @@
         <button id="prevPage" disabled>Previous</button>
         <span id="pageInfo" class="page-info"></span>
         <button id="nextPage" disabled>Next</button>
+      </div>
+
+      <div class="repo-features-info info-box">
+        <p class="help-text info-flex-start mb-8">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span><strong>Pin:</strong> Keep repositories at the top of your feed for quick access. Pinned repos always appear above other repositories in the popup.</span>
+        </p>
+        <p class="help-text info-flex-start">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span><strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)</span>
+        </p>
+      </div>
       </div>
     </section>
     </div>
@@ -378,9 +395,9 @@
         </div>
       </div>
 
-      <div class="expiry-settings" id="itemExpiryInputRow" style="display: none;">
-        <div class="info-box" style="margin-bottom: 16px;">
-          <p class="help-text" style="margin: 0;">
+      <div class="expiry-settings d-none" id="itemExpiryInputRow">
+        <div class="info-box mb-16">
+          <p class="help-text m-0">
             <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -388,12 +405,12 @@
           </p>
         </div>
 
-        <label for="itemExpiryHours" style="display: block; font-weight: 500; margin-bottom: 12px; font-size: 14px; color: var(--text-primary);">Remove items older than</label>
+        <label for="itemExpiryHours" class="input-label-styled">Remove items older than</label>
         <div class="number-input-group">
           <input type="number" id="itemExpiryHours" min="1" max="168" placeholder="24" aria-describedby="expiry-help" class="styled-number-input">
           <span class="input-suffix">hours</span>
         </div>
-        <p id="expiry-help" class="help-text" style="margin-top: 10px; font-size: 12px;">Enter a value between 1 and 168 hours (7 days)</p>
+        <p id="expiry-help" class="help-text help-text-small">Enter a value between 1 and 168 hours (7 days)</p>
       </div>
     </section>
 
@@ -494,6 +511,24 @@
         </div>
       </fieldset>
 
+      <div class="feed-management-card mt-16">
+        <div class="card-header">
+          <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="activity-info">
+            <h3>Mark as Read on Snooze</h3>
+            <p>Automatically mark all repository items as read when snoozing</p>
+          </div>
+        </div>
+        <div class="card-controls">
+          <label class="activity-toggle">
+            <input type="checkbox" id="markReadOnSnooze">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="current-snoozes">
         <h3>Currently Snoozed</h3>
         <div id="snoozedReposList" class="snoozed-repos-list">
@@ -511,6 +546,29 @@
     <section class="section" id="data-management">
       <h2>Data Management</h2>
       <p class="help-text">Manage your extension data, cache, and settings</p>
+
+      <div class="data-card mt-24">
+        <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 8c-2.5 0-4.5 1.8-4.5 4s2 4 4.5 4c2 0 3.5-1.5 4.5-3.5 1 2 2.5 3.5 4.5 3.5 2.5 0 4.5-1.8 4.5-4s-2-4-4.5-4c-2 0-3.5 1.5-4.5 3.5-1-2-2.5-3.5-4.5-3.5z"/>
+        </svg>
+        <div class="data-info">
+          <h3>Unlimited Repositories</h3>
+          <p>Allow watching more than 50 repositories</p>
+        </div>
+        <label class="activity-toggle">
+          <input type="checkbox" id="allowUnlimitedRepos">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="info-box mb-32">
+        <p class="help-text info-flex-start">
+          <svg class="info-icon icon-top-aligned warning-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span><strong>Warning:</strong> We limit repositories to 50 by default to prevent exceeding GitHub's API rate limits and causing problems with your account. Enabling unlimited repositories may result in rate limit issues.</span>
+        </p>
+      </div>
 
       <div class="data-management-cards">
         <div class="data-card">
@@ -563,9 +621,9 @@
         </div>
       </div>
 
-      <div class="info-box" style="margin-top: 24px;">
-        <p class="help-text" style="margin: 0; display: flex; align-items: flex-start; gap: 8px;">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;">
+      <div class="info-box mt-24">
+        <p class="help-text info-flex-start">
+          <svg class="info-icon icon-top-aligned warning-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
           <span><strong>Warning:</strong> Clearing data or resetting settings cannot be undone. Use the Export feature below to backup your configuration first.</span>
@@ -625,7 +683,7 @@
           <circle cx="100" cy="28" r="18" fill="#ef4444"/>
         </svg>
         <h2>GitHub DevWatch</h2>
-        <p class="help-tagline">Monitor your favorite repositories and stay updated with real-time GitHub activity</p>
+        <p class="help-tagline">Monitor repositories easily and stay updated with GitHub activity</p>
       </div>
 
   
@@ -662,15 +720,25 @@
             </div>
           </a>
 
-          <a href="https://github.com/jonmartin721/devwatch-github/releases" target="_blank" rel="noopener noreferrer" class="resource-link">
+          <a href="https://github.com/jonmartin721/devwatch-github/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer" class="resource-link">
             <svg class="resource-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
             <div class="resource-content">
-              <h4>Changelog</h4>
-              <p>See what's new in the latest version</p>
+              <h4>Privacy & Security</h4>
+              <p>How your data is protected and stored</p>
             </div>
           </a>
+        </div>
+      </div>
+
+      <div class="help-version-changelog">
+        <h3>Version & Changelog</h3>
+        <div id="versionInfo" class="version-info">
+          <p>Loading version information...</p>
+        </div>
+        <div id="changelogContent" class="changelog-content">
+          <p>Loading changelog...</p>
         </div>
       </div>
 

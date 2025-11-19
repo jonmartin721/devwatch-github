@@ -41,6 +41,9 @@ if (typeof document !== 'undefined') {
 
     // Handle URL parameters for enhanced navigation
     handleUrlParameters();
+
+    // Load version and changelog for Help tab
+    await loadVersionAndChangelog();
   });
 }
 
@@ -106,53 +109,17 @@ function handleUrlParameters() {
   const urlParams = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
 
-  // Handle showAdd parameter to open Add repository panel
+  // Focus on repo input if showAdd parameter is present
   if (urlParams.get('showAdd') === 'true') {
     // Wait a bit for DOM to be fully ready
     setTimeout(() => {
-      const toggleAddBtn = document.getElementById('toggleAddBtn');
-      if (toggleAddBtn && !toggleAddBtn.classList.contains('active')) {
-        toggleAddBtn.click();
+      const repoInput = document.getElementById('repoInput');
+      if (repoInput) {
+        repoInput.focus();
       }
     }, 100);
   }
 
-  // Map old section hashes to tabs for backwards compatibility
-  const sectionToTabMap = {
-    'token': 'setup',
-    'repositories': 'repositories',
-    'filters': 'filters',
-    'feed-management': 'preferences',
-    'appearance': 'preferences',
-    'interval': 'preferences',
-    'snooze': 'preferences',
-    'import-export': 'advanced'
-  };
-
-  // Handle hash navigation - if it's an old section hash, switch to appropriate tab
-  if (hash) {
-    const cleanHash = hash.substring(1).split('?')[0];
-    const targetTab = sectionToTabMap[cleanHash];
-
-    if (targetTab) {
-      // Switch to the tab containing this section
-      setTimeout(() => {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const targetButton = Array.from(tabButtons).find(btn => btn.dataset.tab === targetTab);
-        if (targetButton) {
-          targetButton.click();
-
-          // Then scroll to the section within that tab
-          setTimeout(() => {
-            const targetSection = document.getElementById(cleanHash);
-            if (targetSection) {
-              targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 100);
-        }
-      }, 150);
-    }
-  }
 }
 
 function setupEventListeners() {
@@ -163,16 +130,8 @@ function setupEventListeners() {
   document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
 
   // Action button toggles
-  const toggleAddBtn = document.getElementById('toggleAddBtn');
-  const toggleSearchBtn = document.getElementById('toggleSearchBtn');
-  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn');
+  const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
 
-  if (toggleAddBtn) {
-    toggleAddBtn.addEventListener('click', () => togglePanel('add'));
-  }
-  if (toggleSearchBtn) {
-    toggleSearchBtn.addEventListener('click', () => togglePanel('search'));
-  }
   if (hidePinnedToggleBtn) {
     hidePinnedToggleBtn.addEventListener('click', toggleHidePinned);
   }
@@ -349,6 +308,24 @@ function setupEventListeners() {
     toastManager.info(`Auto-removal time changed to ${hours} hours`);
   });
 
+  // Auto-save markReadOnSnooze changes
+  document.getElementById('markReadOnSnooze').addEventListener('change', async (e) => {
+    const markReadOnSnooze = e.target.checked;
+    await chrome.storage.sync.set({ markReadOnSnooze });
+    toastManager.info(`Mark as read on snooze ${markReadOnSnooze ? 'enabled' : 'disabled'}`);
+  });
+
+  // Auto-save allowUnlimitedRepos changes
+  document.getElementById('allowUnlimitedRepos').addEventListener('change', async (e) => {
+    const allowUnlimitedRepos = e.target.checked;
+    await chrome.storage.sync.set({ allowUnlimitedRepos });
+    if (allowUnlimitedRepos) {
+      toastManager.warning('Unlimited repositories enabled - watch for rate limits');
+    } else {
+      toastManager.info('Repository limit set to 50');
+    }
+  });
+
   // Auto-save filter and notification changes
   ['filterPrs', 'filterIssues', 'filterReleases', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
     document.getElementById(id).addEventListener('change', async (e) => {
@@ -449,61 +426,10 @@ function setupEventListeners() {
 
 }
 
-// Panel toggle functionality
-function togglePanel(type) {
-  const addPanel = document.getElementById('addRepoPanel');
-  const searchPanel = document.getElementById('searchRepoPanel');
-  const addBtn = document.getElementById('toggleAddBtn');
-  const searchBtn = document.getElementById('toggleSearchBtn');
-
-  const isAddVisible = addPanel.classList.contains('show');
-  const isSearchVisible = searchPanel.classList.contains('show');
-
-  // Clicked 'add'
-  if (type === 'add') {
-    if (isAddVisible) {
-      addPanel.classList.remove('show');
-      addBtn.classList.remove('active');
-    } else {
-      addPanel.classList.add('show');
-      addBtn.classList.add('active');
-      searchPanel.classList.remove('show');
-      searchBtn.classList.remove('active');
-
-      // Clear search text when switching from search to add mode
-      if (isSearchVisible) {
-        const searchInput = document.getElementById('repoSearch');
-        searchInput.value = '';
-        state.searchQuery = '';
-        renderRepoListWrapper(); // Re-render without search filter
-      }
-
-      // Focus on input after animation
-      setTimeout(() => {
-        document.getElementById('repoInput').focus();
-      }, 300);
-    }
-  }
-  // Clicked 'search'
-  else if (type === 'search') {
-    if (isSearchVisible) {
-      searchPanel.classList.remove('show');
-      searchBtn.classList.remove('active');
-    } else {
-      searchPanel.classList.add('show');
-      searchBtn.classList.add('active');
-      addPanel.classList.remove('show');
-      addBtn.classList.remove('active');
-      // Focus on search input after animation
-      setTimeout(() => {
-        document.getElementById('repoSearch').focus();
-      }, 300);
-    }
-  }
-}
+// Panel toggle functionality (removed Add panel toggle, keeping search panel always visible)
 
 function toggleHidePinned() {
-  const btn = document.getElementById('hidePinnedToggleBtn');
+  const btn = document.getElementById('hidePinnedToggleBtn2');
   btn.classList.toggle('active');
 
   // Trigger existing hide pinned functionality
@@ -569,7 +495,9 @@ async function loadSettings() {
       'filters',
       'notifications',
       'theme',
-      'itemExpiryHours'
+      'itemExpiryHours',
+      'markReadOnSnooze',
+      'allowUnlimitedRepos'
     ]);
 
     const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
@@ -651,6 +579,14 @@ async function loadSettings() {
       document.getElementById('itemExpiryInputRow').style.display = 'block';
     }
 
+    // Load markReadOnSnooze setting (default to false - pause not dismiss)
+    const markReadOnSnooze = settings.markReadOnSnooze === true;
+    document.getElementById('markReadOnSnooze').checked = markReadOnSnooze;
+
+    // Load allowUnlimitedRepos setting (default to false)
+    const allowUnlimitedRepos = settings.allowUnlimitedRepos === true;
+    document.getElementById('allowUnlimitedRepos').checked = allowUnlimitedRepos;
+
     // Update notification toggle states after loading settings
     updateNotificationToggleStates();
 
@@ -680,9 +616,10 @@ async function addRepo() {
     return;
   }
 
-  // Check if we've hit the maximum repo limit
-  if (state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
-    showRepoError(`Maximum of ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repositories allowed`);
+  // Check if we've hit the maximum repo limit (unless unlimited repos is enabled)
+  const { allowUnlimitedRepos } = await chrome.storage.sync.get(['allowUnlimitedRepos']);
+  if (!allowUnlimitedRepos && state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
+    showRepoError(`Maximum of ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repositories allowed. Enable "Unlimited Repositories" in Advanced settings to watch more.`);
     statusEl.className = 'repo-validation-status error';
     return;
   }
@@ -1089,6 +1026,105 @@ async function resetSettings() {
     console.error('Error resetting settings:', error);
     toastManager.error('Failed to reset settings');
   }
+}
+
+/**
+ * Load and display version information and changelog
+ */
+async function loadVersionAndChangelog() {
+  try {
+    // Load version from manifest.json
+    const manifestUrl = chrome.runtime.getURL('manifest.json');
+    const manifestResponse = await fetch(manifestUrl);
+    const manifest = await manifestResponse.json();
+
+    const versionInfo = document.getElementById('versionInfo');
+    if (versionInfo) {
+      versionInfo.innerHTML = `
+        <div class="version-badge">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+          </svg>
+          <span>Current Version: <strong>v${manifest.version}</strong></span>
+        </div>
+      `;
+    }
+
+    // Load changelog from CHANGELOG.md
+    const changelogUrl = chrome.runtime.getURL('CHANGELOG.md');
+    const changelogResponse = await fetch(changelogUrl);
+    const changelogText = await changelogResponse.text();
+
+    // Parse markdown to HTML (basic conversion)
+    const changelogHtml = parseChangelogMarkdown(changelogText);
+
+    const changelogContent = document.getElementById('changelogContent');
+    if (changelogContent) {
+      changelogContent.innerHTML = changelogHtml;
+    }
+  } catch (error) {
+    console.error('Error loading version/changelog:', error);
+    const versionInfo = document.getElementById('versionInfo');
+    const changelogContent = document.getElementById('changelogContent');
+    if (versionInfo) {
+      versionInfo.innerHTML = '<p class="error-text">Unable to load version information</p>';
+    }
+    if (changelogContent) {
+      changelogContent.innerHTML = '<p class="error-text">Unable to load changelog</p>';
+    }
+  }
+}
+
+/**
+ * Convert changelog markdown to HTML
+ * @param {string} markdown - The markdown text
+ * @returns {string} HTML string
+ */
+function parseChangelogMarkdown(markdown) {
+  let html = markdown;
+
+  // Convert headers
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+  // Convert links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  // Convert bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Convert inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Convert bullet lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+
+  // Wrap consecutive <li> elements in <ul>
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+    return '<ul>' + match + '</ul>';
+  });
+
+  // Convert paragraphs (lines separated by blank lines)
+  html = html.split('\n\n').map(paragraph => {
+    // Skip if already wrapped in a tag
+    if (paragraph.startsWith('<')) return paragraph;
+    // Skip if empty
+    if (paragraph.trim() === '') return '';
+    // Wrap in paragraph
+    return `<p>${paragraph}</p>`;
+  }).join('\n');
+
+  // Convert line breaks
+  html = html.replace(/\n/g, '<br>');
+
+  // Clean up multiple <br> tags
+  html = html.replace(/(<br>)+/g, '<br>');
+  html = html.replace(/<\/h[234]><br>/g, '</h4>');
+  html = html.replace(/<\/ul><br>/g, '</ul>');
+  html = html.replace(/<\/p><br>/g, '</p>');
+
+  return html;
 }
 
 // Auto-refresh snoozed repos list every 5 minutes
