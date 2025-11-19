@@ -10,7 +10,6 @@ let alarmSetupInProgress = false; // Lock to prevent concurrent setup
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Setup alarm when extension is installed
   chrome.runtime.onInstalled.addListener(() => {
-    console.log('[DevWatch] Extension installed, setting up alarm and running initial check...');
     chrome.storage.sync.get(['checkInterval'], (result) => {
       const interval = result.checkInterval || DEFAULT_INTERVAL;
       setupAlarm(interval);
@@ -21,7 +20,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
 
   // Setup alarm on startup
   chrome.runtime.onStartup.addListener(() => {
-    console.log('[DevWatch] Extension started, setting up alarm and running initial check...');
     chrome.storage.sync.get(['checkInterval'], (result) => {
       const interval = result.checkInterval || DEFAULT_INTERVAL;
       setupAlarm(interval);
@@ -34,7 +32,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
 function setupAlarm(intervalMinutes) {
   // Prevent concurrent alarm setup
   if (alarmSetupInProgress) {
-    console.log('[DevWatch] Alarm setup already in progress, skipping');
     return;
   }
 
@@ -45,7 +42,6 @@ function setupAlarm(intervalMinutes) {
       periodInMinutes: intervalMinutes
     }, () => {
       alarmSetupInProgress = false;
-      console.log(`[DevWatch] Alarm set for ${intervalMinutes} minute intervals`);
     });
   });
 }
@@ -77,8 +73,6 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    console.log('[DevWatch] Starting GitHub activity check...');
-
     // Get token from secure local storage
     const githubToken = await getToken();
 
@@ -91,8 +85,6 @@ async function checkGitHubActivity() {
       'snoozedRepos',
       'unmutedRepos'
     ]);
-
-    console.log('[DevWatch] Watched repos:', watchedRepos?.length || 0);
 
     if (!githubToken) {
       console.warn('[DevWatch] No GitHub token found. Please add a token in settings.');
@@ -122,7 +114,6 @@ async function checkGitHubActivity() {
 
       // Skip muted and snoozed repos
       if (excludedRepos.has(repoName)) {
-        console.log(`[DevWatch] Skipping ${repoName} (muted or snoozed)`);
         return [];
       }
 
@@ -146,11 +137,8 @@ async function checkGitHubActivity() {
         }
       }
 
-      console.log(`[DevWatch] Fetching activity for ${repoName} since ${checkDate.toISOString()}`);
-
       try {
         const activities = await fetchRepoActivity(repoName, githubToken, checkDate, enabledFilters);
-        console.log(`[DevWatch] Found ${activities.length} new activities in ${repoName}`);
         return activities;
       } catch (error) {
         // fetchRepoActivity should handle its own errors, but catch unexpected ones
@@ -167,8 +155,6 @@ async function checkGitHubActivity() {
       .filter(result => result.status === 'fulfilled')
       .flatMap(result => result.value);
 
-    console.log(`[DevWatch] Total new activities: ${newActivities.length}`);
-
     if (newActivities.length > 0) {
       await storeActivities(newActivities);
       await updateBadge();
@@ -176,7 +162,6 @@ async function checkGitHubActivity() {
     }
 
     await chrome.storage.sync.set({ lastCheck: new Date().toISOString() });
-    console.log('[DevWatch] Check complete');
   } catch (error) {
     console.error('[DevWatch] Error checking GitHub:', error);
   }
@@ -222,7 +207,6 @@ async function fetchRepoActivity(repo, token, since, filters) {
             reset: parseInt(reset) * 1000
           });
         } catch (storageError) {
-          console.warn('[DevWatch] Failed to store rate limit:', storageError);
           // Continue even if storage fails
         }
       }
@@ -251,7 +235,6 @@ async function fetchRepoActivity(repo, token, since, filters) {
 
       // Validate that we received an array
       if (!Array.isArray(data)) {
-        console.warn(`Expected array from ${url}, received:`, typeof data);
         return [];
       }
 

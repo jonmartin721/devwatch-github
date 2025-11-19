@@ -148,7 +148,6 @@ async function fetchReposFromGitHub(type, token) {
   while (hasMorePages && page <= MAX_PAGES && allRepos.length < MAX_REPOS) {
     // Check for timeout to prevent hanging
     if (Date.now() - startTime > TIMEOUT_MS) {
-      console.warn('[Import] Pagination timeout reached, stopping at', allRepos.length, 'repos');
       break;
     }
 
@@ -190,7 +189,6 @@ async function fetchReposFromGitHub(type, token) {
 
     // Stop if we've hit the max repos limit
     if (allRepos.length >= MAX_REPOS) {
-      console.warn('[Import] Maximum repo limit reached:', MAX_REPOS);
       break;
     }
 
@@ -200,10 +198,6 @@ async function fetchReposFromGitHub(type, token) {
     } else {
       page++;
     }
-  }
-
-  if (page > MAX_PAGES) {
-    console.warn('[Import] Maximum page limit reached:', MAX_PAGES);
   }
 
   return allRepos;
