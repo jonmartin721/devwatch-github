@@ -5,8 +5,7 @@ Track GitHub activity across multiple repos. Get notifications for new PRs, issu
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chrome.google.com/webstore)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/jonmartin721/devwatch-github/workflows/CI/badge.svg)](https://github.com/jonmartin721/devwatch-github/actions)
-[![Tests](https://img.shields.io/badge/tests-316%20passing-brightgreen)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-58%25-brightgreen)](tests/)
+[![codecov](https://codecov.io/gh/jonmartin721/devwatch-github/branch/main/graph/badge.svg)](https://codecov.io/gh/jonmartin721/devwatch-github)
 
 ## Key Features
 
@@ -156,9 +155,10 @@ For accessibility issues or suggestions, please [open an issue](https://github.c
 
 ## Privacy & Security
 
-Your GitHub token stays on your machine in Chrome's encrypted storage. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
+Your GitHub token is encrypted and stays securely on your machine. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
 
-- **Local Storage Only** - Token stored locally using Chrome's encrypted sync storage
+- **Encrypted Storage** - Tokens are encrypted using industry-standard AES-256 encryption and stored locally in Chrome's secure storage with session caching for optimal performance
+- **Local Storage Only** - All data stays on your machine, never sent to third-party servers
 - **API-Only Communication** - Only talks to GitHub's official API
 - **No Third Parties** - Zero external servers or analytics services
 - **Minimal Permissions** - Token used exclusively for fetching repository activity

@@ -13,7 +13,7 @@ GitHub Devwatch is a Chrome browser extension that helps you monitor activity on
 GitHub Devwatch collects and stores the following data **locally on your device only**:
 
 1. **GitHub Personal Access Token**
-   - Stored in Chrome's local storage (encrypted by Chrome)
+   - Encrypted with AES-256 encryption and stored securely on your device
    - Used only to authenticate with GitHub's API
    - Never transmitted to any third-party servers
    - Never shared with anyone
@@ -101,7 +101,7 @@ You have complete control over your data:
 We take security seriously:
 
 - All API requests use HTTPS
-- GitHub tokens are stored encrypted by Chrome
+- GitHub tokens are encrypted using AES-256 encryption
 - Input is sanitized to prevent XSS attacks
 - Only GitHub URLs are allowed (no external redirects)
 - Content Security Policy prevents malicious script injection

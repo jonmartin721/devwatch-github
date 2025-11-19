@@ -40,6 +40,51 @@ npm test        # Run tests
 3. Keep commits focused and descriptive
 4. Reference any related issues
 
+## Releases
+
+Only maintainers can create releases. If you're a maintainer, follow this process:
+
+### Creating a Release
+
+1. **Update version** in `manifest.json`
+2. **Update CHANGELOG.md** with release notes:
+   ```markdown
+   ## [X.Y.Z] - YYYY-MM-DD
+
+   ### Added
+   - New features
+
+   ### Changed
+   - Updates to existing features
+
+   ### Fixed
+   - Bug fixes
+   ```
+3. **Commit changes**:
+   ```bash
+   git add manifest.json CHANGELOG.md
+   git commit -m "Bump version to X.Y.Z"
+   git push
+   ```
+4. **Create and push tag**:
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+5. **GitHub Actions will**:
+   - Validate the extension
+   - Check CHANGELOG.md has an entry for the version (blocks release if missing)
+   - Run all tests
+   - Build the extension
+   - Create a GitHub release with the zip file
+
+### Version Guidelines
+
+Follow [Semantic Versioning](https://semver.org/):
+- **Major (X.0.0)**: Breaking changes
+- **Minor (0.X.0)**: New features, backwards compatible
+- **Patch (0.0.X)**: Bug fixes
+
 ## Bug Reports
 
 When reporting bugs, include:
