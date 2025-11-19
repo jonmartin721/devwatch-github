@@ -17,37 +17,9 @@ Track GitHub activity across multiple repos. Get notifications for new PRs, issu
 - **Badge Counts** - Unread count on the extension icon
 - **Secure & Private** - Your token stays local, zero third-party data sharing
 
-## Screenshots
-
-### Guided Setup Wizard
 <div align="center">
-  <img src="screenshots/onboarding-welcome.png" alt="Interactive setup wizard welcome screen" width="500">
-  <br><em>Interactive setup wizard guides you through configuration in under 2 minutes</em>
+  <img src="screenshots/full-tagline.png" alt="GitHub Devwatch - Track your repositories" width="800">
 </div>
-
-### Extension Interface
-<table>
-  <tr>
-    <td width="50%">
-      <img src="screenshots/popup-interface.png" alt="Popup interface showing GitHub activity feed">
-      <br><em>Popup interface with activity feed and filtering</em>
-    </td>
-    <td width="50%">
-      <img src="screenshots/settings-page.png" alt="Settings page for configuring repositories">
-      <br><em>Settings page with repository management</em>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <img src="screenshots/browser-notification.png" alt="Browser notification example">
-      <br><em>Real-time browser notifications</em>
-    </td>
-    <td width="50%">
-      <img src="screenshots/badge-count.png" alt="Extension badge count">
-      <br><em>Badge showing unread activity count</em>
-    </td>
-  </tr>
-</table>
 
 ## Installation
 
@@ -87,6 +59,11 @@ When you first install the extension, an **interactive setup wizard** guides you
 
 The entire setup takes about 2 minutes and requires no prior configuration knowledge.
 
+<div align="center">
+  <img src="screenshots/onboarding-welcome.png" alt="Interactive setup wizard welcome screen" width="500">
+  <br><em>Interactive setup wizard guides you through configuration</em>
+</div>
+
 ### Ongoing Use
 - The extension automatically checks for activity at your configured interval (default: 15 minutes)
 - Click the extension icon to view your activity feed
@@ -112,6 +89,11 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 - **Notifications**: Toggle browser notifications on/off
 - **Theme**: Choose dark, light, or system theme
 - **Backup/Restore**: Export and import your settings
+
+<div align="center">
+  <img src="screenshots/settings-page.png" alt="Settings page for configuring repositories" width="600">
+  <br><em>Settings page with repository management</em>
+</div>
 
 ## Typical Workflow
 
@@ -270,5 +252,9 @@ Copyright (c) 2025 Jonathan Martin
 <div align="center">
 
 [⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if you find it useful!
+
+<br><br>
+
+<img src="screenshots/logo-tagline.png" alt="GitHub Devwatch - Track changes fast" width="300">
 
 </div>
