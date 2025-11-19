@@ -69,6 +69,12 @@ describe('Repository Controller', () => {
     };
   });
 
+  afterEach(() => {
+    // Ensure real timers are always restored after each test
+    // This prevents timer state leakage between tests
+    jest.useRealTimers();
+  });
+
   test('toggleRepoCollapse saves state', async () => {
     const collapsedRepos = new Set();
     const mockRender = jest.fn();

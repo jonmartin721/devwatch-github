@@ -1,8 +1,7 @@
-import { escapeHtml } from '../sanitize.js';
-
 /**
  * Toast Notification Manager
  * Singleton class for managing toast notifications across the application
+ * Note: Using textContent for text insertion provides automatic XSS protection
  */
 class NotificationManager {
   constructor() {
@@ -67,30 +66,50 @@ class NotificationManager {
 
     const icon = this.getIcon(type);
 
-    let toastHTML = `
-      <div class="toast-icon">${icon}</div>
-      <div class="toast-message">${escapeHtml(message)}</div>
-      <button class="toast-close" aria-label="Close toast">✕</button>
-      <div class="toast-progress"></div>
-    `;
+    // Build toast structure
+    const toastIcon = document.createElement('div');
+    toastIcon.className = 'toast-icon';
+    toastIcon.textContent = icon;
 
+    const toastMessage = document.createElement('div');
+    toastMessage.className = 'toast-message';
+    toastMessage.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.setAttribute('aria-label', 'Close toast');
+    closeBtn.textContent = '✕';
+
+    const progressBar = document.createElement('div');
+    progressBar.className = 'toast-progress';
+
+    // Append elements in order
+    toast.appendChild(toastIcon);
+    toast.appendChild(toastMessage);
+
+    // Add action button if provided
     if (action) {
-      const actionButton = `<button class="toast-action" data-action="${action.id}">${escapeHtml(action.text)}</button>`;
-      toastHTML = toastHTML.replace('</div><button class="toast-close">', `</div>${actionButton}<button class="toast-close">`);
+      const actionBtn = document.createElement('button');
+      actionBtn.className = 'toast-action';
+      actionBtn.setAttribute('data-action', action.id);
+      actionBtn.textContent = action.text;
+      toast.appendChild(actionBtn);
     }
 
-    toast.innerHTML = toastHTML;
+    toast.appendChild(closeBtn);
+    toast.appendChild(progressBar);
 
     // Add event listeners
-    const closeBtn = toast.querySelector('.toast-close');
     closeBtn.addEventListener('click', () => this.remove(id));
 
-    const actionBtn = toast.querySelector('.toast-action');
-    if (actionBtn && action) {
-      actionBtn.addEventListener('click', () => {
-        action.handler();
-        this.remove(id);
-      });
+    if (action) {
+      const actionBtn = toast.querySelector('.toast-action');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', () => {
+          action.handler();
+          this.remove(id);
+        });
+      }
     }
 
     return toast;

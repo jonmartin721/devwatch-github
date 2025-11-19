@@ -155,18 +155,14 @@ describe('NotificationManager', () => {
       const actionBtn = toast.querySelector('.toast-action');
 
       // Action button should be present
-      if (actionBtn) {
-        expect(actionBtn.textContent).toBe('Click me');
+      expect(actionBtn).not.toBeNull();
+      expect(actionBtn.textContent).toBe('Click me');
 
-        // Click the action button
-        actionBtn.click();
+      // Click the action button
+      actionBtn.click();
 
-        expect(actionHandler).toHaveBeenCalled();
-        expect(toast.classList.contains('removing')).toBe(true);
-      } else {
-        // If action button logic doesn't work in test env, just verify toast was created
-        expect(toast).not.toBeNull();
-      }
+      expect(actionHandler).toHaveBeenCalled();
+      expect(toast.classList.contains('removing')).toBe(true);
     });
 
     test('should escape HTML in messages', () => {
@@ -189,14 +185,9 @@ describe('NotificationManager', () => {
       });
 
       const actionBtn = mockContainer.querySelector('.toast-action');
-      // Action button HTML insertion might not work in test env, so make test optional
-      if (actionBtn) {
-        expect(actionBtn.textContent).toContain('<img');
-        expect(actionBtn.innerHTML).not.toContain('<img src=');
-      } else {
-        // At least verify toast was created
-        expect(mockContainer.children.length).toBe(1);
-      }
+      expect(actionBtn).not.toBeNull();
+      expect(actionBtn.textContent).toContain('<img');
+      expect(actionBtn.innerHTML).not.toContain('<img src=');
     });
   });
 
@@ -259,6 +250,7 @@ describe('NotificationManager', () => {
     });
 
     test('should clear timeout when removing toast', () => {
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
       const toastId = manager.show('Test', 'info');
 
       const toastData = manager.toasts.get(toastId);
@@ -267,8 +259,10 @@ describe('NotificationManager', () => {
       manager.remove(toastId);
 
       // Timeout should be cleared
-      // Note: We can't directly verify clearTimeout was called, but the toast is removed
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(toastData.timeout);
       expect(mockContainer.children[0].classList.contains('removing')).toBe(true);
+
+      clearTimeoutSpy.mockRestore();
     });
   });
 
