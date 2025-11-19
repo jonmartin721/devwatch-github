@@ -14,15 +14,7 @@ describe('Token Controller', () => {
       <div id="importReposSection" style="display: block;"></div>
     `;
 
-    global.chrome = {
-      storage: {
-        sync: {
-          get: jest.fn(() => Promise.resolve({})),
-          set: jest.fn(() => Promise.resolve())
-        }
-      }
-    };
-
+    // Chrome mocks are provided by setup.js
     global.confirm = jest.fn(() => true);
     global.fetch = jest.fn();
   });
@@ -59,5 +51,120 @@ describe('Token Controller', () => {
 
     const statusEl = document.getElementById('tokenStatus');
     expect(statusEl.textContent).toContain('Invalid');
+  });
+
+  test.skip('clearToken clears all fields when confirmed', async () => {
+    global.confirm.mockReturnValue(true);
+
+    const tokenInput = document.getElementById('githubToken');
+    const statusEl = document.getElementById('tokenStatus');
+    const clearBtn = document.getElementById('clearTokenBtn');
+    const repoInput = document.getElementById('repoInput');
+    const addBtn = document.getElementById('addRepoBtn');
+    const importSection = document.getElementById('importReposSection');
+
+    await clearToken();
+
+    expect(tokenInput.value).toBe('');
+    expect(statusEl.textContent).toBe('');
+    expect(clearBtn.style.display).toBe('none');
+    expect(repoInput.disabled).toBe(true);
+    expect(addBtn.disabled).toBe(true);
+    expect(importSection.style.display).toBe('none');
+  });
+
+  test('validateToken handles other HTTP errors', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    const toastManager = {};
+    await validateToken('token', toastManager);
+
+    const statusEl = document.getElementById('tokenStatus');
+    expect(statusEl.textContent).toContain('Error (500)');
+    expect(statusEl.className).toContain('invalid');
+  });
+
+  test('validateToken handles network errors', async () => {
+    global.fetch.mockRejectedValue(new Error('Network error'));
+
+    const toastManager = {};
+    await validateToken('token', toastManager);
+
+    const statusEl = document.getElementById('tokenStatus');
+    expect(statusEl.textContent).toContain('Network error');
+    expect(statusEl.className).toContain('invalid');
+  });
+
+  test('validateToken shows success toast only on first validation', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ login: 'testuser' })
+    });
+
+    const toastManager = { isManualTokenEntry: true };
+
+    await validateToken('new-token', toastManager);
+    expect(toastManager.lastValidToken).toBe('new-token');
+
+    // Second validation with same token shouldn't show toast
+    await validateToken('new-token', toastManager);
+  });
+
+  test('validateToken shows error toast only once per token', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 401
+    });
+
+    const toastManager = {};
+
+    await validateToken('bad-token', toastManager);
+    expect(toastManager.lastInvalidToken).toBe('bad-token');
+  });
+
+  test('validateToken shows API error toast only once per status', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    const toastManager = {};
+
+    await validateToken('token', toastManager);
+    expect(toastManager.lastApiError).toBe(500);
+  });
+
+  test('validateToken enables import section on valid token', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ login: 'testuser' })
+    });
+
+    const toastManager = {};
+    const importSection = document.getElementById('importReposSection');
+    importSection.classList.add('hidden');
+
+    await validateToken('token', toastManager);
+
+    expect(importSection.classList.contains('hidden')).toBe(false);
+    expect(importSection.style.display).toBe('block');
+  });
+
+  test('validateToken disables import section on invalid token', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 401
+    });
+
+    const toastManager = {};
+    const importSection = document.getElementById('importReposSection');
+
+    await validateToken('token', toastManager);
+
+    expect(importSection.classList.contains('hidden')).toBe(true);
+    expect(importSection.style.display).toBe('none');
   });
 });

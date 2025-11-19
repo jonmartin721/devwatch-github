@@ -44,6 +44,10 @@ global.chrome = {
   },
   tabs: {
     create: jest.fn()
+  },
+  action: {
+    setBadgeText: jest.fn(),
+    setBadgeBackgroundColor: jest.fn()
   }
 };
 
@@ -56,7 +60,7 @@ Object.defineProperty(navigator, 'onLine', {
   value: true
 });
 
-// Setup mocks reset for each test (but not DOM since tests set up their own)
+// Setup mocks reset for each test
 beforeEach(() => {
   jest.clearAllMocks();
 });
