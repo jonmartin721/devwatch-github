@@ -5,6 +5,24 @@ All notable changes to GitHub Devwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-11-19
+
+### Fixed
+- Fixed ESLint v9 flat config setup after upgrade (CI was broken due to missing @eslint/js dependency)
+- Fixed manifest description length to comply with Chrome Web Store requirements (120 char limit)
+
+### Changed
+- Updated ESLint from 8.57.1 to 9.39.1 with proper flat config support
+- Updated Jest and jest-environment-jsdom to v30.2.0
+- Updated @types/chrome to latest version
+- Updated GitHub Actions dependencies (checkout, setup-node, gh-release)
+- Cleaned up unused variables and imports across codebase
+- Configured ESLint to ignore underscore-prefixed intentionally unused variables
+
+### Documentation
+- Updated encryption algorithm documentation for clarity
+- Refreshed popup and settings page screenshots
+
 ## [1.0.0] - 2025-11-18
 
 **Initial stable release** of GitHub Devwatch - A Chrome extension for monitoring GitHub repository activity across multiple repos with real-time notifications.
