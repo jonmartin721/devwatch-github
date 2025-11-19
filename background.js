@@ -381,12 +381,10 @@ async function storeActivities(newActivities) {
         const reduced = filtered.slice(0, 50);
         try {
           await setLocalItem('activities', reduced);
-          console.warn('[DevWatch] Reduced activities to 50 due to quota limits');
         } catch (retryError) {
           // If still failing, try with just 25 items
           const minimal = filtered.slice(0, 25);
           await setLocalItem('activities', minimal);
-          console.warn('[DevWatch] Reduced activities to 25 due to quota limits');
         }
       } else {
         // Re-throw non-quota errors
@@ -401,8 +399,21 @@ async function storeActivities(newActivities) {
 
 async function updateBadge() {
   const { readItems = [], activities = [] } = await getLocalItems(['readItems', 'activities']);
+  const { itemExpiryHours } = await getSyncItems(['itemExpiryHours']);
 
-  const unreadCount = activities.filter(a => !readItems.includes(a.id)).length;
+  let filteredActivities = activities;
+
+  // Apply time-based expiry filter (same logic as getFilteredActivities in state-manager)
+  if (itemExpiryHours !== null && itemExpiryHours > 0) {
+    const expiryThreshold = Date.now() - (itemExpiryHours * 60 * 60 * 1000);
+    filteredActivities = filteredActivities.filter(activity => {
+      const activityTime = new Date(activity.createdAt).getTime();
+      return activityTime >= expiryThreshold;
+    });
+  }
+
+  // Count only unread items (not in readItems)
+  const unreadCount = filteredActivities.filter(a => !readItems.includes(a.id)).length;
 
   chrome.action.setBadgeText({ text: unreadCount > 0 ? unreadCount.toString() : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#0366d6' });
