@@ -1028,7 +1028,7 @@ describe('Background Service Worker', () => {
 
       // May or may not call storage.sync.set depending on execution path
       // This test mainly ensures no errors are thrown
-      expect(true).toBe(true);
+      expect(chrome.storage.sync.set).toBeDefined();
     });
 
     test('handles errors gracefully without crashing', async () => {
@@ -1204,7 +1204,7 @@ describe('Background Service Worker', () => {
         json: async () => []
       });
 
-      const _result = await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
+      await fetchRepoActivity(mockRepo, mockToken, mockSince, mockFilters);
 
       // Should proceed with fetch since reset time has passed
       expect(fetch).toHaveBeenCalled();

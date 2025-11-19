@@ -329,7 +329,7 @@ describe('NotificationManager', () => {
 
   describe('setupAutoRemove()', () => {
     test('should set progress bar transition', () => {
-      const _toastId = manager.show('Test');
+      manager.show('Test');
       const progressBar = mockContainer.querySelector('.toast-progress');
 
       expect(progressBar.style.transition).toContain('5000ms');
