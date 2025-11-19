@@ -34,7 +34,7 @@ export async function fetchGitHubRepoFromNpm(packageName) {
 
     const repo = githubMatch[1].replace(/\.git$/, '');
     return { success: true, repo };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: 'Network error fetching NPM package' };
   }
 }

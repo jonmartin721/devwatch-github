@@ -732,7 +732,7 @@ describe('Background Service Worker', () => {
       const expiredSnooze = { repo: 'expired/repo', expiresAt: now - 1000 };
 
       // Mock storage failure
-      chrome.storage.sync.set.mockImplementation((items, callback) => {
+      chrome.storage.sync.set.mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 

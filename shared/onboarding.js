@@ -253,7 +253,7 @@ export class OnboardingManager {
 
             return finalRepos;
 
-        } catch (error) {
+        } catch (_error) {
             // Fallback to static popular repos - diverse, well-maintained projects
             const fallbackRepos = [
                 {

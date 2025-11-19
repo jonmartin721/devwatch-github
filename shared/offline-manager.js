@@ -226,7 +226,7 @@ export async function getStorageUsage() {
       usagePercent: Math.round(usagePercent * 100) / 100,
       itemCount: Object.keys(result).length
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       totalBytes: 0,
       quotaBytes: 5 * 1024 * 1024,

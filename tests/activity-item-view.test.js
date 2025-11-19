@@ -1,4 +1,4 @@
-import { jest, describe, test, beforeEach, expect } from '@jest/globals';
+import { jest, describe, test, expect } from '@jest/globals';
 
 // Mock dependencies
 jest.unstable_mockModule('../shared/state-manager.js', () => ({

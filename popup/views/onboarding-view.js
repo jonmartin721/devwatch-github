@@ -546,13 +546,13 @@ function setupTokenStepListeners() {
           if (Array.isArray(popular) && popular.length > 0) {
             await onboardingManager.saveStepData('popularRepos', popular);
           }
-        } catch (prefetchError) {
+        } catch (_prefetchError) {
           // Silently handle prefetch errors - not critical
         }
       } else {
         tokenStatus.innerHTML = '<div class="status-error">✗ Invalid token</div>';
       }
-    } catch (error) {
+    } catch (_error) {
       tokenStatus.innerHTML = '<div class="status-error">Error validating token</div>';
     }
   });
@@ -590,7 +590,7 @@ async function loadPopularRepos() {
       repoLoading.innerHTML = 'No popular repositories available. Please add repositories manually below.';
       repoLoading.className = 'repo-loading repo-error';
     }
-  } catch (error) {
+  } catch (_error) {
     repoLoading.innerHTML = 'Failed to load popular repositories. Please add repositories manually below.';
     repoLoading.className = 'repo-loading repo-error';
   }
@@ -846,7 +846,7 @@ export async function handleNextStep() {
           if (Array.isArray(popular) && popular.length > 0) {
             await onboardingManager.saveStepData('popularRepos', popular);
           }
-        } catch (prefetchError) {
+        } catch (_prefetchError) {
           // Silently fail - user can still manually search for repos
         }
       }

@@ -1,8 +1,6 @@
-import { stateManager, useState, setState } from '../../shared/state-manager.js';
-import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, getPinIcon, createSvg } from '../../shared/icons.js';
+import { stateManager, useState } from '../../shared/state-manager.js';
 import { showError } from '../../shared/error-handler.js';
 import { safelyOpenUrl } from '../../shared/security.js';
-import { renderActivityItem, groupByRepo } from './activity-item-view.js';
 
 /**
  * Renders the filtered activity list using ActivityListRenderer for efficient DOM updates

@@ -206,7 +206,7 @@ async function fetchRepoActivity(repo, token, since, filters) {
             limit: parseInt(limit),
             reset: parseInt(reset) * 1000
           });
-        } catch (storageError) {
+        } catch (_storageError) {
           // Continue even if storage fails
         }
       }
@@ -381,7 +381,7 @@ async function storeActivities(newActivities) {
         const reduced = filtered.slice(0, 50);
         try {
           await setLocalItem('activities', reduced);
-        } catch (retryError) {
+        } catch (_retryError) {
           // If still failing, try with just 25 items
           const minimal = filtered.slice(0, 25);
           await setLocalItem('activities', minimal);

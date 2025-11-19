@@ -98,7 +98,7 @@ export async function validateToken(token, toastManager) {
         toastManager.lastApiError = response.status;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     statusEl.textContent = '✗ Network error';
     statusEl.className = 'token-status invalid';
     document.getElementById('clearTokenBtn').style.display = 'none';

@@ -107,7 +107,6 @@ function setupTabNavigation() {
 function handleUrlParameters() {
   // Check for URL parameters to enhance user experience
   const urlParams = new URLSearchParams(window.location.search);
-  const hash = window.location.hash;
 
   // Focus on repo input if showAdd parameter is present
   if (urlParams.get('showAdd') === 'true') {
@@ -804,7 +803,7 @@ async function validateRepo(repo) {
         latestRelease
       }
     };
-  } catch (error) {
+  } catch (_error) {
     // If release fetch fails, return basic validation result
     return {
       valid: true,

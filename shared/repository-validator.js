@@ -165,7 +165,7 @@ export async function validateRepositoryEnhanced(repo, token = null) {
         addedAt: new Date().toISOString()
       }
     };
-  } catch (error) {
+  } catch (_error) {
     // If enhanced validation fails, return basic validation result
     return basicValidation;
   }
