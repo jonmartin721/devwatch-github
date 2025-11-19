@@ -32,6 +32,16 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Validate CHANGELOG.md
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            echo "❌ Error: CHANGELOG.md does not contain an entry for version $VERSION"
+            echo "Please add a changelog entry with the format: ## [$VERSION] - YYYY-MM-DD"
+            exit 1
+          fi
+          echo "✅ CHANGELOG.md contains entry for version $VERSION"
+
       - name: Create Release Zip
         run: |
           zip -r devwatch-github-v${{ steps.get_version.outputs.VERSION }}.zip \

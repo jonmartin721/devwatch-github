@@ -29,7 +29,12 @@ jobs:
       run: npm run typecheck
 
     - name: Run tests with coverage
-      run: npm test -- --coverage --coverageReporters=text
+      run: npm test -- --coverage --coverageReporters=text --coverageReporters=lcov
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Validate extension build
       run: npm run build

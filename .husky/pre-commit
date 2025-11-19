@@ -1,0 +1,2 @@
+echo "Running pre-commit lint check..."
+npm run lint
