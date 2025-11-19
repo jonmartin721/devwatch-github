@@ -33,7 +33,7 @@ These are better suited for regular issues:
 The extension implements several security practices:
 
 ### Token Storage
-- GitHub tokens are encrypted using AES-256
+- GitHub tokens are encrypted using AES-GCM with 256-bit keys
 - Stored in Chrome's secure storage API
 - Never transmitted to third-party servers
 - Session caching for performance without compromising security

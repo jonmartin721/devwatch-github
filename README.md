@@ -157,7 +157,7 @@ For accessibility issues or suggestions, please [open an issue](https://github.c
 
 Your GitHub token is encrypted and stays securely on your machine. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
 
-- **Encrypted Storage** - Tokens are encrypted using industry-standard AES-256 encryption and stored locally in Chrome's secure storage with session caching for optimal performance
+- **Encrypted Storage** - Tokens are encrypted using industry-standard AES-GCM encryption and stored locally in Chrome's secure storage with session caching for optimal performance
 - **Local Storage Only** - All data stays on your machine, never sent to third-party servers
 - **API-Only Communication** - Only talks to GitHub's official API
 - **No Third Parties** - Zero external servers or analytics services
