@@ -99,6 +99,7 @@ header {
 .header-refresh-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .header-refresh-btn:focus-visible {
@@ -287,6 +288,34 @@ h1 {
   display: none; /* Hidden by default to prevent flash on load */
 }
 
+/* Custom thin scrollbar styling */
+.activity-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  min-height: 40px;
+}
+
+.activity-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+  background-clip: content-box;
+}
+
+.activity-list::-webkit-scrollbar-thumb:active {
+  background: var(--text-primary);
+  background-clip: content-box;
+}
+
 .empty-state {
   padding: 56px 18px;
   text-align: center;
@@ -308,6 +337,9 @@ h1 {
   border-bottom: 1px solid var(--border-color);
   font-size: 13px;
   color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 11;
 }
 
 .header-actions {
@@ -327,6 +359,10 @@ h1 {
   letter-spacing: 0.5px;
 }
 
+.repo-group {
+  position: relative;
+}
+
 .repo-group-header {
   display: flex;
   justify-content: space-between;
@@ -335,7 +371,7 @@ h1 {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
-  top: 0;
+  top: var(--list-header-height, 0px);
   z-index: 10;
   cursor: pointer;
   transition: opacity 0.3s, transform 0.3s, max-height 0.3s, padding 0.3s, margin 0.3s, border-width 0.3s;
@@ -423,8 +459,8 @@ h1 {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -438,16 +474,17 @@ h1 {
 }
 
 .repo-snooze-btn:hover {
-  background: var(--bg-hover);
+  background: var(--bg-secondary);
   color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .repo-pin-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -461,8 +498,9 @@ h1 {
 }
 
 .repo-pin-btn:hover {
-  background: var(--bg-hover);
+  background: var(--bg-secondary);
   color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .repo-pin-btn.pinned {
@@ -472,6 +510,30 @@ h1 {
 .repo-pin-btn.pinned:hover {
   color: var(--accent-color);
   filter: brightness(1.2);
+}
+
+.repo-mark-read-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.repo-mark-read-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.repo-mark-read-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .options-link {
@@ -488,13 +550,14 @@ h1 {
 .repo-activities {
   max-height: 10000px;
   overflow: hidden;
-  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+  transition: all 0.3s ease-out;
+  transform-origin: top;
   opacity: 1;
 }
 
 .repo-activities.removing {
   opacity: 0;
-  transform: translateX(20px) scale(0.95);
+  transform: scale(0.95);
   max-height: 0;
   margin-top: 0;
   margin-bottom: 0;
@@ -662,9 +725,12 @@ h1 {
 }
 
 footer {
+  position: sticky;
+  bottom: 0;
   padding: 10px 18px;
   border-top: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  z-index: 20;
 }
 
 .footer-content {
@@ -701,6 +767,7 @@ footer {
 .footer-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .footer-btn.spinning .refresh-icon {
@@ -1126,6 +1193,34 @@ body.dark-mode .search-box input:focus-visible {
   padding: 12px;
   overflow-y: auto;
   min-height: 0;
+}
+
+/* Custom thin scrollbar styling for onboarding */
+.onboarding-view::-webkit-scrollbar {
+  width: 8px;
+}
+
+.onboarding-view::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.onboarding-view::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  min-height: 40px;
+}
+
+.onboarding-view::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+  background-clip: content-box;
+}
+
+.onboarding-view::-webkit-scrollbar-thumb:active {
+  background: var(--text-primary);
+  background-clip: content-box;
 }
 
 .onboarding-progress {

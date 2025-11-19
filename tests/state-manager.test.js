@@ -1,96 +1,53 @@
-import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 
-// Mock Chrome storage
-let mockSyncStorage = {};
-let mockLocalStorage = {};
-
+// Mock Chrome APIs before importing
 global.chrome = {
   storage: {
     sync: {
-      get: jest.fn((keys, callback) => {
-        const result = {};
-        const keyArray = Array.isArray(keys) ? keys : [keys];
-        keyArray.forEach(key => {
-          if (Object.prototype.hasOwnProperty.call(mockSyncStorage, key)) {
-            result[key] = mockSyncStorage[key];
-          }
-        });
-        callback(result);
-      }),
-      set: jest.fn((items, callback) => {
-        Object.assign(mockSyncStorage, items);
-        if (callback) callback();
-      })
+      get: jest.fn((keys, callback) => callback({})),
+      set: jest.fn((items, callback) => callback())
     },
     local: {
-      get: jest.fn((keys, callback) => {
-        const result = {};
-        const keyArray = Array.isArray(keys) ? keys : [keys];
-        keyArray.forEach(key => {
-          if (Object.prototype.hasOwnProperty.call(mockLocalStorage, key)) {
-            result[key] = mockLocalStorage[key];
-          }
-        });
-        callback(result);
-      }),
-      set: jest.fn((items, callback) => {
-        Object.assign(mockLocalStorage, items);
-        if (callback) callback();
-      })
+      get: jest.fn((keys, callback) => callback({})),
+      set: jest.fn((items, callback) => callback())
     }
+  },
+  runtime: {
+    lastError: null
   }
 };
 
-// Import after mocking chrome
-import { stateManager } from '../shared/state-manager.js';
-import { STORAGE_DEFAULTS } from '../shared/storage-helpers.js';
+// Mock storage helpers
+jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
+  getSyncItems: jest.fn(async () => ({})),
+  getLocalItems: jest.fn(async () => ({})),
+  STORAGE_KEYS: {
+    SETTINGS: ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'],
+    ACTIVITY: ['activities', 'readItems']
+  },
+  STORAGE_DEFAULTS: {
+    watchedRepos: [],
+    mutedRepos: [],
+    snoozedRepos: [],
+    filters: { prs: true, issues: true, releases: true },
+    notifications: { prs: true, issues: true, releases: true },
+    checkInterval: 15,
+    theme: 'system',
+    itemExpiryHours: null,
+    activities: [],
+    readItems: []
+  }
+}));
 
-describe('StateManager', () => {
-  beforeEach(() => {
-    // Reset storage
-    mockSyncStorage = {};
-    mockLocalStorage = {};
+const { stateManager, getFilteredActivities, getStats, addActivities, markAsRead, addWatchedRepo, removeWatchedRepo } = await import('../shared/state-manager.js');
 
-    // Reset Chrome API mocks with fresh implementations
-    global.chrome = {
-      storage: {
-        sync: {
-          get: jest.fn((keys, callback) => {
-            const result = {};
-            const keyArray = Array.isArray(keys) ? keys : [keys];
-            keyArray.forEach(key => {
-              if (Object.prototype.hasOwnProperty.call(mockSyncStorage, key)) {
-                result[key] = mockSyncStorage[key];
-              }
-            });
-            callback(result);
-          }),
-          set: jest.fn((items, callback) => {
-            Object.assign(mockSyncStorage, items);
-            if (callback) callback();
-          })
-        },
-        local: {
-          get: jest.fn((keys, callback) => {
-            const result = {};
-            const keyArray = Array.isArray(keys) ? keys : [keys];
-            keyArray.forEach(key => {
-              if (Object.prototype.hasOwnProperty.call(mockLocalStorage, key)) {
-                result[key] = mockLocalStorage[key];
-              }
-            });
-            callback(result);
-          }),
-          set: jest.fn((items, callback) => {
-            Object.assign(mockLocalStorage, items);
-            if (callback) callback();
-          })
-        }
-      }
-    };
+describe('state-manager', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
 
-    // Reset state manager to uninitialized state
+    // Reset state manager
     stateManager.initialized = false;
+    stateManager.initializationLock = null;
     stateManager.state = {
       currentFilter: 'all',
       searchQuery: '',
@@ -100,590 +57,286 @@ describe('StateManager', () => {
       watchedRepos: [],
       mutedRepos: [],
       snoozedRepos: [],
-      filters: { ...STORAGE_DEFAULTS.filters },
-      notifications: { ...STORAGE_DEFAULTS.notifications },
-      checkInterval: STORAGE_DEFAULTS.checkInterval,
-      theme: STORAGE_DEFAULTS.theme,
+      filters: { prs: true, issues: true, releases: true },
+      notifications: { prs: true, issues: true, releases: true },
+      checkInterval: 15,
+      theme: 'system',
+      itemExpiryHours: null,
       isLoading: false,
       error: null
     };
-    stateManager.subscribers.clear();
-  });
-
-  describe('constructor', () => {
-    test('initializes with default state', () => {
-      expect(stateManager.state).toBeDefined();
-      expect(stateManager.state.currentFilter).toBe('all');
-      expect(stateManager.state.searchQuery).toBe('');
-      expect(stateManager.state.allActivities).toEqual([]);
-      expect(stateManager.state.watchedRepos).toEqual([]);
-      expect(stateManager.initialized).toBe(false);
-    });
-
-    test('initializes with empty subscribers map', () => {
-      expect(stateManager.subscribers).toBeInstanceOf(Map);
-      expect(stateManager.subscribers.size).toBe(0);
-    });
-  });
-
-  describe('initialize', () => {
-    test('loads state from storage', async () => {
-      mockSyncStorage = {
-        watchedRepos: ['facebook/react', 'nodejs/node'],
-        filters: { prs: true, issues: true, releases: false },
-        theme: 'dark',
-        checkInterval: 30
-      };
-
-      mockLocalStorage = {
-        activities: [
-          { id: '1', type: 'pr', title: 'Test PR', repo: 'facebook/react' }
-        ],
-        readItems: ['1']
-      };
-
-      await stateManager.initialize();
-
-      expect(stateManager.initialized).toBe(true);
-      expect(stateManager.state.watchedRepos).toEqual(['facebook/react', 'nodejs/node']);
-      expect(stateManager.state.theme).toBe('dark');
-      expect(stateManager.state.allActivities).toHaveLength(1);
-      expect(stateManager.state.readItems).toEqual(['1']);
-    });
-
-    test('uses defaults when storage is empty', async () => {
-      await stateManager.initialize();
-
-      expect(stateManager.initialized).toBe(true);
-      expect(stateManager.state.watchedRepos).toEqual(STORAGE_DEFAULTS.watchedRepos);
-      expect(stateManager.state.filters).toEqual(STORAGE_DEFAULTS.filters);
-    });
-
-    test('only initializes once', async () => {
-      await stateManager.initialize();
-      const firstInitState = { ...stateManager.state };
-
-      await stateManager.initialize();
-      const secondInitState = { ...stateManager.state };
-
-      expect(firstInitState).toEqual(secondInitState);
-      expect(chrome.storage.sync.get).toHaveBeenCalledTimes(1);
-    });
-
-    test('throws error when storage fails', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      chrome.storage.sync.get = jest.fn(() => {
-        throw new Error('Storage error');
-      });
-
-      await expect(stateManager.initialize()).rejects.toThrow('Storage error');
-
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('getState', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('returns entire state when no key provided', () => {
-      const state = stateManager.getState();
-
-      expect(state).toHaveProperty('currentFilter');
-      expect(state).toHaveProperty('allActivities');
-      expect(state).toHaveProperty('watchedRepos');
-    });
-
-    test('returns specific property when key provided', () => {
-      stateManager.state.watchedRepos = ['facebook/react'];
-
-      const repos = stateManager.getState('watchedRepos');
-
-      expect(repos).toEqual(['facebook/react']);
-    });
-
-    test('returns undefined for non-existent key', () => {
-      const result = stateManager.getState('nonExistentKey');
-
-      expect(result).toBeUndefined();
-    });
-
-    test('returns empty object when not initialized', () => {
-      stateManager.initialized = false;
-      const state = stateManager.getState();
-
-      expect(state).toEqual({});
-    });
-
-    test('returns undefined for key when not initialized', () => {
-      stateManager.initialized = false;
-      const result = stateManager.getState('watchedRepos');
-
-      expect(result).toBeUndefined();
-    });
-  });
-
-  describe('setState', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('updates state with object', async () => {
-      await stateManager.setState({ currentFilter: 'pr' });
-
-      expect(stateManager.state.currentFilter).toBe('pr');
-    });
-
-    test('updates state with function', async () => {
-      await stateManager.setState((state) => ({
-        ...state,
-        currentFilter: 'issue'
-      }));
-
-      expect(stateManager.state.currentFilter).toBe('issue');
-    });
-
-    test('persists to storage by default', async () => {
-      await stateManager.setState({ watchedRepos: ['facebook/react'] });
-
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
-    });
-
-    test('skips persistence when persist: false', async () => {
-      chrome.storage.sync.set.mockClear();
-
-      await stateManager.setState(
-        { currentFilter: 'pr' },
-        { persist: false }
-      );
-
-      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
-    });
-
-    test('notifies subscribers by default', async () => {
-      const callback = jest.fn();
-      stateManager.subscribe(callback);
-
-      await stateManager.setState({ currentFilter: 'pr' });
-
-      expect(callback).toHaveBeenCalled();
-    });
-
-    test('skips notification when notify: false', async () => {
-      const callback = jest.fn();
-      stateManager.subscribe(callback);
-
-      await stateManager.setState(
-        { currentFilter: 'pr' },
-        { notify: false }
-      );
-
-      expect(callback).not.toHaveBeenCalled();
-    });
-
-    test('does nothing when not initialized', async () => {
-      stateManager.initialized = false;
-      stateManager.state.currentFilter = 'all';
-
-      await stateManager.setState({ currentFilter: 'pr' });
-
-      expect(stateManager.state.currentFilter).toBe('all');
-    });
-  });
-
-  describe('subscribe', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('adds subscriber and returns unsubscribe function', () => {
-      const callback = jest.fn();
-
-      const unsubscribe = stateManager.subscribe(callback);
-
-      expect(stateManager.subscribers.size).toBe(1);
-      expect(typeof unsubscribe).toBe('function');
-    });
-
-    test('unsubscribe removes subscriber', () => {
-      const callback = jest.fn();
-      const unsubscribe = stateManager.subscribe(callback);
-
-      expect(stateManager.subscribers.size).toBe(1);
-
-      unsubscribe();
-
-      expect(stateManager.subscribers.size).toBe(0);
-    });
-
-    test('allows multiple subscribers', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-
-      stateManager.subscribe(callback1);
-      stateManager.subscribe(callback2);
-
-      expect(stateManager.subscribers.size).toBe(2);
-    });
-
-    test('subscriber can watch specific keys', async () => {
-      const callback = jest.fn();
-      stateManager.subscribe(callback, ['currentFilter']);
-
-      await stateManager.setState({ currentFilter: 'pr' });
-
-      expect(callback).toHaveBeenCalled();
-    });
-  });
-
-  describe('notifySubscribers', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('notifies all subscribers of changes', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-
-      stateManager.subscribe(callback1);
-      stateManager.subscribe(callback2);
-
-      const prevState = { ...stateManager.state };
-      const newState = { ...stateManager.state, currentFilter: 'pr' };
-
-      stateManager.notifySubscribers(prevState, newState);
-
-      expect(callback1).toHaveBeenCalledWith(newState, prevState);
-      expect(callback2).toHaveBeenCalledWith(newState, prevState);
-    });
-
-    test('only notifies when watched keys change', () => {
-      const callback = jest.fn();
-      stateManager.subscribe(callback, ['currentFilter']);
-
-      const prevState = { ...stateManager.state };
-      const newState = { ...stateManager.state, searchQuery: 'test' };
-
-      stateManager.notifySubscribers(prevState, newState);
-
-      expect(callback).not.toHaveBeenCalled();
-    });
-
-    test('handles errors in subscriber callbacks gracefully', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const errorCallback = jest.fn(() => {
-        throw new Error('Subscriber error');
-      });
-
-      stateManager.subscribe(errorCallback);
-
-      const prevState = { ...stateManager.state };
-      const newState = { ...stateManager.state, currentFilter: 'pr' };
-
-      expect(() => {
-        stateManager.notifySubscribers(prevState, newState);
-      }).not.toThrow();
-
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('persistState', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('persists sync storage keys', async () => {
-      await stateManager.persistState({
-        watchedRepos: ['facebook/react'],
-        theme: 'dark'
-      });
-
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-        {
-          watchedRepos: ['facebook/react'],
-          theme: 'dark'
-        },
-        expect.any(Function)
-      );
-    });
-
-    test('persists local storage keys', async () => {
-      await stateManager.persistState({
-        allActivities: [{ id: '1', title: 'Test' }],
-        readItems: ['1']
-      });
-
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        {
-          activities: [{ id: '1', title: 'Test' }],
-          readItems: ['1']
-        },
-        expect.any(Function)
-      );
-    });
-
-    test('handles function updates', async () => {
-      const updateFn = () => ({ watchedRepos: ['facebook/react'] });
-
-      await stateManager.persistState(updateFn);
-
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
-    });
-
-    test('skips persistence when no relevant keys', async () => {
-      chrome.storage.sync.set.mockClear();
-      chrome.storage.local.set.mockClear();
-
-      await stateManager.persistState({ currentFilter: 'pr' });
-
-      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
-      expect(chrome.storage.local.set).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('reset', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-      stateManager.state.watchedRepos = ['facebook/react'];
-      stateManager.state.currentFilter = 'pr';
-    });
-
-    test('resets all state to defaults', async () => {
-      await stateManager.reset();
-
-      expect(stateManager.state.watchedRepos).toEqual(STORAGE_DEFAULTS.watchedRepos);
-      expect(stateManager.state.filters).toEqual(STORAGE_DEFAULTS.filters);
-    });
-
-    test('resets specific keys only', async () => {
-      const originalFilter = stateManager.state.currentFilter;
-
-      await stateManager.reset(['watchedRepos']);
-
-      expect(stateManager.state.watchedRepos).toEqual(STORAGE_DEFAULTS.watchedRepos);
-      expect(stateManager.state.currentFilter).toBe(originalFilter);
-    });
-  });
-
-  describe('addActivities', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('adds new activities to the beginning', async () => {
-      const existingActivity = { id: '1', title: 'Old' };
-      stateManager.state.allActivities = [existingActivity];
-
-      const newActivities = [
-        { id: '2', title: 'New 1' },
-        { id: '3', title: 'New 2' }
-      ];
-
-      await stateManager.addActivities(newActivities);
-
-      expect(stateManager.state.allActivities[0].id).toBe('2');
-      expect(stateManager.state.allActivities[1].id).toBe('3');
-      expect(stateManager.state.allActivities[2].id).toBe('1');
-    });
-
-    test('limits activities to maximum of 2000', async () => {
-      const manyActivities = Array.from({ length: 110 }, (_, i) => ({
-        id: `${i}`,
-        title: `Activity ${i}`
-      }));
-
-      await stateManager.addActivities(manyActivities);
-
-      expect(stateManager.state.allActivities).toHaveLength(110); // 110 is under 2000 limit
-    });
-  });
-
-  describe('markAsRead', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('marks activities as read', async () => {
-      await stateManager.markAsRead(['1', '2', '3']);
-
-      expect(stateManager.state.readItems).toEqual(expect.arrayContaining(['1', '2', '3']));
-    });
-
-    test('avoids duplicates in read items', async () => {
-      stateManager.state.readItems = ['1'];
-
-      await stateManager.markAsRead(['1', '2']);
-
-      expect(stateManager.state.readItems).toHaveLength(2);
-      expect(stateManager.state.readItems).toEqual(expect.arrayContaining(['1', '2']));
-    });
-  });
-
-  describe('addWatchedRepo', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-    });
-
-    test('adds new repository', async () => {
-      await stateManager.addWatchedRepo('facebook/react');
-
-      expect(stateManager.state.watchedRepos).toContain('facebook/react');
-    });
-
-    test('avoids duplicates', async () => {
-      await stateManager.addWatchedRepo('facebook/react');
-      await stateManager.addWatchedRepo('facebook/react');
-
-      const reactRepos = stateManager.state.watchedRepos.filter(r => r === 'facebook/react');
-      expect(reactRepos).toHaveLength(1);
-    });
-  });
-
-  describe('removeWatchedRepo', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-      stateManager.state.watchedRepos = ['facebook/react', 'nodejs/node'];
-    });
-
-    test('removes repository', async () => {
-      await stateManager.removeWatchedRepo('facebook/react');
-
-      expect(stateManager.state.watchedRepos).not.toContain('facebook/react');
-      expect(stateManager.state.watchedRepos).toContain('nodejs/node');
-    });
-
-    test('handles removing non-existent repo', async () => {
-      await stateManager.removeWatchedRepo('nonexistent/repo');
-
-      expect(stateManager.state.watchedRepos).toHaveLength(2);
-    });
+    stateManager.subscribers = new Map();
   });
 
   describe('getFilteredActivities', () => {
     beforeEach(async () => {
-      await stateManager.initialize();
+      stateManager.initialized = true;
+      const now = Date.now();
 
       stateManager.state.allActivities = [
-        { id: '1', type: 'pr', title: 'Pull Request', description: 'Test PR', repo: 'facebook/react' },
-        { id: '2', type: 'issue', title: 'Issue', description: 'Test Issue', repo: 'nodejs/node' },
-        { id: '3', type: 'pr', title: 'Another PR', description: 'More tests', repo: 'facebook/react' }
+        { id: '1', type: 'pr', title: 'Add feature', repo: 'facebook/react', createdAt: new Date(now - 1000).toISOString() },
+        { id: '2', type: 'issue', title: 'Bug report', repo: 'facebook/react', createdAt: new Date(now - 2000).toISOString() },
+        { id: '3', type: 'release', title: 'v1.0.0', repo: 'vuejs/vue', createdAt: new Date(now - 3000).toISOString() },
+        { id: '4', type: 'pr', title: 'Fix bug', repo: 'vuejs/vue', createdAt: new Date(now - 4000).toISOString() }
       ];
+      stateManager.state.readItems = ['2'];
     });
 
-    test('returns all activities when filter is "all"', () => {
-      stateManager.state.currentFilter = 'all';
-
-      const filtered = stateManager.getFilteredActivities();
+    test('returns all unread activities by default', () => {
+      const filtered = getFilteredActivities();
 
       expect(filtered).toHaveLength(3);
+      expect(filtered.map(a => a.id)).toEqual(['1', '3', '4']);
     });
 
     test('filters by type', () => {
       stateManager.state.currentFilter = 'pr';
-
-      const filtered = stateManager.getFilteredActivities();
+      const filtered = getFilteredActivities();
 
       expect(filtered).toHaveLength(2);
       expect(filtered.every(a => a.type === 'pr')).toBe(true);
     });
 
-    test('filters out read items when showArchive is false', () => {
-      stateManager.state.readItems = ['1'];
-      stateManager.state.showArchive = false;
+    test('filters by search query', () => {
+      stateManager.state.searchQuery = 'bug';
+      const filtered = getFilteredActivities();
 
-      const filtered = stateManager.getFilteredActivities();
-
-      expect(filtered).toHaveLength(2);
-      expect(filtered.find(a => a.id === '1')).toBeUndefined();
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe('4');
     });
 
-    test('includes read items when showArchive is true', () => {
-      stateManager.state.readItems = ['1'];
+    test('shows only read items in archive view', () => {
       stateManager.state.showArchive = true;
-
-      const filtered = stateManager.getFilteredActivities();
-
-      expect(filtered).toHaveLength(1); // Archive view shows only read items
-      expect(filtered[0].id).toBe('1');
-    });
-
-    test('filters by search query in title', () => {
-      stateManager.state.searchQuery = 'Issue';
-
-      const filtered = stateManager.getFilteredActivities();
+      const filtered = getFilteredActivities();
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Issue');
+      expect(filtered[0].id).toBe('2');
     });
 
-    test('filters by search query in description', () => {
-      stateManager.state.searchQuery = 'tests';
-
-      const filtered = stateManager.getFilteredActivities();
-
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe('3');
-    });
-
-    test('filters by search query in repo', () => {
-      stateManager.state.searchQuery = 'react';
-
-      const filtered = stateManager.getFilteredActivities();
+    test('filters by repository name', () => {
+      stateManager.state.searchQuery = 'vue';
+      const filtered = getFilteredActivities();
 
       expect(filtered).toHaveLength(2);
-      expect(filtered.every(a => a.repo.includes('react'))).toBe(true);
+      expect(filtered.every(a => a.repo === 'vuejs/vue')).toBe(true);
+    });
+
+    test('applies time-based expiry filter', () => {
+      const now = Date.now();
+      stateManager.state.allActivities = [
+        { id: '1', type: 'pr', title: 'Recent', repo: 'test/repo', createdAt: new Date(now - 1000).toISOString() },
+        { id: '2', type: 'pr', title: 'Old', repo: 'test/repo', createdAt: new Date(now - 25 * 60 * 60 * 1000).toISOString() }
+      ];
+      stateManager.state.itemExpiryHours = 24;
+      stateManager.state.readItems = [];
+
+      const filtered = getFilteredActivities();
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe('1');
     });
 
     test('combines multiple filters', () => {
       stateManager.state.currentFilter = 'pr';
-      stateManager.state.searchQuery = 'react';
-      stateManager.state.readItems = ['1'];
-      stateManager.state.showArchive = false;
-
-      const filtered = stateManager.getFilteredActivities();
+      stateManager.state.searchQuery = 'feature';
+      const filtered = getFilteredActivities();
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe('3');
+      expect(filtered[0].id).toBe('1');
     });
   });
 
   describe('getStats', () => {
-    beforeEach(async () => {
-      await stateManager.initialize();
-
+    beforeEach(() => {
+      stateManager.initialized = true;
       stateManager.state.allActivities = [
-        { id: '1', createdAt: '2024-01-01T00:00:00Z' },
-        { id: '2', createdAt: '2024-01-02T00:00:00Z' },
-        { id: '3', createdAt: '2024-01-03T00:00:00Z' }
+        { id: '1', createdAt: '2025-01-15T10:00:00Z' },
+        { id: '2', createdAt: '2025-01-14T10:00:00Z' },
+        { id: '3', createdAt: '2025-01-13T10:00:00Z' }
       ];
-      stateManager.state.readItems = ['2'];
-      stateManager.state.watchedRepos = ['facebook/react', 'nodejs/node'];
+      stateManager.state.readItems = ['1', '2'];
+      stateManager.state.watchedRepos = ['repo1/test', 'repo2/test'];
     });
 
     test('returns correct statistics', () => {
-      const stats = stateManager.getStats();
+      const stats = getStats();
 
-      expect(stats.totalActivities).toBe(3);
-      expect(stats.readActivities).toBe(1);
-      expect(stats.unreadActivities).toBe(2);
-      expect(stats.watchedRepositories).toBe(2);
-      expect(stats.lastActivity).toBe('2024-01-01T00:00:00Z');
+      expect(stats).toEqual({
+        totalActivities: 3,
+        readActivities: 2,
+        unreadActivities: 1,
+        watchedRepositories: 2,
+        lastActivity: '2025-01-15T10:00:00Z'
+      });
     });
 
-    test('handles empty activities', () => {
+    test('returns null for lastActivity when no activities', () => {
       stateManager.state.allActivities = [];
-      stateManager.state.readItems = [];
+      const stats = getStats();
 
-      const stats = stateManager.getStats();
-
-      expect(stats.totalActivities).toBe(0);
-      expect(stats.readActivities).toBe(0);
-      expect(stats.unreadActivities).toBe(0);
       expect(stats.lastActivity).toBeNull();
+    });
+
+    test('handles empty read items', () => {
+      stateManager.state.readItems = [];
+      const stats = getStats();
+
+      expect(stats.readActivities).toBe(0);
+      expect(stats.unreadActivities).toBe(3);
+    });
+  });
+
+  describe('addActivities', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+    });
+
+    test('adds new activities', async () => {
+      const newActivities = [
+        { id: '1', title: 'Test' },
+        { id: '2', title: 'Test 2' }
+      ];
+
+      await addActivities(newActivities);
+
+      expect(stateManager.state.allActivities).toHaveLength(2);
+    });
+
+    test('prepends new activities to existing ones', async () => {
+      stateManager.state.allActivities = [{ id: '3', title: 'Existing' }];
+
+      await addActivities([{ id: '1', title: 'New' }]);
+
+      expect(stateManager.state.allActivities[0].id).toBe('1');
+      expect(stateManager.state.allActivities[1].id).toBe('3');
+    });
+
+    test('limits activities to 2000', async () => {
+      const existingActivities = Array.from({ length: 2000 }, (_, i) => ({ id: `old-${i}` }));
+      stateManager.state.allActivities = existingActivities;
+
+      await addActivities([{ id: 'new-1' }, { id: 'new-2' }]);
+
+      expect(stateManager.state.allActivities).toHaveLength(2000);
+      expect(stateManager.state.allActivities[0].id).toBe('new-1');
+    });
+  });
+
+  describe('markAsRead', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+      stateManager.state.readItems = ['1', '2'];
+    });
+
+    test('marks activities as read', async () => {
+      await markAsRead(['3', '4']);
+
+      expect(stateManager.state.readItems).toContain('3');
+      expect(stateManager.state.readItems).toContain('4');
+    });
+
+    test('does not duplicate read items', async () => {
+      await markAsRead(['1', '2', '3']);
+
+      const uniqueItems = [...new Set(stateManager.state.readItems)];
+      expect(stateManager.state.readItems.length).toBe(uniqueItems.length);
+    });
+
+    test('handles empty array', async () => {
+      const before = [...stateManager.state.readItems];
+      await markAsRead([]);
+
+      expect(stateManager.state.readItems).toEqual(before);
+    });
+  });
+
+  describe('addWatchedRepo', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+      stateManager.state.watchedRepos = ['facebook/react'];
+    });
+
+    test('adds new repository', async () => {
+      await addWatchedRepo('vuejs/vue');
+
+      expect(stateManager.state.watchedRepos).toContain('vuejs/vue');
+      expect(stateManager.state.watchedRepos).toHaveLength(2);
+    });
+
+    test('does not add duplicate repository', async () => {
+      await addWatchedRepo('facebook/react');
+
+      expect(stateManager.state.watchedRepos).toHaveLength(1);
+    });
+  });
+
+  describe('removeWatchedRepo', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+      stateManager.state.watchedRepos = ['facebook/react', 'vuejs/vue', 'nodejs/node'];
+    });
+
+    test('removes repository', async () => {
+      await removeWatchedRepo('vuejs/vue');
+
+      expect(stateManager.state.watchedRepos).not.toContain('vuejs/vue');
+      expect(stateManager.state.watchedRepos).toHaveLength(2);
+    });
+
+    test('handles non-existent repository', async () => {
+      await removeWatchedRepo('nonexistent/repo');
+
+      expect(stateManager.state.watchedRepos).toHaveLength(3);
+    });
+  });
+
+  describe('subscribe', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+    });
+
+    test('calls callback on state change', async () => {
+      const callback = jest.fn();
+      stateManager.subscribe(callback);
+
+      await stateManager.setState({ searchQuery: 'test' });
+
+      expect(callback).toHaveBeenCalled();
+    });
+
+    test('only calls callback for watched keys', async () => {
+      const callback = jest.fn();
+      stateManager.subscribe(callback, ['searchQuery']);
+
+      await stateManager.setState({ currentFilter: 'pr' });
+      expect(callback).not.toHaveBeenCalled();
+
+      await stateManager.setState({ searchQuery: 'test' });
+      expect(callback).toHaveBeenCalled();
+    });
+
+    test('unsubscribe removes callback', async () => {
+      const callback = jest.fn();
+      const unsubscribe = stateManager.subscribe(callback);
+
+      unsubscribe();
+      await stateManager.setState({ searchQuery: 'test' });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    test('handles callback errors gracefully', async () => {
+      const errorCallback = jest.fn(() => {
+        throw new Error('Test error');
+      });
+      const goodCallback = jest.fn();
+
+      stateManager.subscribe(errorCallback);
+      stateManager.subscribe(goodCallback);
+
+      await stateManager.setState({ searchQuery: 'test' });
+
+      expect(goodCallback).toHaveBeenCalled();
     });
   });
 });

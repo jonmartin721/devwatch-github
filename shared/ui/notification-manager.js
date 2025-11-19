@@ -28,14 +28,10 @@ class NotificationManager {
 
   init() {
     this.container = document.getElementById('toastContainer');
-    if (!this.container) {
-      console.warn('Toast container not found');
-    }
   }
 
   show(message, type = 'info', options = {}) {
     if (!this.container) {
-      console.warn('Toast container not initialized');
       return;
     }
 

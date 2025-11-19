@@ -179,15 +179,7 @@ export async function getToken() {
 
   // 2. Try local storage (encrypted)
   const encrypted = await getLocalItem('encryptedGithubToken');
-  
-  // Legacy fallback: check for unencrypted token and migrate if found
   if (!encrypted) {
-    const legacyToken = await getLocalItem('githubToken');
-    if (legacyToken) {
-      await setToken(legacyToken); // This will encrypt and store it
-      await setLocalItem('githubToken', null); // Clear legacy
-      return legacyToken;
-    }
     return null;
   }
 
@@ -237,7 +229,6 @@ export async function clearToken() {
     });
   }
   await setLocalItem('encryptedGithubToken', null);
-  await setLocalItem('githubToken', null); // Clear legacy if exists
 }
 
 // Storage configuration objects for batch operations

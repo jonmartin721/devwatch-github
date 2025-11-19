@@ -121,12 +121,10 @@ export function mapActivity(item, type, repo) {
 export function filterActivitiesByDate(items, since, dateField = 'created_at') {
   // Validate inputs
   if (!Array.isArray(items)) {
-    console.warn('[filterActivitiesByDate] Expected array, received:', typeof items);
     return [];
   }
 
   if (!(since instanceof Date) || isNaN(since.getTime())) {
-    console.warn('[filterActivitiesByDate] Invalid date provided:', since);
     return items; // Return all items if date is invalid
   }
 
@@ -139,7 +137,6 @@ export function filterActivitiesByDate(items, since, dateField = 'created_at') {
     // Parse and validate the date
     const itemDate = new Date(item[dateField]);
     if (isNaN(itemDate.getTime())) {
-      console.warn(`[filterActivitiesByDate] Invalid date in item[${dateField}]:`, item[dateField]);
       return false;
     }
 

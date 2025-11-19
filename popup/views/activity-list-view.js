@@ -1,5 +1,5 @@
 import { stateManager, useState, setState } from '../../shared/state-manager.js';
-import { CHEVRON_DOWN_ICON, SNOOZE_ICON, getPinIcon, createSvg } from '../../shared/icons.js';
+import { CHEVRON_DOWN_ICON, SNOOZE_ICON, CHECK_ICON, getPinIcon, createSvg } from '../../shared/icons.js';
 import { showError } from '../../shared/error-handler.js';
 import { safelyOpenUrl } from '../../shared/security.js';
 import { renderActivityItem, groupByRepo } from './activity-item-view.js';
@@ -17,6 +17,7 @@ import { renderActivityItem, groupByRepo } from './activity-item-view.js';
  * @param {Function} toggleRepoCollapse - Callback for toggling repo collapse state
  * @param {Function} togglePinRepo - Callback for toggling repo pin state
  * @param {Function} snoozeRepo - Callback for snoozing a repo
+ * @param {Function} markRepoAsRead - Callback for marking all items in a repo as read
  */
 export function renderActivities(
   activityRenderer,
@@ -28,7 +29,8 @@ export function renderActivities(
   handleCollapseAll,
   toggleRepoCollapse,
   togglePinRepo,
-  snoozeRepo
+  snoozeRepo,
+  markRepoAsRead
 ) {
   const list = document.getElementById('activityList');
   const state = useState();
@@ -60,6 +62,13 @@ export function renderActivities(
         <small>${fullMessage}</small>
       </div>
     `;
+
+    // Clear the renderer's cache since we manually updated the DOM
+    // This prevents the renderer from thinking it doesn't need to re-render
+    // when we later have items to show
+    if (activityRenderer) {
+      activityRenderer.lastRenderedData = null;
+    }
 
     // Add click listener for options link (only present in non-archive states)
     if (!state.showArchive) {
@@ -135,26 +144,12 @@ export function renderActivities(
       handleCollapseAll,
       toggleRepoCollapse,
       togglePinRepo,
-      snoozeRepo
+      snoozeRepo,
+      markRepoAsRead
     );
 
     return;
   }
-
-  // Fallback to legacy rendering if renderer not available
-  legacyRenderActivities(
-    filtered,
-    state,
-    collapsedRepos,
-    pinnedRepos,
-    markAsRead,
-    markAsReadWithAnimation,
-    handleMarkAllRead,
-    handleCollapseAll,
-    toggleRepoCollapse,
-    togglePinRepo,
-    snoozeRepo
-  );
 }
 
 /**
@@ -168,6 +163,7 @@ export function renderActivities(
  * @param {Function} toggleRepoCollapse - Callback for toggling repo collapse state
  * @param {Function} togglePinRepo - Callback for toggling repo pin state
  * @param {Function} snoozeRepo - Callback for snoozing a repo
+ * @param {Function} markRepoAsRead - Callback for marking all items in a repo as read
  */
 function attachEventListeners(
   list,
@@ -177,10 +173,9 @@ function attachEventListeners(
   handleCollapseAll,
   toggleRepoCollapse,
   togglePinRepo,
-  snoozeRepo
+  snoozeRepo,
+  markRepoAsRead
 ) {
-  console.log('Attaching event listeners with delegation');
-
   // Header action button listeners (using document.getElementById for buttons outside list)
   const markAllBtn = document.getElementById('markAllReadBtn');
   const collapseBtn = document.getElementById('collapseAllBtn');
@@ -211,21 +206,20 @@ function attachEventListeners(
     // Handle repo group header clicks (for expand/collapse)
     const repoHeader = e.target.closest('.repo-group-header');
     if (repoHeader) {
-      // Don't trigger if clicking on buttons, spans with specific classes, or SVG inside buttons
-      if (e.target.closest('.repo-snooze-btn') ||
-          e.target.closest('.repo-pin-btn') ||
-          e.target.closest('.repo-collapse-btn') ||
-          e.target.classList.contains('repo-unread-count') ||
-          e.target.classList.contains('repo-count')) {
+      // Only trigger if NOT clicking on buttons or specific spans
+      if (!e.target.closest('.repo-snooze-btn') &&
+          !e.target.closest('.repo-pin-btn') &&
+          !e.target.closest('.repo-collapse-btn') &&
+          !e.target.closest('.repo-mark-read-btn') &&
+          !e.target.classList.contains('repo-unread-count') &&
+          !e.target.classList.contains('repo-count')) {
+        const repo = repoHeader.dataset.repo;
+        if (repo) {
+          toggleRepoCollapse(repo);
+        }
         return;
       }
-
-      const repo = repoHeader.dataset.repo;
-      if (repo) {
-        console.log('Header click for repo:', repo);
-        toggleRepoCollapse(repo);
-      }
-      return;
+      // Don't return here - let it fall through to button-specific handlers
     }
 
     // Handle collapse button clicks
@@ -234,7 +228,6 @@ function attachEventListeners(
       e.stopPropagation();
       const repo = collapseBtn.dataset.repo;
       if (repo) {
-        console.log('Collapse button click for repo:', repo);
         toggleRepoCollapse(repo);
       }
       return;
@@ -246,7 +239,6 @@ function attachEventListeners(
       e.stopPropagation();
       const repo = pinBtn.dataset.repo;
       if (repo) {
-        console.log('Pin button click for repo:', repo);
         togglePinRepo(repo);
       }
       return;
@@ -258,8 +250,18 @@ function attachEventListeners(
       e.stopPropagation();
       const repo = snoozeBtn.dataset.repo;
       if (repo) {
-        console.log('Snooze button click for repo:', repo);
         snoozeRepo(repo);
+      }
+      return;
+    }
+
+    // Handle mark repo as read button clicks
+    const markRepoReadBtn = e.target.closest('.repo-mark-read-btn');
+    if (markRepoReadBtn) {
+      e.stopPropagation();
+      const repo = markRepoReadBtn.dataset.repo;
+      if (repo) {
+        markRepoAsRead(repo);
       }
       return;
     }
@@ -275,7 +277,6 @@ function attachEventListeners(
         const id = activityItem.dataset.id;
 
         if (action === 'mark-read') {
-          console.log('Mark as read click for item:', id);
           markAsReadWithAnimation(id, activityItem);
         }
         return;
@@ -285,7 +286,6 @@ function attachEventListeners(
       const content = e.target.closest('.activity-content');
       if (content) {
         const url = activityItem.dataset.url;
-        console.log('Content click for URL:', url);
 
         // Validate URL before opening to prevent javascript: and data: URLs
         safelyOpenUrl(url).then(opened => {
@@ -316,7 +316,6 @@ function attachEventListeners(
         (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       const url = e.target.dataset.url;
-      console.log('Keyboard activation for URL:', url);
 
       safelyOpenUrl(url).then(opened => {
         if (!opened) {
@@ -335,181 +334,4 @@ function attachEventListeners(
   // Add keyboard event delegation
   list.addEventListener('keydown', keydownHandler);
   list._keydownListener = keydownHandler;
-
-  console.log('Event delegation listeners attached successfully');
-}
-
-/**
- * Legacy rendering function as fallback when optimized renderer is not available
- * Generates full HTML for the activity list with all event handlers
- */
-function legacyRenderActivities(
-  filtered,
-  state,
-  collapsedRepos,
-  pinnedRepos,
-  markAsRead,
-  markAsReadWithAnimation,
-  handleMarkAllRead,
-  handleCollapseAll,
-  toggleRepoCollapse,
-  togglePinRepo,
-  snoozeRepo
-) {
-  const list = document.getElementById('activityList');
-
-  const unreadCount = filtered.filter(a => !state.readItems.includes(a.id)).length;
-  const repoCount = new Set(filtered.map(a => a.repo)).size;
-  const allCollapsed = repoCount > 0 && collapsedRepos.size === repoCount;
-
-  // Only render header if there's something to show
-  const showCollapseAll = repoCount > 1;
-  const showMarkAllRead = unreadCount > 0 && !state.showArchive;
-  const showUnreadCount = unreadCount > 0 && !state.showArchive;
-  const showClearArchive = state.showArchive && filtered.length > 0;
-  const archivedCount = state.showArchive ? filtered.length : 0;
-  const shouldShowHeader = showCollapseAll || showMarkAllRead || showUnreadCount || showClearArchive;
-
-  let htmlContent = '';
-
-  if (shouldShowHeader) {
-    htmlContent += `
-      <div class="list-header">
-        <span>${showUnreadCount ? `${unreadCount} unread` : showClearArchive ? `${archivedCount} archived` : ''}</span>
-        <div class="header-actions">
-          ${showCollapseAll ? `<button id="collapseAllBtn" class="text-btn">${allCollapsed ? 'Expand all' : 'Collapse all'}</button>` : ''}
-          ${showMarkAllRead ? `<button id="markAllReadBtn" class="text-btn">Mark all as read</button>` : ''}
-          ${showClearArchive ? `<button id="clearArchiveBtn" class="text-btn">Clear archive</button>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  // Group activities by repository
-  const grouped = groupByRepo(filtered, pinnedRepos);
-
-  // Render each repo group
-  Object.keys(grouped).forEach(repo => {
-    const activities = grouped[repo];
-    const repoUnreadCount = activities.filter(a => !state.readItems.includes(a.id)).length;
-    const isCollapsed = collapsedRepos.has(repo);
-    const isPinned = pinnedRepos.includes(repo);
-
-    htmlContent += `
-      <div class="repo-group-header ${isPinned ? 'pinned' : ''}" data-repo="${repo}">
-        <div class="repo-group-title">
-          <button class="repo-collapse-btn" data-repo="${repo}" title="${isCollapsed ? 'Expand' : 'Collapse'}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${repo} activities">
-            ${createSvg(CHEVRON_DOWN_ICON, 12, 12, `chevron ${isCollapsed ? 'collapsed' : ''}`)}
-          </button>
-          <span class="repo-group-name">${repo}</span>
-        </div>
-        <div class="repo-group-actions">
-          <button class="repo-pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${repo}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} ${repo} repository">
-            ${getPinIcon(isPinned)}
-          </button>
-          ${repoUnreadCount > 0 ? `<span class="repo-unread-count">${repoUnreadCount}</span>` : ''}
-          <button class="repo-snooze-btn" data-repo="${repo}" title="Snooze this repository" aria-label="Snooze ${repo} repository">
-            ${createSvg(SNOOZE_ICON, 14, 14)}
-          </button>
-        </div>
-      </div>
-      <div class="repo-activities ${isCollapsed ? 'collapsed' : ''}" data-repo="${repo}">
-    `;
-
-    htmlContent += activities.map(activity => renderActivityItem(activity)).join('');
-    htmlContent += '</div>';
-  });
-
-  list.innerHTML = htmlContent;
-
-  // Event listeners
-  document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
-  document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
-  document.getElementById('clearArchiveBtn')?.addEventListener('click', async () => {
-    // Clear all archived items by removing them from readItems
-    await setState({ readItems: [] });
-  });
-
-  // Header click listeners for expand/collapse
-  list.querySelectorAll('.repo-group-header').forEach(header => {
-    header.addEventListener('click', (e) => {
-      // Don't trigger if clicking on buttons or SVG inside buttons
-      const target = e.target;
-      if (target.closest('.repo-snooze-btn') ||
-          target.closest('.repo-pin-btn') ||
-          target.closest('.repo-collapse-btn') ||
-          target.classList.contains('repo-unread-count')) {
-        return;
-      }
-
-      const repo = header.dataset.repo;
-      toggleRepoCollapse(repo);
-    });
-  });
-
-  // Collapse button listeners
-  list.querySelectorAll('.repo-collapse-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      toggleRepoCollapse(repo);
-    });
-  });
-
-  // Pin button listeners
-  list.querySelectorAll('.repo-pin-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      togglePinRepo(repo);
-    });
-  });
-
-  // Snooze button listeners
-  list.querySelectorAll('.repo-snooze-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const repo = btn.dataset.repo;
-      snoozeRepo(repo);
-    });
-  });
-
-  list.querySelectorAll('.activity-item').forEach(item => {
-    const content = item.querySelector('.activity-content');
-
-    // Shared handler for opening activity
-    const handleOpen = async () => {
-      const url = item.dataset.url;
-
-      // Validate URL before opening to prevent javascript: and data: URLs
-      const opened = await safelyOpenUrl(url);
-      if (!opened) {
-        showError('errorMessage', new Error('Invalid URL detected'), null, { action: 'open link' }, 3000);
-      }
-    };
-
-    // Click handler for content
-    content.addEventListener('click', handleOpen);
-
-    // Keyboard handler for the entire item (role="button")
-    item.addEventListener('keydown', (e) => {
-      // Activate on Enter or Space key
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleOpen();
-      }
-    });
-
-    item.querySelectorAll('.action-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const action = btn.dataset.action;
-        const id = item.dataset.id;
-
-        if (action === 'mark-read') {
-          markAsReadWithAnimation(id, item);
-        }
-      });
-    });
-  });
 }

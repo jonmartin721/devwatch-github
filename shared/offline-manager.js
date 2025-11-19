@@ -56,12 +56,10 @@ export function showOfflineStatus(elementId, offline = isOffline()) {
  */
 export function setupOfflineListeners(onOnline, onOffline) {
   window.addEventListener('online', () => {
-    console.log('Connection restored');
     if (onOnline) onOnline();
   });
 
   window.addEventListener('offline', () => {
-    console.log('Connection lost');
     if (onOffline) onOffline();
   });
 }
@@ -75,7 +73,6 @@ export function setupOfflineListeners(onOnline, onOffline) {
  */
 export async function fetchWithOfflineFallback(url, options = {}, fallbackData = null) {
   if (isOffline()) {
-    console.log('Offline detected, using fallback data');
     if (fallbackData) {
       return fallbackData;
     }
@@ -87,7 +84,6 @@ export async function fetchWithOfflineFallback(url, options = {}, fallbackData =
     return response;
   } catch (error) {
     if (isOffline() && fallbackData) {
-      console.log('Network error detected, using fallback data');
       return fallbackData;
     }
     throw error;
@@ -231,7 +227,6 @@ export async function getStorageUsage() {
       itemCount: Object.keys(result).length
     };
   } catch (error) {
-    console.warn('Failed to get storage usage:', error);
     return {
       totalBytes: 0,
       quotaBytes: 5 * 1024 * 1024,

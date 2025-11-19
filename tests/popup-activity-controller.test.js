@@ -18,6 +18,16 @@ describe('Activity Controller', () => {
     global.chrome = {
       runtime: {
         sendMessage: jest.fn(() => Promise.resolve())
+      },
+      storage: {
+        sync: {
+          get: jest.fn((keys) => {
+            if (keys.includes('lastCheck')) {
+              return Promise.resolve({ lastCheck: '2025-01-15T10:30:00.000Z' });
+            }
+            return Promise.resolve({});
+          })
+        }
       }
     };
   });
@@ -33,8 +43,8 @@ describe('Activity Controller', () => {
     expect(mockLoad).toHaveBeenCalled();
   });
 
-  test('updateLastUpdated sets timestamp', () => {
-    updateLastUpdated();
+  test('updateLastUpdated sets timestamp', async () => {
+    await updateLastUpdated();
 
     const lastUpdated = document.getElementById('lastUpdated');
     expect(lastUpdated.textContent).toMatch(/Updated \d{1,2}:\d{2}/);

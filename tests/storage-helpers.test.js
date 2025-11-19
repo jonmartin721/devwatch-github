@@ -403,12 +403,10 @@ describe('Storage Helpers', () => {
   describe('clearToken', () => {
     it('should clear token from local storage', async () => {
       mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-      mockLocalStorage.githubToken = 'legacy-token';
 
       await clearToken();
 
       expect(mockLocalStorage.encryptedGithubToken).toBeNull();
-      expect(mockLocalStorage.githubToken).toBeNull();
     });
 
     it('should work even if no token exists', async () => {

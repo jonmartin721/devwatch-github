@@ -3,6 +3,8 @@
  * Handles first-run experience and setup flow
  */
 
+import { getToken } from './storage-helpers.js';
+
 export class OnboardingManager {
     static STORAGE_KEY = 'onboarding_state';
     static STEPS = ['welcome', 'token', 'repos', 'categories', 'complete'];
@@ -128,12 +130,12 @@ export class OnboardingManager {
             // token allows. We intentionally avoid setting the User-Agent
             // header in browser fetch to avoid disallowed header errors.
             // Prefer token stored in onboarding step data (user-entered token)
-            // so that prefetching works even if chrome.storage.local hasn't
-            // been updated yet by UI code that persists the token. Fallback
-            // to chrome.storage.local to support tokens set outside onboarding.
+            // so that prefetching works even if storage hasn't been updated yet
+            // by UI code that persists the token. Fallback to getToken() to
+            // support tokens set outside onboarding.
             const tokenStep = await this.getStepData('token');
-            const local = await chrome.storage.local.get(['githubToken']);
-            const githubToken = tokenStep?.token || local?.githubToken;
+            const storedToken = await getToken();
+            const githubToken = tokenStep?.token || storedToken;
 
             const headers = {
                 'Accept': 'application/vnd.github.v3+json'
@@ -252,8 +254,6 @@ export class OnboardingManager {
             return finalRepos;
 
         } catch (error) {
-            console.warn('Failed to fetch trending repos, using fallback:', error);
-
             // Fallback to static popular repos - diverse, well-maintained projects
             const fallbackRepos = [
                 {

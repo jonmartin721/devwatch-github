@@ -111,7 +111,7 @@ export async function loadActivities(
 
     renderActivitiesCallback();
     updateRateLimit(data.rateLimit);
-    updateLastUpdated();
+    await updateLastUpdated();
     if (data.lastError) {
       showStoredError(data.lastError);
     }
@@ -136,7 +136,7 @@ export async function handleRefresh(loadActivitiesCallback) {
     clearError('errorMessage');
     await chrome.runtime.sendMessage({ action: 'checkNow' });
     // Pass skipLoadingIndicator to avoid clearing the existing feed
-    await loadActivitiesCallback(null, null, null, { skipLoadingIndicator: true });
+    await loadActivitiesCallback({ skipLoadingIndicator: true });
   } catch (error) {
     showError('errorMessage', error, null, { action: 'refresh activities' }, 5000);
   } finally {
@@ -154,9 +154,16 @@ export async function handleRefresh(loadActivitiesCallback) {
 /**
  * Updates the "last updated" timestamp in the footer
  */
-export function updateLastUpdated() {
-  const now = new Date();
-  const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+export async function updateLastUpdated() {
+  const { lastCheck } = await chrome.storage.sync.get(['lastCheck']);
+
+  if (!lastCheck) {
+    document.getElementById('lastUpdated').textContent = 'Never updated';
+    return;
+  }
+
+  const lastCheckDate = new Date(lastCheck);
+  const timeString = lastCheckDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   document.getElementById('lastUpdated').textContent = `Updated ${timeString}`;
 }
 

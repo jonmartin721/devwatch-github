@@ -54,7 +54,9 @@ import {
   fetchRepoActivity,
   storeActivities,
   updateBadge,
-  cleanupOldUnmutedEntries
+  cleanupOldUnmutedEntries,
+  showNotifications,
+  cleanExpiredSnoozes
 } from '../background.js';
 
 describe('Background Service Worker', () => {
@@ -463,6 +465,297 @@ describe('Background Service Worker', () => {
       expect(result1).toBeNull();
       expect(result2).toBeUndefined();
       expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('showNotifications', () => {
+    const mockActivities = [
+      {
+        id: 'pr-repo1-1',
+        type: 'pr',
+        repo: 'facebook/react',
+        title: 'Add feature',
+        url: 'https://github.com/facebook/react/pull/1'
+      },
+      {
+        id: 'pr-repo1-2',
+        type: 'pr',
+        repo: 'facebook/react',
+        title: 'Fix bug',
+        url: 'https://github.com/facebook/react/pull/2'
+      },
+      {
+        id: 'issue-repo1-1',
+        type: 'issue',
+        repo: 'facebook/react',
+        title: 'Bug report',
+        url: 'https://github.com/facebook/react/issues/3'
+      },
+      {
+        id: 'release-repo2-1',
+        type: 'release',
+        repo: 'vuejs/vue',
+        title: 'v3.0.0',
+        url: 'https://github.com/vuejs/vue/releases/tag/v3.0.0'
+      }
+    ];
+
+    test('groups activities by repository', () => {
+      showNotifications(mockActivities);
+
+      // Should create 2 notifications (one per repo)
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+    });
+
+    test('creates notification with correct message format', () => {
+      showNotifications(mockActivities);
+
+      // facebook/react has 2 PRs and 1 issue
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/facebook/react/pull/1',
+        expect.objectContaining({
+          type: 'basic',
+          title: 'facebook/react',
+          message: '2 new prs, 1 new issue',
+          iconUrl: 'icons/icon128.png',
+          priority: 1
+        })
+      );
+
+      // vuejs/vue has 1 release
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/vuejs/vue/releases/tag/v3.0.0',
+        expect.objectContaining({
+          type: 'basic',
+          title: 'vuejs/vue',
+          message: '1 new release',
+          iconUrl: 'icons/icon128.png',
+          priority: 1
+        })
+      );
+    });
+
+    test('filters out PRs when notification setting disabled', () => {
+      const settings = { prs: false, issues: true, releases: true };
+      showNotifications(mockActivities, settings);
+
+      // Should only show notifications for issues and releases
+      // facebook/react should only show 1 issue, vuejs/vue should show 1 release
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+
+      // facebook/react notification should only mention issues
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/facebook/react/issues/3',
+        expect.objectContaining({
+          title: 'facebook/react',
+          message: '1 new issue'
+        })
+      );
+    });
+
+    test('filters out issues when notification setting disabled', () => {
+      const settings = { prs: true, issues: false, releases: true };
+      showNotifications(mockActivities, settings);
+
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+
+      // facebook/react notification should only mention PRs
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/facebook/react/pull/1',
+        expect.objectContaining({
+          title: 'facebook/react',
+          message: '2 new prs'
+        })
+      );
+    });
+
+    test('filters out releases when notification setting disabled', () => {
+      const settings = { prs: true, issues: true, releases: false };
+      showNotifications(mockActivities, settings);
+
+      // Should only show notification for facebook/react (has prs and issues)
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(1);
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/facebook/react/pull/1',
+        expect.objectContaining({
+          title: 'facebook/react'
+        })
+      );
+    });
+
+    test('does not create notifications when all activities filtered out', () => {
+      const settings = { prs: false, issues: false, releases: false };
+      showNotifications(mockActivities, settings);
+
+      expect(chrome.notifications.create).not.toHaveBeenCalled();
+    });
+
+    test('does not create notifications when activities array is empty', () => {
+      showNotifications([]);
+
+      expect(chrome.notifications.create).not.toHaveBeenCalled();
+    });
+
+    test('uses default settings when notificationSettings is undefined', () => {
+      showNotifications(mockActivities, undefined);
+
+      // All notifications should be shown with default settings
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+    });
+
+    test('uses default settings when notificationSettings is empty object', () => {
+      showNotifications(mockActivities, {});
+
+      // All notifications should be shown with default settings
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(2);
+    });
+
+    test('uses first activity URL as notification ID', () => {
+      const activities = [
+        {
+          id: 'pr-1',
+          type: 'pr',
+          repo: 'test/repo',
+          url: 'https://github.com/test/repo/pull/1'
+        },
+        {
+          id: 'pr-2',
+          type: 'pr',
+          repo: 'test/repo',
+          url: 'https://github.com/test/repo/pull/2'
+        }
+      ];
+
+      showNotifications(activities);
+
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        'https://github.com/test/repo/pull/1',
+        expect.any(Object)
+      );
+    });
+
+    test('handles single activity correctly', () => {
+      const singleActivity = [mockActivities[0]];
+      showNotifications(singleActivity);
+
+      expect(chrome.notifications.create).toHaveBeenCalledTimes(1);
+      expect(chrome.notifications.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          message: '1 new pr' // Singular, not plural
+        })
+      );
+    });
+  });
+
+  describe('cleanExpiredSnoozes', () => {
+    test('removes expired snoozes', async () => {
+      const now = Date.now();
+      const expiredSnooze1 = {
+        repo: 'old/repo1',
+        expiresAt: now - 1000 // Expired 1 second ago
+      };
+      const expiredSnooze2 = {
+        repo: 'old/repo2',
+        expiresAt: now - 60000 // Expired 1 minute ago
+      };
+      const activeSnooze = {
+        repo: 'active/repo',
+        expiresAt: now + 3600000 // Expires in 1 hour
+      };
+
+      const snoozedRepos = [expiredSnooze1, expiredSnooze2, activeSnooze];
+
+      const result = await cleanExpiredSnoozes(snoozedRepos);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(activeSnooze);
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        snoozedRepos: [activeSnooze]
+      });
+    });
+
+    test('keeps all snoozes when none are expired', async () => {
+      const now = Date.now();
+      const activeSnoozes = [
+        { repo: 'repo1', expiresAt: now + 3600000 },
+        { repo: 'repo2', expiresAt: now + 7200000 }
+      ];
+
+      const result = await cleanExpiredSnoozes(activeSnoozes);
+
+      expect(result).toEqual(activeSnoozes);
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    });
+
+    test('removes all snoozes when all are expired', async () => {
+      const now = Date.now();
+      const expiredSnoozes = [
+        { repo: 'repo1', expiresAt: now - 1000 },
+        { repo: 'repo2', expiresAt: now - 2000 }
+      ];
+
+      const result = await cleanExpiredSnoozes(expiredSnoozes);
+
+      expect(result).toEqual([]);
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        snoozedRepos: []
+      });
+    });
+
+    test('handles empty snoozes array', async () => {
+      const result = await cleanExpiredSnoozes([]);
+
+      expect(result).toEqual([]);
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    });
+
+    test('handles snooze exactly at expiry boundary', async () => {
+      const now = Date.now();
+      const exactlyExpired = {
+        repo: 'boundary/repo',
+        expiresAt: now // Exactly at boundary
+      };
+
+      const result = await cleanExpiredSnoozes([exactlyExpired]);
+
+      // expiresAt <= now should be considered expired
+      expect(result).toEqual([]);
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        snoozedRepos: []
+      });
+    });
+
+    test('continues with active snoozes even if storage write fails', async () => {
+      const now = Date.now();
+      const activeSnooze = { repo: 'active/repo', expiresAt: now + 3600000 };
+      const expiredSnooze = { repo: 'expired/repo', expiresAt: now - 1000 };
+
+      // Mock storage failure
+      chrome.storage.sync.set.mockImplementation((items, callback) => {
+        throw new Error('Storage quota exceeded');
+      });
+
+      const result = await cleanExpiredSnoozes([expiredSnooze, activeSnooze]);
+
+      // Should still return filtered results even if storage fails
+      expect(result).toEqual([activeSnooze]);
+    });
+
+    test('handles mixed expired and active snoozes correctly', async () => {
+      const now = Date.now();
+      const snoozes = [
+        { repo: 'active1', expiresAt: now + 1000 },
+        { repo: 'expired1', expiresAt: now - 1000 },
+        { repo: 'active2', expiresAt: now + 2000 },
+        { repo: 'expired2', expiresAt: now - 2000 },
+        { repo: 'active3', expiresAt: now + 3000 }
+      ];
+
+      const result = await cleanExpiredSnoozes(snoozes);
+
+      expect(result).toHaveLength(3);
+      expect(result.map(s => s.repo)).toEqual(['active1', 'active2', 'active3']);
     });
   });
 });

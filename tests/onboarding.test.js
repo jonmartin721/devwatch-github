@@ -33,6 +33,25 @@ global.chrome = {
         if (callback) callback();
         return Promise.resolve();
       })
+    },
+    session: {
+      get: jest.fn((keys, callback) => {
+        // keys can be array or single key
+        const result = {};
+        if (Array.isArray(keys)) {
+          keys.forEach(k => result[k] = _localStorage[k]);
+        } else {
+          result[keys] = _localStorage[keys];
+        }
+
+        if (callback) callback(result);
+        return Promise.resolve(result);
+      }),
+      set: jest.fn((items, callback) => {
+        _localStorage = { ..._localStorage, ...items };
+        if (callback) callback();
+        return Promise.resolve();
+      })
     }
   },
   runtime: { sendMessage: jest.fn() },

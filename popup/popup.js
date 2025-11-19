@@ -22,6 +22,7 @@ import {
   snoozeRepoWithAnimation as snoozeRepoWithAnimationController,
   markAsRead,
   markAsReadWithAnimation,
+  markRepoAsRead,
   handleMarkAllRead as handleMarkAllReadController,
   handleCollapseAll as handleCollapseAllController
 } from './controllers/repository-controller.js';
@@ -171,7 +172,7 @@ import { toggleDarkMode, updateDarkModeIcon } from './controllers/theme-controll
 
 // Wrapper for handleRefresh to pass loadActivities callback
 async function handleRefresh() {
-  await handleRefreshController(() => loadActivities());
+  await handleRefreshController((...args) => loadActivities(...args));
 }
 
 // Update repo count in header
@@ -208,7 +209,8 @@ function renderActivities() {
     () => handleCollapseAll(),
     (repo) => toggleRepoCollapse(repo),
     (repo) => togglePinRepo(repo),
-    (repo) => handleSnoozeRepo(repo)
+    (repo) => handleSnoozeRepo(repo),
+    (repo) => markRepoAsRead(repo, () => renderActivities())
   );
 
   // Update ARIA attributes after rendering
@@ -230,7 +232,7 @@ function toggleSearch() {
     searchBtn.classList.remove('active');
     setState({ searchQuery: '' });
     searchInput.value = '';
-    renderActivities();
+    // Note: renderActivities() is called automatically by the state subscription
   }
 }
 
@@ -239,7 +241,7 @@ function toggleArchive() {
   const currentState = useState().showArchive;
   setState({ showArchive: !currentState });
   archiveBtn.classList.toggle('active', !currentState);
-  renderActivities();
+  // Note: renderActivities() is called automatically by the state subscription
 }
 
 

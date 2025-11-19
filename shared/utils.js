@@ -63,15 +63,6 @@ export function formatDate(dateString, options = {}) {
 }
 
 /**
- * Legacy compact date formatter (backward compatibility)
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted date (e.g., "5m ago", "2d ago")
- */
-export function formatDateCompact(dateString) {
-  return formatDate(dateString, { compact: true, includeMinutes: true });
-}
-
-/**
  * Verbose date formatter for options page
  * @param {string} dateString - ISO date string
  * @returns {string} Formatted date (e.g., "today", "5 days ago")

@@ -584,8 +584,8 @@ describe('ActivityListRenderer', () => {
 
       expect(html).toContain('owner/repo1');
       expect(html).toContain('owner/repo2');
-      expect(html).toContain('repo-count">2<');
-      expect(html).toContain('repo-count">1<');
+      expect(html).toContain('repo-unread-count">2<');
+      expect(html).toContain('repo-unread-count">1<');
     });
   });
 

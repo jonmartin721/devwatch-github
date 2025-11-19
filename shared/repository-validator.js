@@ -167,7 +167,6 @@ export async function validateRepositoryEnhanced(repo, token = null) {
     };
   } catch (error) {
     // If enhanced validation fails, return basic validation result
-    console.warn('Enhanced validation failed, returning basic result:', error);
     return basicValidation;
   }
 }

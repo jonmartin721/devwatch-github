@@ -9,7 +9,6 @@
  */
 export function extractRepoName(repo) {
   if (!repo) {
-    console.warn('[extractRepoName] Invalid repo: null or undefined');
     return '';
   }
 
@@ -17,7 +16,6 @@ export function extractRepoName(repo) {
     return repo.fullName;
   }
 
-  console.warn('[extractRepoName] Invalid repo format:', repo);
   return '';
 }
 
@@ -84,7 +82,6 @@ export function isSameRepo(repo1, repo2) {
 export function dedupeRepos(repos) {
   // Validate input is an array
   if (!Array.isArray(repos)) {
-    console.warn('[dedupeRepos] Expected array, received:', typeof repos);
     return [];
   }
 

@@ -1,6 +1,6 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
-import { getToken } from '../../shared/storage-helpers.js';
+import { getToken, setToken } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 
 // Create onboarding manager instance
@@ -212,9 +212,9 @@ async function renderTokenStep() {
 
     <p class="security-note">
       <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
       </svg>
-      Your token is stored securely and only used for GitHub API access.
+      Your token is encrypted with AES-256 encryption and stored securely on your device. It's only used for GitHub API access and never shared.
     </p>
   `;
 }
@@ -537,10 +537,10 @@ function setupTokenStepListeners() {
         const tokenData = { token, validated: true, username };
         tokenStatus.innerHTML = `<div class="status-success">✓ Token is valid! Logged in as ${username}</div>`;
         await onboardingManager.saveStepData('token', tokenData);
-        // Persist the token first so any calls which read chrome.storage.local
+        // Persist the token first so any calls which read it
         // can rely on the token being present. This reduces the chance of
         // unauthenticated fetches or hitting rate limits when prefetching.
-        await chrome.storage.local.set({ githubToken: token });
+        await setToken(token);
         try {
           const popular = await onboardingManager.getPopularRepos();
           if (Array.isArray(popular) && popular.length > 0) {
@@ -689,8 +689,7 @@ function setupReposStepListeners() {
 
     try {
       // Get token for API calls
-      const tokenResult = await chrome.storage.local.get(['githubToken']);
-      const githubToken = tokenResult.githubToken;
+      const githubToken = await getToken();
 
       // Parse GitHub URL if provided
       const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
@@ -848,7 +847,7 @@ export async function handleNextStep() {
             await onboardingManager.saveStepData('popularRepos', popular);
           }
         } catch (prefetchError) {
-          console.warn('Failed to prefetch popular repos in handleNextStep', prefetchError);
+          // Silently fail - user can still manually search for repos
         }
       }
       break;
