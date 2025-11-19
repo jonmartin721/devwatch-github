@@ -5,6 +5,24 @@ All notable changes to GitHub Devwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-11-19
+
+### Fixed
+- Fixed test failures in popup repository controller due to Chrome storage API mocks using callback-based API instead of promise-based
+- Fixed lint warnings for unused variables in test files
+
+### Changed
+- Expanded test coverage from ~40% to 47% line coverage
+- Added comprehensive tests for background service worker message handlers
+- Added tests for rate limiting and storage quota handling
+- Added tests for badge expiry filtering
+- Added tests for token validation edge cases
+- Added animation timing tests using Jest fake timers
+- Updated Jest coverage thresholds and collection patterns
+
+### Added
+- New test files for notification manager, theme controller, activity list view, and repository list view
+
 ## [1.0.1] - 2025-11-19
 
 ### Fixed
