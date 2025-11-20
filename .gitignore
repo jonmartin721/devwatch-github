@@ -6,6 +6,7 @@ dist/
 *.zip
 temp-package/
 .env
+client_secret*.json
 .vscode/
 *.crx
 *.pem
