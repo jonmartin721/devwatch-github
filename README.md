@@ -2,7 +2,7 @@
 
 Track GitHub activity across multiple repos. Get notifications for new PRs, issues, and releases without constantly refreshing.
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chrome.google.com/webstore)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chromewebstore.google.com/detail/github-devwatch/dbgjgcaphfcfgppicmbiafcgcabikjch)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/jonmartin721/devwatch-github/workflows/CI/badge.svg)](https://github.com/jonmartin721/devwatch-github/actions)
 [![codecov](https://codecov.io/gh/jonmartin721/devwatch-github/branch/main/graph/badge.svg)](https://codecov.io/gh/jonmartin721/devwatch-github)
@@ -25,10 +25,12 @@ Track GitHub activity across multiple repos. Get notifications for new PRs, issu
 
 ### From Chrome Web Store (Recommended)
 
-1. Visit the Chrome Web Store (coming soon)
+1. Visit the [Chrome Web Store](https://chromewebstore.google.com/detail/github-devwatch/dbgjgcaphfcfgppicmbiafcgcabikjch)
 2. Click "Add to Chrome"
 3. Grant permissions when prompted
 4. Follow the guided setup wizard on first launch
+
+**GitHub Token Permissions**: You'll need a [Personal Access Token](https://github.com/settings/tokens/new) with `repo` (for private repos) or `public_repo` (for public only).
 
 ### Manual Installation (For Development)
 
@@ -49,19 +51,16 @@ cd devwatch-github
 ## Quick Setup
 
 ### First-Time Setup
-When you first install the extension, an **interactive setup wizard** guides you through:
 
-1. **Welcome** - Overview of features and capabilities
-2. **GitHub Token** - Create and validate your personal access token with step-by-step instructions
-3. **Add Repositories** - Select which repositories to monitor
-4. **Activity Preferences** - Choose which types of activity to track (PRs, Issues, Releases)
-5. **Done!** - Start monitoring immediately
+An interactive wizard guides you through:
+1. Create a GitHub token
+2. Add repositories to watch
+3. Choose activity types (PRs, Issues, Releases)
 
-The entire setup takes about 2 minutes and requires no prior configuration knowledge.
+Takes about 2 minutes. No configuration knowledge needed.
 
 <div align="center">
   <img src="screenshots/onboarding-welcome.png" alt="Interactive setup wizard welcome screen" width="500">
-  <br><em>Interactive setup wizard guides you through configuration</em>
 </div>
 
 ### Ongoing Use
@@ -74,25 +73,13 @@ The entire setup takes about 2 minutes and requires no prior configuration knowl
 ## How to Use
 
 ### Popup Interface
-- **Tabs**: Filter between All/PRs/Issues/Releases
-- **Search**: Filter activities by keyword
-- **Refresh**: Manually check for new activity
-- **Archive**: View previously read activities
-- **Activity Items**: Click to open in GitHub
+Filter by type (All/PRs/Issues/Releases), search activities, refresh manually, or browse the archive. Click any item to open in GitHub.
 
 ### Settings Page
-- **GitHub Token**: Secure storage of your personal access token
-- **Watched Repositories**: Add/remove repositories, import from GitHub
-- **Activity Filters**: Choose what types of activity to monitor
-- **Feed Management**: Control how long items are stored (up to 2000 items, optional time-based expiry)
-- **Check Interval**: Configure how often to check for updates
-- **Notifications**: Toggle browser notifications on/off
-- **Theme**: Choose dark, light, or system theme
-- **Backup/Restore**: Export and import your settings
+Manage your GitHub token, watched repositories, activity filters, check interval, notifications, and theme. Export/import settings for backup.
 
 <div align="center">
   <img src="screenshots/settings-page.png" alt="Settings page for configuring repositories" width="600">
-  <br><em>Settings page with repository management</em>
 </div>
 
 ## Typical Workflow
@@ -110,39 +97,19 @@ The extension keeps up to 2000 items in your local history, so you can always ch
 
 ## Accessibility
 
-GitHub Devwatch is built with accessibility in mind to ensure everyone can use it effectively:
+Full WCAG 2.1 Level A compliance with keyboard navigation, screen reader support, and ARIA landmarks.
 
-### WCAG 2.1 Level A Compliance
-- **Form Labels**: All form inputs have proper visible labels for screen readers
-- **Keyboard Navigation**: Full keyboard support with intuitive shortcuts
-- **Focus Management**: Proper focus indicators and logical tab order
-- **ARIA Landmarks**: Semantic HTML with proper ARIA roles and labels
-- **Screen Reader Support**: Descriptive labels and live region announcements
+**Keyboard Shortcuts**: R (refresh), S (search), A (archive), Escape (close), Arrow keys (navigate tabs)
 
-### Keyboard Shortcuts
-- **R** - Refresh activity
-- **S** - Toggle search
-- **A** - Toggle archive view
-- **Escape** - Close modals and search
-- **Arrow Keys** - Navigate between filter tabs
-- **Enter/Space** - Activate buttons and links
-
-### Testing & Validation
-- Automated accessibility testing with axe-core
-- Manual testing with NVDA and JAWS screen readers
-- Keyboard-only navigation verified
-- Focus trap implementation in modals
-
-For accessibility issues or suggestions, please [open an issue](https://github.com/jonmartin721/devwatch-github/issues).
+Tested with NVDA/JAWS screen readers and axe-core. [Report accessibility issues](https://github.com/jonmartin721/devwatch-github/issues).
 
 ## Privacy & Security
 
-Your GitHub token is encrypted and stays securely on your machine. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
+Your GitHub token is encrypted and stays on your machine. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
 
-- **Encrypted Storage** - Tokens are encrypted using industry-standard AES-GCM encryption and stored locally in Chrome's secure storage with session caching for optimal performance
-- **Local Storage Only** - All data stays on your machine, never sent to third-party servers
-- **API-Only Communication** - Only talks to GitHub's official API
-- **No Third Parties** - Zero external servers or analytics services
+- **Encrypted Storage** - Tokens use AES-GCM encryption in Chrome's secure storage
+- **Local Only** - All data stays on your machine, never sent to third parties
+- **GitHub API Only** - No external servers or analytics services
 - **Minimal Permissions** - Token used exclusively for fetching repository activity
 - **Open Source** - Review the entire codebase, raise issues, or submit fixes
 
@@ -225,14 +192,13 @@ Contributions welcome! Submit issues or pull requests. See [CONTRIBUTING.md](CON
 
 ## Roadmap
 
-Features I'm considering (no promises on timeline - this is a side project):
+This is a side project for me, so I work on it when time allows - but I'd love to see contributions! Here are some features I'm considering:
 - **Comment notifications** - Track new comments on issues and PRs
 - **Mention tracking** - Get notified when you're mentioned
 - **Multiple GitHub accounts** - Switch between different accounts
-- **Custom notification filters** - Advanced filtering rules
+- **GitHub OAuth** - Simplified authentication with one-click login
 - **Internationalization** - Support for multiple languages
 - **Dashboard view** - Full-page dashboard for all activity
-- **Integration with other platforms** - GitLab, Bitbucket support
 
 If any of these sound useful, open an issue or submit a PR!
 

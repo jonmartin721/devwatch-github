@@ -5,6 +5,7 @@
 
 import { getSyncItems, getLocalItems } from './storage-helpers.js';
 import { STORAGE_KEYS, STORAGE_DEFAULTS } from './storage-helpers.js';
+import { STORAGE_CONFIG } from './config.js';
 
 /**
  * Centralized state manager with reactive updates
@@ -277,9 +278,8 @@ class StateManager {
     const currentActivities = this.getState('allActivities');
     const newActivities = [...activities, ...currentActivities];
 
-    // Keep only the most recent activities (2000 limit to stay under Chrome storage quota)
-    const maxActivities = 2000;
-    const trimmedActivities = newActivities.slice(0, maxActivities);
+    // Keep only the most recent activities to stay under Chrome storage quota
+    const trimmedActivities = newActivities.slice(0, STORAGE_CONFIG.MAX_ACTIVITIES_STORED);
 
     await this.setState({ allActivities: trimmedActivities });
   }

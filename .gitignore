@@ -6,6 +6,8 @@ dist/
 *.zip
 temp-package/
 .env
+client_secret*.json
+scripts/get-refresh-token.js
 .vscode/
 *.crx
 *.pem

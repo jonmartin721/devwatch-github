@@ -29,7 +29,7 @@ GitHub Devwatch collects and stores the following data **locally on your device 
    - Synced across your Chrome browsers if you're signed into Chrome
 
 4. **Activity Data**
-   - Recent activity from your watched repositories (last 100 items)
+   - Recent activity from your watched repositories (up to 2000 items)
    - Cached locally for offline viewing
    - Automatically cleaned up when storage limits are approached
 
@@ -68,13 +68,22 @@ This extension communicates with GitHub's API (api.github.com) to fetch reposito
 - GitHub's privacy policy and terms of service apply to these interactions
 - See GitHub's privacy policy at: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
 
+### NPM Registry (Optional)
+
+When you add a repository by NPM package name, the extension communicates with the NPM registry (registry.npmjs.org):
+
+- This is entirely optional and only happens when you use the "Add by NPM package" feature
+- Used to look up the GitHub repository associated with an NPM package
+- No authentication or personal data is sent to NPM
+- NPM's privacy policy applies to these interactions
+
 ### No Other Third Parties
 
 GitHub Devwatch does **NOT**:
 - Use advertising networks
 - Use analytics services
 - Connect to any servers we operate
-- Share data with any third-party services
+- Share data with any other third-party services
 
 ## Permissions Explained
 

@@ -77,6 +77,7 @@ Only maintainers can create releases. If you're a maintainer, follow this proces
    - Run all tests
    - Build the extension
    - Create a GitHub release with the zip file
+   - Automatically publish to Chrome Web Store
 
 ### Version Guidelines
 
