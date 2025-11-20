@@ -28,7 +28,7 @@ export const RATE_LIMIT_CONFIG = {
 // Storage Configuration
 export const STORAGE_CONFIG = {
   MAX_WATCHED_REPOS: 50,
-  MAX_ACTIVITIES_STORED: 100,
+  MAX_ACTIVITIES_STORED: 2000,
   MAX_STORAGE_SIZE: 1024 * 1024, // 1MB
   CLEANUP_DAYS: 30, // days to keep old data
   STORAGE_QUOTA_CHECK_INTERVAL: 10000 // 10 seconds
