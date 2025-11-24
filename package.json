@@ -23,7 +23,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
-    "@types/chrome": "^0.1.30",
+    "@types/chrome": "^0.1.31",
     "axe-core": "^4.11.0",
     "eslint": "^9.39.1",
     "husky": "^9.1.7",
