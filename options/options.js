@@ -51,21 +51,38 @@ if (typeof document !== 'undefined') {
 // Theme listener imported from controllers/theme-controller.js
 
 function setupTabNavigation() {
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabPanels = document.querySelectorAll('.tab-panel');
+  const tabButtons = Array.from(document.querySelectorAll('.tab-button'));
+  const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
 
-  // Function to switch tabs
-  function switchTab(tabName) {
+  if (tabButtons.length === 0 || tabPanels.length === 0) {
+    return;
+  }
+
+  const validTabs = tabButtons
+    .map(button => button.dataset.tab)
+    .filter(Boolean);
+
+  function getTabButton(tabName) {
+    return tabButtons.find(button => button.dataset.tab === tabName);
+  }
+
+  function switchTab(tabName, { focusTab = false } = {}) {
+    if (!validTabs.includes(tabName)) {
+      return;
+    }
+
     // Update buttons
     tabButtons.forEach(btn => {
       const isActive = btn.dataset.tab === tabName;
       btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      btn.tabIndex = isActive ? 0 : -1;
     });
 
     // Update panels
     tabPanels.forEach(panel => {
-      panel.classList.toggle('active', panel.dataset.tab === tabName);
+      const isActive = panel.dataset.tab === tabName;
+      panel.hidden = !isActive;
     });
 
     // Save to localStorage
@@ -73,22 +90,53 @@ function setupTabNavigation() {
 
     // Update URL hash without scrolling
     history.replaceState(null, null, `#${tabName}`);
+
+    if (focusTab) {
+      getTabButton(tabName)?.focus();
+    }
   }
 
   // Add click listeners to tab buttons
-  tabButtons.forEach(button => {
+  tabButtons.forEach((button, index) => {
     button.addEventListener('click', () => {
       switchTab(button.dataset.tab);
+    });
+
+    button.addEventListener('keydown', (event) => {
+      let targetIndex = null;
+
+      switch (event.key) {
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        targetIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+        break;
+      case 'ArrowDown':
+      case 'ArrowRight':
+        targetIndex = (index + 1) % tabButtons.length;
+        break;
+      case 'Home':
+        targetIndex = 0;
+        break;
+      case 'End':
+        targetIndex = tabButtons.length - 1;
+        break;
+      default:
+        return;
+      }
+
+      event.preventDefault();
+      switchTab(tabButtons[targetIndex].dataset.tab, { focusTab: true });
     });
   });
 
   // Add click listeners to clickable setup steps
   const clickableSetupSteps = document.querySelectorAll('.setup-step.clickable');
   clickableSetupSteps.forEach(step => {
-    step.addEventListener('click', () => {
+    step.addEventListener('click', (event) => {
+      event.preventDefault();
       const tabName = step.dataset.tab;
       if (tabName) {
-        switchTab(tabName);
+        switchTab(tabName, { focusTab: true });
       }
     });
   });
@@ -98,8 +146,6 @@ function setupTabNavigation() {
   const savedTab = localStorage.getItem('activeTab');
   const initialTab = hash || savedTab || 'setup';
 
-  // Check if the hash/saved tab is valid
-  const validTabs = ['setup', 'repositories', 'filters', 'preferences', 'advanced', 'help'];
   const tabToActivate = validTabs.includes(initialTab) ? initialTab : 'setup';
 
   switchTab(tabToActivate);
@@ -1193,6 +1239,7 @@ setInterval(async () => {
 // ES6 exports for tests
 export {
   state,
+  setupTabNavigation,
   validateToken,
   loadSettings,
   setupEventListeners,
