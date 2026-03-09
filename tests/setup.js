@@ -1,23 +1,36 @@
 import { jest } from '@jest/globals';
+import { inspect } from 'node:util';
 import '@testing-library/jest-dom';
+
+function createStorageArea() {
+  return {
+    get: jest.fn((keys, callback) => {
+      const result = {};
+      if (callback) callback(result);
+      return Promise.resolve(result);
+    }),
+    set: jest.fn((items, callback) => {
+      if (callback) callback();
+      return Promise.resolve();
+    }),
+    remove: jest.fn((keys, callback) => {
+      if (callback) callback();
+      return Promise.resolve();
+    })
+  };
+}
 
 // Mock Chrome APIs globally
 global.chrome = {
   storage: {
-    local: {
-      get: jest.fn(),
-      set: jest.fn(),
-      remove: jest.fn()
-    },
-    sync: {
-      get: jest.fn(),
-      set: jest.fn(),
-      remove: jest.fn()
-    }
+    local: createStorageArea(),
+    sync: createStorageArea(),
+    session: createStorageArea()
   },
   runtime: {
     sendMessage: jest.fn(),
     openOptionsPage: jest.fn(),
+    lastError: null,
     onInstalled: {
       addListener: jest.fn()
     },
@@ -60,7 +73,75 @@ Object.defineProperty(navigator, 'onLine', {
   value: true
 });
 
+function formatConsoleArgs(args) {
+  return args.map(arg => inspect(arg, { depth: 3, breakLength: 120 })).join(' ');
+}
+
+const consoleGuardState = {};
+
+function installConsoleGuard(method) {
+  const guard = jest.spyOn(console, method).mockImplementation((...args) => {
+    consoleGuardState[method].calls.push(args);
+  });
+
+  consoleGuardState[method] = {
+    allowed: false,
+    calls: [],
+    guard,
+    initialImplementation: guard.getMockImplementation()
+  };
+}
+
+global.allowUnexpectedConsole = (...methods) => {
+  methods.forEach((method) => {
+    if (consoleGuardState[method]) {
+      consoleGuardState[method].allowed = true;
+    }
+  });
+};
+
 // Setup mocks reset for each test
 beforeEach(() => {
   jest.clearAllMocks();
+  if (chrome.runtime) {
+    chrome.runtime.lastError = null;
+  }
+
+  installConsoleGuard('error');
+  installConsoleGuard('warn');
+});
+
+afterEach(() => {
+  const unexpectedMessages = ['error', 'warn']
+    .flatMap((method) => {
+      const state = consoleGuardState[method];
+      if (!state) {
+        return [];
+      }
+
+      const explicitlyHandled =
+        state.allowed ||
+        console[method] !== state.guard ||
+        state.guard.getMockImplementation() !== state.initialImplementation;
+
+      if (explicitlyHandled || state.calls.length === 0) {
+        return [];
+      }
+
+      return state.calls.map(args => `console.${method}: ${formatConsoleArgs(args)}`);
+    });
+
+  ['error', 'warn'].forEach((method) => {
+    const state = consoleGuardState[method];
+    if (state) {
+      state.guard.mockRestore();
+      delete consoleGuardState[method];
+    }
+  });
+
+  if (unexpectedMessages.length > 0) {
+    throw new Error(
+      `Unexpected console output. Mock or restore console.${unexpectedMessages.length > 1 ? 'error/console.warn' : unexpectedMessages[0].includes('console.error') ? 'error' : 'warn'} in the test.\n${unexpectedMessages.join('\n')}`
+    );
+  }
 });

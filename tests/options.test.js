@@ -67,6 +67,11 @@ const {
 describe('Options Page - Repository Management', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   describe('fetchGitHubRepoFromNpm', () => {

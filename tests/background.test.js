@@ -18,6 +18,13 @@ import {
 describe('Background Service Worker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
+    console.warn.mockRestore();
   });
 
   describe.skip('fetchRepoActivity', () => {

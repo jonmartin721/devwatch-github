@@ -44,6 +44,7 @@ const { stateManager, getFilteredActivities, getStats, addActivities, markAsRead
 describe('state-manager', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 
     // Reset state manager
     stateManager.initialized = false;
@@ -66,6 +67,10 @@ describe('state-manager', () => {
       error: null
     };
     stateManager.subscribers = new Map();
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   describe('getFilteredActivities', () => {

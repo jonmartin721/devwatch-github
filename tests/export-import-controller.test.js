@@ -24,6 +24,8 @@ window.location = { reload: mockReload };
 
 describe('export-import-controller', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
     // Clear mocks individually instead of using jest.clearAllMocks()
     mockReload.mockClear();
     mockNotifications.success.mockClear();
@@ -55,6 +57,10 @@ describe('export-import-controller', () => {
 
     // Reset document.body
     document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   describe('exportSettings', () => {

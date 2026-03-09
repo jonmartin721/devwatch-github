@@ -67,6 +67,7 @@ import { applyTheme } from '../shared/utils.js';
 
 describe('Dark Mode', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     document.body.className = '';
     document.body.innerHTML = `
       <button id="darkModeBtn">
@@ -75,6 +76,10 @@ describe('Dark Mode', () => {
         <svg class="sun-icon" style="display: none;"></svg>
       </button>
     `;
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   test('applies theme correctly', () => {
@@ -162,7 +167,12 @@ describe('Rate Limit Display', () => {
 
 describe('Error Display', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     document.body.innerHTML = '<div id="errorMessage" style="display: none;"></div>';
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   test('shows recent errors', () => {

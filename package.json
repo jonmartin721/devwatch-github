@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p jsconfig.json",
     "build": "node scripts/build.js",
-    "validate": "npm run lint && npm run typecheck && npm test && npm run build",
+    "validate": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "prepare": "husky"
   },

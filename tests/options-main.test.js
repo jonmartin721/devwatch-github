@@ -9,6 +9,8 @@ const {
 
 describe('Options Main Functions', () => {
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
     // Setup complete DOM structure for options page
     document.body.innerHTML = `
       <input id="githubToken" type="password" />
@@ -67,6 +69,10 @@ describe('Options Main Functions', () => {
     };
 
     global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   describe('formatNumber', () => {
