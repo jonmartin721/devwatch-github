@@ -289,11 +289,14 @@ h1 {
 
 /* Tab Panels */
 .tab-panel {
-  display: none;
   animation: fadeIn 0.2s ease-in;
 }
 
-.tab-panel.active {
+.tab-panel[hidden] {
+  display: none;
+}
+
+.tab-panel:not([hidden]) {
   display: block;
 }
 
@@ -324,6 +327,11 @@ h1 {
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
     padding: 4px;
+  }
+
+  .tab-list {
+    flex-direction: row;
+    min-width: max-content;
   }
 
   .tab-button {

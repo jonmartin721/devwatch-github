@@ -81,7 +81,6 @@ function setupTabNavigation() {
     // Update panels
     tabPanels.forEach(panel => {
       const isActive = panel.dataset.tab === tabName;
-      panel.classList.toggle('active', isActive);
       panel.hidden = !isActive;
     });
 
