@@ -63,6 +63,7 @@ import { OnboardingManager } from '../shared/onboarding.js';
 
 let _handleNextStep;
 let _renderReposStep;
+let _renderOnboardingStep;
 
 describe('Onboarding - token persistence', () => {
   beforeEach(async () => {
@@ -85,6 +86,7 @@ describe('Onboarding - token persistence', () => {
     const module = await import('../popup/views/onboarding-view.js');
     _handleNextStep = module.handleNextStep;
     _renderReposStep = module.renderReposStep;
+    _renderOnboardingStep = module.renderOnboardingStep;
   });
 
   test('preserves validated flag when saving token and navigating next', async () => {
@@ -194,6 +196,60 @@ describe('Onboarding - token persistence', () => {
 
     // Restore fetch
     global.fetch = oldFetch;
+  });
+
+  test('renderReposStep escapes repository metadata before building HTML', async () => {
+    const manager = new OnboardingManager();
+    const saved = [
+      {
+        owner: { login: 'alice"><img src=x onerror=alert(1)>' },
+        name: 'fancy<script>alert(1)</script>',
+        description: '<img src=x onerror=alert(1)>',
+        language: 'JS<script>'
+      }
+    ];
+    await manager.saveStepData('popularRepos', saved);
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+  });
+
+  test('renderOnboardingStep escapes saved token values and usernames on the token step', async () => {
+    _localStorage = {
+      onboarding_state: {
+        currentStep: 1,
+        completed: false,
+        skippedSteps: [],
+        data: {
+          token: {
+            token: 'ghp_test" autofocus="true',
+            validated: true,
+            username: '<img src=x onerror=alert(1)>'
+          }
+        }
+      }
+    };
+
+    document.body.innerHTML = `
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    await _renderOnboardingStep();
+
+    const onboardingHtml = document.getElementById('onboardingView').innerHTML;
+    const tokenInput = document.getElementById('tokenInput');
+    const tokenStatus = document.getElementById('tokenStatus');
+
+    expect(tokenInput.value).toBe('ghp_test" autofocus="true');
+    expect(tokenInput.outerHTML).toContain('&quot;');
+    expect(tokenStatus.textContent).toContain('Logged in as <img src=x onerror=alert(1)>');
+    expect(onboardingHtml).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(onboardingHtml).not.toContain('<img src=x onerror=alert(1)>');
   });
 
   test('saves categories preferences during onboarding', async () => {
