@@ -80,6 +80,28 @@ describe('Token Controller', () => {
     expect(result).toEqual({ isValid: false, reason: 'invalid' });
   });
 
+  test('validateToken skips stale invalid-token UI updates', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 401
+    });
+
+    document.getElementById('tokenStatus').textContent = 'Checking...';
+    document.getElementById('tokenStatus').className = 'token-status checking';
+    document.getElementById('clearTokenBtn').style.display = 'block';
+
+    const toastManager = {};
+    const result = await validateToken('stale-bad-token', toastManager, {
+      shouldApplyResult: () => false
+    });
+
+    expect(result).toEqual({ isValid: false, reason: 'invalid' });
+    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
+    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+    expect(toastManager.lastInvalidToken).toBeUndefined();
+  });
+
   test('clearToken clears all fields when confirmed', async () => {
     global.confirm.mockReturnValue(true);
 
@@ -115,6 +137,28 @@ describe('Token Controller', () => {
     expect(result).toEqual({ isValid: false, reason: 'http', status: 500 });
   });
 
+  test('validateToken skips stale API error UI updates', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    document.getElementById('tokenStatus').textContent = 'Checking...';
+    document.getElementById('tokenStatus').className = 'token-status checking';
+    document.getElementById('clearTokenBtn').style.display = 'block';
+
+    const toastManager = {};
+    const result = await validateToken('stale-token', toastManager, {
+      shouldApplyResult: () => false
+    });
+
+    expect(result).toEqual({ isValid: false, reason: 'http', status: 500 });
+    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
+    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+    expect(toastManager.lastApiError).toBeUndefined();
+  });
+
   test('validateToken handles network errors', async () => {
     global.fetch.mockRejectedValue(new Error('Network error'));
 
@@ -125,6 +169,24 @@ describe('Token Controller', () => {
     expect(statusEl.textContent).toContain('Network error');
     expect(statusEl.className).toContain('invalid');
     expect(result).toEqual({ isValid: false, reason: 'network' });
+  });
+
+  test('validateToken skips stale network-error UI updates', async () => {
+    global.fetch.mockRejectedValue(new Error('Network error'));
+
+    document.getElementById('tokenStatus').textContent = 'Checking...';
+    document.getElementById('tokenStatus').className = 'token-status checking';
+    document.getElementById('clearTokenBtn').style.display = 'block';
+
+    const toastManager = {};
+    const result = await validateToken('stale-token', toastManager, {
+      shouldApplyResult: () => false
+    });
+
+    expect(result).toEqual({ isValid: false, reason: 'network' });
+    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
+    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
   });
 
   test('validateToken shows success toast only on first validation', async () => {

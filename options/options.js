@@ -1195,6 +1195,7 @@ export {
   state,
   validateToken,
   loadSettings,
+  setupEventListeners,
   addRepo,
   validateRepo,
   removeRepo,
