@@ -1,10 +1,10 @@
 # Privacy Policy for GitHub Devwatch
 
-**Last Updated: November 17, 2025**
+**Last Updated: March 8, 2026**
 
 ## Overview
 
-GitHub Devwatch is a Chrome browser extension that helps you monitor activity on GitHub repositories. This privacy policy explains how the extension handles your data.
+GitHub Devwatch is a Chrome extension for monitoring activity on GitHub repositories. This policy explains what the extension stores, when it makes network requests, and what is not collected.
 
 ## Data Collection and Usage
 
@@ -13,9 +13,10 @@ GitHub Devwatch is a Chrome browser extension that helps you monitor activity on
 GitHub Devwatch collects and stores the following data **locally on your device only**:
 
 1. **GitHub Personal Access Token**
-   - Encrypted with AES-GCM encryption and stored securely on your device
+   - Stored by the extension in Chrome storage
+   - Current builds encrypt the token before writing it to local storage and keep a decrypted session copy while the extension is running
    - Used only to authenticate with GitHub's API
-   - Never transmitted to any third-party servers
+   - Not sent to third-party services operated by this project
    - Never shared with anyone
 
 2. **Repository Watch List**
@@ -31,7 +32,7 @@ GitHub Devwatch collects and stores the following data **locally on your device 
 4. **Activity Data**
    - Recent activity from your watched repositories (up to 2000 items)
    - Cached locally for offline viewing
-   - Automatically cleaned up when storage limits are approached
+   - Trimmed automatically when the activity limit is reached or cleanup rules apply
 
 ### What We DON'T Collect
 
@@ -52,9 +53,9 @@ All data collected is used exclusively to provide the extension's functionality:
 
 ## Data Storage
 
-- All data is stored locally on your device using Chrome's storage APIs
-- Chrome encrypts sensitive data (like your GitHub token) at rest
+- The extension uses Chrome storage APIs for settings, cached activity, and token handling
 - Settings and repository lists can optionally sync across your Chrome browsers if you use Chrome Sync
+- Token handling uses local and session storage rather than Chrome sync
 - You can clear all data at any time by uninstalling the extension or using Chrome's "Clear extension data" feature
 
 ## Third-Party Services
@@ -107,13 +108,14 @@ You have complete control over your data:
 
 ## Security
 
-We take security seriously:
+Current builds include several concrete safeguards:
 
 - All API requests use HTTPS
-- GitHub tokens are encrypted using AES-GCM encryption
-- Input is sanitized to prevent XSS attacks
-- Only GitHub URLs are allowed (no external redirects)
-- Content Security Policy prevents malicious script injection
+- The token is encrypted before it is persisted locally
+- The codebase includes input sanitization and GitHub URL validation checks
+- Extension pages use a Content Security Policy
+
+These measures reduce risk in normal use, but they should not be read as a formal security certification or third-party audit.
 
 ## Changes to This Policy
 
@@ -130,7 +132,7 @@ This extension is not directed at children under 13. We do not knowingly collect
 If you have questions about this privacy policy or the extension:
 
 - Open an issue on GitHub: https://github.com/jonmartin721/devwatch-github/issues
-- Developer: Jonathan Martinez
+- Developer: Jonathan Martin
 
 ## Open Source
 
