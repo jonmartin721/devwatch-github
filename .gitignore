@@ -14,10 +14,21 @@ scripts/get-refresh-token.js
 scripts/package-extension.sh
 
 # Local dev notes
-CLAUDE.md
 notes.md
 todo.txt
 ROADMAP.md
+
+# AI assistant instruction files
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+QWEN.md
+AIDER.md
+CURSOR.md
+COPILOT.md
+CODEIUM.md
+WINDSURF.md
+CONTINUE.md
 
 # AI assistant directories
 .claude/
