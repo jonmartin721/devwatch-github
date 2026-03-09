@@ -6,7 +6,7 @@ const notifications = NotificationManager.getInstance();
 
 export async function clearToken() {
   if (!confirm('Are you sure you want to clear your GitHub token?')) {
-    return;
+    return false;
   }
 
   document.getElementById('githubToken').value = '';
@@ -25,6 +25,7 @@ export async function clearToken() {
   await clearStoredToken();
 
   notifications.info('GitHub token cleared successfully');
+  return true;
 }
 
 export async function validateToken(token, toastManager, options = {}) {

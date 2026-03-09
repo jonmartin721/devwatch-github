@@ -4,6 +4,8 @@ const {
   formatNumber,
   getFilteredRepos,
   cleanupRepoNotifications,
+  shouldClearStoredToken,
+  syncTokenUiWithStoredCredential,
   state
 } = await import('../options/options.js');
 
@@ -186,6 +188,39 @@ describe('Options Main Functions', () => {
       state.searchQuery = 'test';
       const filtered = getFilteredRepos();
       expect(filtered.length).toBe(1);
+    });
+  });
+
+  describe('token persistence helpers', () => {
+    test('only clears stored tokens for invalid credentials', () => {
+      expect(shouldClearStoredToken({ isValid: false, reason: 'invalid' })).toBe(true);
+      expect(shouldClearStoredToken({ isValid: false, reason: 'network' })).toBe(false);
+      expect(shouldClearStoredToken({ isValid: false, reason: 'http', status: 500 })).toBe(false);
+      expect(shouldClearStoredToken({ isValid: true, user: 'testuser' })).toBe(false);
+    });
+
+    test('restores authenticated UI when a stored token still exists', () => {
+      const clearBtn = document.getElementById('clearTokenBtn');
+      const repoInput = document.getElementById('repoInput');
+      const addBtn = document.getElementById('addRepoBtn');
+      const helpText = document.getElementById('repoHelpText');
+      const importSection = document.getElementById('importReposSection');
+
+      clearBtn.style.display = 'none';
+      repoInput.disabled = true;
+      addBtn.disabled = true;
+      helpText.textContent = 'Invalid token. Please check your GitHub token and try again.';
+      importSection.classList.add('hidden');
+      importSection.style.display = 'none';
+
+      syncTokenUiWithStoredCredential(true);
+
+      expect(clearBtn.style.display).toBe('block');
+      expect(repoInput.disabled).toBe(false);
+      expect(addBtn.disabled).toBe(false);
+      expect(helpText.textContent).toContain('Add repositories to monitor');
+      expect(importSection.classList.contains('hidden')).toBe(false);
+      expect(importSection.style.display).toBe('block');
     });
   });
 
