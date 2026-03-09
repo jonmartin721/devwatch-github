@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getToken, setToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -200,17 +200,27 @@ function setupEventListeners() {
     }
   });
 
-  // Validate and auto-save token on input
+  // Validate and persist token only after the current input has been confirmed valid.
   let tokenValidationTimeout;
-  document.getElementById('githubToken').addEventListener('input', (e) => {
+  let tokenValidationRequestId = 0;
+  document.getElementById('githubToken').addEventListener('input', async (e) => {
     clearTimeout(tokenValidationTimeout);
     const token = e.target.value.trim();
+    tokenValidationRequestId++;
+    const validationId = tokenValidationRequestId;
 
     if (!token) {
+      toastManager.lastValidatedToken = null;
+      await clearStoredToken();
       document.getElementById('tokenStatus').textContent = '';
       document.getElementById('tokenStatus').className = 'token-status';
       document.getElementById('clearTokenBtn').style.display = 'none';
       return;
+    }
+
+    if (toastManager.lastValidatedToken && toastManager.lastValidatedToken !== token) {
+      toastManager.lastValidatedToken = null;
+      await clearStoredToken();
     }
 
     document.getElementById('tokenStatus').textContent = 'Checking...';
@@ -220,10 +230,21 @@ function setupEventListeners() {
     toastManager.isManualTokenEntry = true;
 
     tokenValidationTimeout = setTimeout(async () => {
-      await validateToken(token, toastManager);
-      // Auto-save token after validation
-      if (token) {
+      const validationResult = await validateToken(token, toastManager, {
+        shouldApplyResult: () =>
+          validationId === tokenValidationRequestId &&
+          document.getElementById('githubToken')?.value.trim() === token
+      });
+
+      if (validationId !== tokenValidationRequestId) {
+        return;
+      }
+
+      if (validationResult.isValid) {
         await setToken(token);
+        toastManager.lastValidatedToken = token;
+      } else {
+        await clearStoredToken();
       }
     }, 500);
   });
@@ -519,7 +540,12 @@ async function loadSettings() {
       document.getElementById('githubToken').value = githubToken;
       document.getElementById('clearTokenBtn').style.display = 'block';
       // Validate existing token
-      validateToken(githubToken, toastManager);
+      const validationResult = await validateToken(githubToken, toastManager);
+      if (validationResult.isValid) {
+        toastManager.lastValidatedToken = githubToken;
+      } else {
+        await clearStoredToken();
+      }
     } else {
       // No token - set appropriate placeholder and help text
       const repoInput = document.getElementById('repoInput');

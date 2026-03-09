@@ -17,6 +17,9 @@ describe('Token Controller', () => {
     // Chrome mocks are provided by setup.js
     global.confirm = jest.fn(() => true);
     global.fetch = jest.fn();
+    chrome.storage.local.set.mockImplementation((items, callback) => {
+      if (callback) callback();
+    });
   });
 
   test('clearToken does nothing when cancelled', async () => {
@@ -34,10 +37,33 @@ describe('Token Controller', () => {
     });
 
     const toastManager = {};
-    await validateToken('test-token', toastManager);
+    const result = await validateToken('test-token', toastManager);
 
     const statusEl = document.getElementById('tokenStatus');
     expect(statusEl.textContent).toContain('testuser');
+    expect(result).toEqual({ isValid: true, user: 'testuser' });
+  });
+
+  test('validateToken skips UI updates for stale responses', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ login: 'stale-user' })
+    });
+
+    document.getElementById('tokenStatus').textContent = 'Checking...';
+    document.getElementById('tokenStatus').className = 'token-status checking';
+    document.getElementById('clearTokenBtn').style.display = 'none';
+
+    const toastManager = { isManualTokenEntry: true };
+    const result = await validateToken('stale-token', toastManager, {
+      shouldApplyResult: () => false
+    });
+
+    expect(result).toEqual({ isValid: true, user: 'stale-user' });
+    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
+    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
+    expect(toastManager.lastValidToken).toBeUndefined();
   });
 
   test('validateToken handles invalid token', async () => {
@@ -47,13 +73,14 @@ describe('Token Controller', () => {
     });
 
     const toastManager = {};
-    await validateToken('bad-token', toastManager);
+    const result = await validateToken('bad-token', toastManager);
 
     const statusEl = document.getElementById('tokenStatus');
     expect(statusEl.textContent).toContain('Invalid');
+    expect(result).toEqual({ isValid: false, reason: 'invalid' });
   });
 
-  test.skip('clearToken clears all fields when confirmed', async () => {
+  test('clearToken clears all fields when confirmed', async () => {
     global.confirm.mockReturnValue(true);
 
     const tokenInput = document.getElementById('githubToken');
@@ -80,22 +107,24 @@ describe('Token Controller', () => {
     });
 
     const toastManager = {};
-    await validateToken('token', toastManager);
+    const result = await validateToken('token', toastManager);
 
     const statusEl = document.getElementById('tokenStatus');
     expect(statusEl.textContent).toContain('Error (500)');
     expect(statusEl.className).toContain('invalid');
+    expect(result).toEqual({ isValid: false, reason: 'http', status: 500 });
   });
 
   test('validateToken handles network errors', async () => {
     global.fetch.mockRejectedValue(new Error('Network error'));
 
     const toastManager = {};
-    await validateToken('token', toastManager);
+    const result = await validateToken('token', toastManager);
 
     const statusEl = document.getElementById('tokenStatus');
     expect(statusEl.textContent).toContain('Network error');
     expect(statusEl.className).toContain('invalid');
+    expect(result).toEqual({ isValid: false, reason: 'network' });
   });
 
   test('validateToken shows success toast only on first validation', async () => {
