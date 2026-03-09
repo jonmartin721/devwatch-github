@@ -12,11 +12,13 @@ function getStatusMarkup(type, message) {
 }
 
 function renderRepoSuggestion(repo) {
-  const owner = escapeHtml(repo?.owner?.login || 'unknown');
-  const name = escapeHtml(repo?.name || 'unknown');
+  const rawOwner = repo?.owner?.login || 'unknown';
+  const rawName = repo?.name || 'unknown';
+  const owner = escapeHtml(rawOwner);
+  const name = escapeHtml(rawName);
   const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project`);
   const language = escapeHtml(repo?.language || '');
-  const repoFullName = `${owner}/${name}`;
+  const repoFullName = `${rawOwner}/${rawName}`;
   const stars = Number.isFinite(repo?.stargazers_count)
     ? repo.stargazers_count.toLocaleString()
     : '';
@@ -33,7 +35,7 @@ function renderRepoSuggestion(repo) {
           ${stars ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${stars}</span>` : ''}
         </div>
       </div>
-      <button class="add-repo-btn" data-repo="${repoFullName}">+</button>
+      <button class="add-repo-btn" data-repo="${escapeHtml(repoFullName)}">+</button>
     </div>
   `;
 }
