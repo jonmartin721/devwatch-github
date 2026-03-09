@@ -9,8 +9,6 @@ const {
 
 describe('Options Main Functions', () => {
   beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-
     // Setup complete DOM structure for options page
     document.body.innerHTML = `
       <input id="githubToken" type="password" />
@@ -70,11 +68,6 @@ describe('Options Main Functions', () => {
 
     global.fetch = jest.fn();
   });
-
-  afterEach(() => {
-    console.error.mockRestore();
-  });
-
   describe('formatNumber', () => {
     test('formats numbers under 1000 as-is', () => {
       expect(formatNumber(0)).toBe('0');
@@ -257,6 +250,7 @@ describe('Options Main Functions', () => {
     });
 
     test('does not throw error when cleanup fails', async () => {
+      allowUnexpectedConsole('error');
       // Mock a Chrome storage error by not calling the callback properly
       global.chrome.storage.local.get = jest.fn(() => {
         throw new Error('Storage error');

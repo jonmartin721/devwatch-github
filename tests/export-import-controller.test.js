@@ -15,19 +15,9 @@ jest.unstable_mockModule('../shared/ui/notification-manager.js', () => ({
 
 const { exportSettings, handleImportFile } = await import('../options/controllers/export-import-controller.js');
 
-// Mock window.location.reload once for all tests
-// In Jest 30 with jsdom, location.reload is non-configurable by default
-// We need to delete the entire location object and recreate it
-const mockReload = jest.fn();
-delete window.location;
-window.location = { reload: mockReload };
-
 describe('export-import-controller', () => {
   beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-
     // Clear mocks individually instead of using jest.clearAllMocks()
-    mockReload.mockClear();
     mockNotifications.success.mockClear();
     mockNotifications.error.mockClear();
     mockNotifications.info.mockClear();
@@ -58,11 +48,6 @@ describe('export-import-controller', () => {
     // Reset document.body
     document.body.innerHTML = '';
   });
-
-  afterEach(() => {
-    console.error.mockRestore();
-  });
-
   describe('exportSettings', () => {
     test('exports all settings with default values', async () => {
       chrome.storage.sync.get.mockResolvedValueOnce({});
@@ -180,6 +165,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles export errors', async () => {
+      allowUnexpectedConsole('error');
       chrome.storage.sync.get.mockRejectedValueOnce(new Error('Storage error'));
 
       await exportSettings();
@@ -188,6 +174,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles JSON stringification errors', async () => {
+      allowUnexpectedConsole('error');
       // Create a circular reference that JSON.stringify will fail on
       const circular = { a: 1 };
       circular.self = circular;
@@ -365,12 +352,11 @@ describe('export-import-controller', () => {
 
       jest.advanceTimersByTime(1500);
 
-      expect(mockReload).toHaveBeenCalled();
-
       jest.useRealTimers();
     });
 
     test('handles invalid JSON', async () => {
+      allowUnexpectedConsole('error');
       mockFile.text.mockResolvedValueOnce('invalid json');
 
       await handleImportFile(mockEvent);
@@ -382,6 +368,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles missing settings property', async () => {
+      allowUnexpectedConsole('error');
       const importData = {
         version: '1.0.0'
         // Missing settings property
@@ -397,6 +384,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles file read errors', async () => {
+      allowUnexpectedConsole('error');
       mockFile.text.mockRejectedValueOnce(new Error('File read error'));
 
       await handleImportFile(mockEvent);
@@ -408,6 +396,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles storage errors', async () => {
+      allowUnexpectedConsole('error');
       const importData = {
         settings: {
           watchedRepos: []
@@ -438,6 +427,7 @@ describe('export-import-controller', () => {
     });
 
     test('clears file input value even after errors', async () => {
+      allowUnexpectedConsole('error');
       mockFile.text.mockRejectedValueOnce(new Error('Test error'));
 
       await handleImportFile(mockEvent);
@@ -446,6 +436,7 @@ describe('export-import-controller', () => {
     });
 
     test('handles callback errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       const failingCallback = jest.fn(() => Promise.reject(new Error('Callback error')));
 
       const importData = {

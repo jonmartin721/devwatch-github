@@ -23,11 +23,6 @@ describe('Error Handler', () => {
     jest.clearAllMocks();
     clearError('errorMessage');
     clearError('statusMessage');
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    console.error.mockRestore();
   });
 
   describe('classifyError', () => {
@@ -140,6 +135,7 @@ describe('Error Handler', () => {
 
   describe('showError', () => {
     beforeEach(() => {
+      allowUnexpectedConsole('error');
       jest.useFakeTimers();
     });
 
@@ -207,6 +203,10 @@ describe('Error Handler', () => {
   });
 
   describe('clearError', () => {
+    beforeEach(() => {
+      allowUnexpectedConsole('error');
+    });
+
     it('should clear error message', () => {
       // First show an error
       showError('errorMessage', new Error('test'));

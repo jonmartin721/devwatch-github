@@ -121,13 +121,12 @@ describe('Options Repository Controller', () => {
     });
 
     test('handles errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      allowUnexpectedConsole('error');
       chrome.storage.sync.get.mockRejectedValue(new Error('Storage error'));
 
       await expect(trackRepoUnmuted('owner/repo')).resolves.not.toThrow();
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
+      expect(console.error).toHaveBeenCalled();
     });
   });
 

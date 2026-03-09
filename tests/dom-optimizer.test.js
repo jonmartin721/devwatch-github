@@ -84,13 +84,12 @@ describe('DOMOptimizer', () => {
     });
 
     test('warns if container not initialized', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      allowUnexpectedConsole('warn');
       const uninitializedOptimizer = new DOMOptimizer();
 
       uninitializedOptimizer.render('<div>test</div>');
 
-      expect(consoleSpy).toHaveBeenCalledWith('DOMOptimizer not initialized');
-      consoleSpy.mockRestore();
+      expect(console.warn).toHaveBeenCalledWith('DOMOptimizer not initialized');
     });
 
     test('handles string content', () => {
@@ -110,12 +109,11 @@ describe('DOMOptimizer', () => {
     });
 
     test('warns when newElement is null', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      allowUnexpectedConsole('warn');
 
       optimizer.render(null);
 
-      expect(consoleSpy).toHaveBeenCalledWith('DOMOptimizer: newElement is null or undefined');
-      consoleSpy.mockRestore();
+      expect(console.warn).toHaveBeenCalledWith('DOMOptimizer: newElement is null or undefined');
     });
   });
 
@@ -247,7 +245,7 @@ describe('DOMOptimizer', () => {
     });
 
     test('handles removal errors gracefully', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      allowUnexpectedConsole('warn');
       const current = document.createElement('div');
       const child = document.createElement('span');
       current.appendChild(child);
@@ -260,8 +258,7 @@ describe('DOMOptimizer', () => {
       const newEl = document.createElement('div');
       optimizer.updateChildren(current, newEl);
 
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
+      expect(console.warn).toHaveBeenCalled();
     });
   });
 

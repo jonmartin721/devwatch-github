@@ -67,11 +67,6 @@ const {
 describe('Options Page - Repository Management', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    console.error.mockRestore();
   });
 
   describe('fetchGitHubRepoFromNpm', () => {
@@ -630,6 +625,7 @@ describe('Options Page - Repository Management', () => {
     });
 
     test('handles storage errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       // Mock storage error
       chrome.storage.local.get.mockImplementation(() => {
         throw new Error('Storage error');
@@ -672,6 +668,7 @@ describe('Options Page - Repository Management', () => {
 
   describe('Repository Unmute Tracking', () => {
     test('handles storage errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       chrome.storage.sync.get.mockImplementation(() => {
         throw new Error('Storage error');
       });

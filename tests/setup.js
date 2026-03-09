@@ -112,6 +112,22 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  const guardViolations = ['error', 'warn']
+    .flatMap((method) => {
+      const state = consoleGuardState[method];
+      if (!state) {
+        return [];
+      }
+
+      if (console[method] !== state.guard || state.guard.getMockImplementation() !== state.initialImplementation) {
+        return [
+          `console.${method} guard was overridden during the test. Use allowUnexpectedConsole('${method}') instead of replacing console.${method}.`
+        ];
+      }
+
+      return [];
+    });
+
   const unexpectedMessages = ['error', 'warn']
     .flatMap((method) => {
       const state = consoleGuardState[method];
@@ -119,12 +135,7 @@ afterEach(() => {
         return [];
       }
 
-      const explicitlyHandled =
-        state.allowed ||
-        console[method] !== state.guard ||
-        state.guard.getMockImplementation() !== state.initialImplementation;
-
-      if (explicitlyHandled || state.calls.length === 0) {
+      if (state.allowed || state.calls.length === 0) {
         return [];
       }
 
@@ -139,9 +150,14 @@ afterEach(() => {
     }
   });
 
-  if (unexpectedMessages.length > 0) {
+  if (guardViolations.length > 0 || unexpectedMessages.length > 0) {
     throw new Error(
-      `Unexpected console output. Mock or restore console.${unexpectedMessages.length > 1 ? 'error/console.warn' : unexpectedMessages[0].includes('console.error') ? 'error' : 'warn'} in the test.\n${unexpectedMessages.join('\n')}`
+      [
+        ...guardViolations,
+        unexpectedMessages.length > 0
+          ? `Unexpected console output. Allow console.${unexpectedMessages.length > 1 ? 'error/console.warn' : unexpectedMessages[0].includes('console.error') ? 'error' : 'warn'} in the test.\n${unexpectedMessages.join('\n')}`
+          : null
+      ].filter(Boolean).join('\n')
     );
   }
 });

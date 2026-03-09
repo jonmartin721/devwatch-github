@@ -44,7 +44,6 @@ const { stateManager, getFilteredActivities, getStats, addActivities, markAsRead
 describe('state-manager', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
 
     // Reset state manager
     stateManager.initialized = false;
@@ -67,10 +66,6 @@ describe('state-manager', () => {
       error: null
     };
     stateManager.subscribers = new Map();
-  });
-
-  afterEach(() => {
-    console.error.mockRestore();
   });
 
   describe('getFilteredActivities', () => {
@@ -331,6 +326,7 @@ describe('state-manager', () => {
     });
 
     test('handles callback errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       const errorCallback = jest.fn(() => {
         throw new Error('Test error');
       });
