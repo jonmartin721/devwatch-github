@@ -1,6 +1,8 @@
 # Test Suite
 
-This directory contains the test suite for the GitHub DevWatch Chrome extension.
+This directory contains the test suite for the GitHub Devwatch Chrome extension.
+
+Most tests here are unit-level or DOM-focused integration tests running under Jest with jsdom and mocked Chrome APIs. They are useful for regression coverage, but they do not replace manual testing in a loaded extension or a full browser-level end-to-end pass.
 
 ## Running Tests
 
@@ -43,12 +45,14 @@ Tests are organized by feature and component:
 ### Utility Tests
 - `utils.test.js` - Utility functions
 
-## Coverage Goals
+## Coverage Thresholds
 
-The project maintains minimum coverage thresholds:
-- **Lines**: 35%
-- **Branches**: 34%
-- **Functions**: 30%
+Jest enforces the following global minimum coverage thresholds:
+- **Lines**: 47%
+- **Branches**: 46%
+- **Functions**: 44%
+
+Current thresholds are defined in `jest.config.js`. They are guardrails for CI, not a statement that every extension path is covered.
 
 Current coverage can be viewed by running `npm test -- --coverage`.
 

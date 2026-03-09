@@ -1,4 +1,5 @@
 import { jest, describe, beforeEach, test, expect } from '@jest/globals';
+import { TextEncoder } from 'node:util';
 
 // Simple mock storage to simulate chrome.storage.local for onboarding flows
 let _localStorage = {};
@@ -63,6 +64,26 @@ import { OnboardingManager } from '../shared/onboarding.js';
 
 let _handleNextStep;
 let _renderReposStep;
+let _renderOnboardingStep;
+
+async function renderTokenStep(stateOverrides = {}) {
+  _localStorage = {
+    onboarding_state: {
+      currentStep: 1,
+      completed: false,
+      skippedSteps: [],
+      data: {},
+      ...stateOverrides
+    }
+  };
+
+  document.body.innerHTML = `
+    <div id="onboardingView"></div>
+    <button id="footerSkipBtn" class="hidden"></button>
+  `;
+
+  await _renderOnboardingStep();
+}
 
 describe('Onboarding - token persistence', () => {
   beforeEach(async () => {
@@ -80,11 +101,32 @@ describe('Onboarding - token persistence', () => {
 
     jest.clearAllMocks();
     document.body.innerHTML = '';
+    Object.defineProperty(globalThis, 'crypto', {
+      configurable: true,
+      value: {
+        getRandomValues: jest.fn((array) => {
+          array.fill(1);
+          return array;
+        }),
+        subtle: {
+          generateKey: jest.fn(async () => ({ mockKey: true })),
+          importKey: jest.fn(async () => ({ mockKey: true })),
+          exportKey: jest.fn(async () => new Uint8Array([1, 2, 3, 4]).buffer),
+          encrypt: jest.fn(async () => new Uint8Array([9, 8, 7]).buffer),
+          decrypt: jest.fn(async () => new TextEncoder().encode('decrypted-token').buffer)
+        }
+      }
+    });
+    Object.defineProperty(globalThis, 'TextEncoder', {
+      configurable: true,
+      value: TextEncoder
+    });
     // Reload modules to reset module-level onboardingManager cache
     jest.resetModules();
     const module = await import('../popup/views/onboarding-view.js');
     _handleNextStep = module.handleNextStep;
     _renderReposStep = module.renderReposStep;
+    _renderOnboardingStep = module.renderOnboardingStep;
   });
 
   test('preserves validated flag when saving token and navigating next', async () => {
@@ -194,6 +236,132 @@ describe('Onboarding - token persistence', () => {
 
     // Restore fetch
     global.fetch = oldFetch;
+  });
+
+  test('renderReposStep escapes repository metadata before building HTML', async () => {
+    const manager = new OnboardingManager();
+    const saved = [
+      {
+        owner: { login: 'alice"><img src=x onerror=alert(1)>' },
+        name: 'fancy<script>alert(1)</script>',
+        description: '<img src=x onerror=alert(1)>',
+        language: 'JS<script>'
+      }
+    ];
+    await manager.saveStepData('popularRepos', saved);
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).toContain('data-repo="alice&quot;&gt;&lt;img src=x onerror=alert(1)&gt;/fancy&lt;script&gt;alert(1)&lt;/script&gt;"');
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+  });
+
+  test('renderOnboardingStep escapes saved token values and usernames on the token step', async () => {
+    await renderTokenStep({
+      data: {
+        token: {
+          token: 'ghp_test" autofocus="true',
+          validated: true,
+          username: '<img src=x onerror=alert(1)>'
+        }
+      }
+    });
+
+    const onboardingHtml = document.getElementById('onboardingView').innerHTML;
+    const tokenInput = document.getElementById('tokenInput');
+    const tokenStatus = document.getElementById('tokenStatus');
+
+    expect(tokenInput.value).toBe('ghp_test" autofocus="true');
+    expect(tokenInput.outerHTML).toContain('&quot;');
+    expect(tokenStatus.textContent).toContain('Logged in as <img src=x onerror=alert(1)>');
+    expect(onboardingHtml).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(onboardingHtml).not.toContain('<img src=x onerror=alert(1)>');
+  });
+
+  test('renderOnboardingStep shows validated status without username safely', async () => {
+    await renderTokenStep({
+      data: {
+        token: {
+          token: 'ghp_token',
+          validated: true
+        }
+      }
+    });
+
+    const onboardingHtml = document.getElementById('onboardingView').innerHTML;
+    const tokenStatus = document.getElementById('tokenStatus');
+
+    expect(tokenStatus.textContent).toContain('✓ Token is valid!');
+    expect(onboardingHtml).toContain('Validated');
+  });
+
+  test('token step shows an error when validation is attempted with no token', async () => {
+    await renderTokenStep();
+
+    document.getElementById('validateTokenBtn').click();
+
+    expect(document.getElementById('tokenStatus').textContent).toBe('Please enter a token');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('token step escapes invalid-token responses', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401
+    });
+
+    await renderTokenStep();
+
+    const tokenInput = document.getElementById('tokenInput');
+    tokenInput.value = 'ghp_invalid';
+    document.getElementById('validateTokenBtn').click();
+    await Promise.resolve();
+
+    expect(document.getElementById('tokenStatus').textContent).toBe('✗ Invalid token');
+  });
+
+  test('token step escapes network validation errors', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+
+    await renderTokenStep();
+
+    const tokenInput = document.getElementById('tokenInput');
+    tokenInput.value = 'ghp_network';
+    document.getElementById('validateTokenBtn').click();
+    await Promise.resolve();
+
+    expect(document.getElementById('tokenStatus').textContent).toBe('Error validating token');
+  });
+
+  test('token step escapes successful validation messages', async () => {
+    global.fetch = jest.fn(async (url) => {
+      if (url === 'https://api.github.com/user') {
+        return {
+          ok: true,
+          json: async () => ({ login: '<img src=x onerror=alert(1)>' })
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({ items: [] })
+      };
+    });
+
+    await renderTokenStep();
+
+    const tokenInput = document.getElementById('tokenInput');
+    tokenInput.value = 'ghp_valid';
+    document.getElementById('validateTokenBtn').click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const tokenStatus = document.getElementById('tokenStatus');
+    expect(tokenStatus.textContent).toContain('Logged in as <img src=x onerror=alert(1)>');
+    expect(tokenStatus.innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
   test('saves categories preferences during onboarding', async () => {

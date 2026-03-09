@@ -196,7 +196,6 @@ h1 {
 .tab-navigation {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   padding: 8px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
@@ -206,6 +205,12 @@ h1 {
   height: 100vh;
   overflow-y: auto;
   scrollbar-width: thin;
+}
+
+.tab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sidebar-header {
@@ -284,11 +289,14 @@ h1 {
 
 /* Tab Panels */
 .tab-panel {
-  display: none;
   animation: fadeIn 0.2s ease-in;
 }
 
-.tab-panel.active {
+.tab-panel[hidden] {
+  display: none;
+}
+
+.tab-panel:not([hidden]) {
   display: block;
 }
 
@@ -319,6 +327,11 @@ h1 {
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
     padding: 4px;
+  }
+
+  .tab-list {
+    flex-direction: row;
+    min-width: max-content;
   }
 
   .tab-button {
@@ -862,6 +875,8 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .setup-step.clickable {
   cursor: pointer;
+  color: inherit;
+  text-decoration: none;
 }
 
 .setup-step:hover {
@@ -908,6 +923,11 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .setup-step-primary:hover {
   transform: none;
+}
+
+.setup-step.clickable:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 2px;
 }
 
 .step-all-content {
@@ -2921,4 +2941,3 @@ body.dark-mode .setup-btn:hover {
     padding: 20px 0 15px;
   }
 }
-

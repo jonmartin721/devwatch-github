@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getToken, setToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -29,6 +29,7 @@ const state = {
   searchQuery: '',
   hidePinnedRepos: false
 };
+let persistedToken = null;
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -50,21 +51,38 @@ if (typeof document !== 'undefined') {
 // Theme listener imported from controllers/theme-controller.js
 
 function setupTabNavigation() {
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabPanels = document.querySelectorAll('.tab-panel');
+  const tabButtons = Array.from(document.querySelectorAll('.tab-button'));
+  const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
 
-  // Function to switch tabs
-  function switchTab(tabName) {
+  if (tabButtons.length === 0 || tabPanels.length === 0) {
+    return;
+  }
+
+  const validTabs = tabButtons
+    .map(button => button.dataset.tab)
+    .filter(Boolean);
+
+  function getTabButton(tabName) {
+    return tabButtons.find(button => button.dataset.tab === tabName);
+  }
+
+  function switchTab(tabName, { focusTab = false } = {}) {
+    if (!validTabs.includes(tabName)) {
+      return;
+    }
+
     // Update buttons
     tabButtons.forEach(btn => {
       const isActive = btn.dataset.tab === tabName;
       btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      btn.tabIndex = isActive ? 0 : -1;
     });
 
     // Update panels
     tabPanels.forEach(panel => {
-      panel.classList.toggle('active', panel.dataset.tab === tabName);
+      const isActive = panel.dataset.tab === tabName;
+      panel.hidden = !isActive;
     });
 
     // Save to localStorage
@@ -72,22 +90,53 @@ function setupTabNavigation() {
 
     // Update URL hash without scrolling
     history.replaceState(null, null, `#${tabName}`);
+
+    if (focusTab) {
+      getTabButton(tabName)?.focus();
+    }
   }
 
   // Add click listeners to tab buttons
-  tabButtons.forEach(button => {
+  tabButtons.forEach((button, index) => {
     button.addEventListener('click', () => {
       switchTab(button.dataset.tab);
+    });
+
+    button.addEventListener('keydown', (event) => {
+      let targetIndex = null;
+
+      switch (event.key) {
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        targetIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+        break;
+      case 'ArrowDown':
+      case 'ArrowRight':
+        targetIndex = (index + 1) % tabButtons.length;
+        break;
+      case 'Home':
+        targetIndex = 0;
+        break;
+      case 'End':
+        targetIndex = tabButtons.length - 1;
+        break;
+      default:
+        return;
+      }
+
+      event.preventDefault();
+      switchTab(tabButtons[targetIndex].dataset.tab, { focusTab: true });
     });
   });
 
   // Add click listeners to clickable setup steps
   const clickableSetupSteps = document.querySelectorAll('.setup-step.clickable');
   clickableSetupSteps.forEach(step => {
-    step.addEventListener('click', () => {
+    step.addEventListener('click', (event) => {
+      event.preventDefault();
       const tabName = step.dataset.tab;
       if (tabName) {
-        switchTab(tabName);
+        switchTab(tabName, { focusTab: true });
       }
     });
   });
@@ -97,8 +146,6 @@ function setupTabNavigation() {
   const savedTab = localStorage.getItem('activeTab');
   const initialTab = hash || savedTab || 'setup';
 
-  // Check if the hash/saved tab is valid
-  const validTabs = ['setup', 'repositories', 'filters', 'preferences', 'advanced', 'help'];
   const tabToActivate = validTabs.includes(initialTab) ? initialTab : 'setup';
 
   switchTab(tabToActivate);
@@ -121,12 +168,41 @@ function handleUrlParameters() {
 
 }
 
+function syncTokenUiWithStoredCredential(hasStoredToken) {
+  const clearTokenBtn = document.getElementById('clearTokenBtn');
+  const repoInput = document.getElementById('repoInput');
+  const addRepoBtn = document.getElementById('addRepoBtn');
+  const repoHelpText = document.getElementById('repoHelpText');
+  const importSection = document.getElementById('importReposSection');
+
+  clearTokenBtn.style.display = hasStoredToken ? 'block' : 'none';
+  repoInput.disabled = !hasStoredToken;
+  repoInput.placeholder = hasStoredToken
+    ? 'e.g., react, facebook/react, or GitHub URL'
+    : 'Enter a valid GitHub token to add repositories';
+  addRepoBtn.disabled = !hasStoredToken;
+  repoHelpText.textContent = hasStoredToken
+    ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
+    : 'Add a valid GitHub token above to start adding repositories';
+  importSection.classList.toggle('hidden', !hasStoredToken);
+  importSection.style.display = hasStoredToken ? 'block' : 'none';
+}
+
+function shouldClearStoredToken(validationResult) {
+  return !validationResult.isValid && validationResult.reason === 'invalid';
+}
+
 function setupEventListeners() {
   // Tab navigation
   setupTabNavigation();
 
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
-  document.getElementById('clearTokenBtn').addEventListener('click', clearToken);
+  document.getElementById('clearTokenBtn').addEventListener('click', async () => {
+    const tokenCleared = await clearToken();
+    if (tokenCleared) {
+      persistedToken = null;
+    }
+  });
 
   // Action button toggles
   const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
@@ -200,16 +276,19 @@ function setupEventListeners() {
     }
   });
 
-  // Validate and auto-save token on input
+  // Validate and persist token only after the current input has been confirmed valid.
   let tokenValidationTimeout;
-  document.getElementById('githubToken').addEventListener('input', (e) => {
+  let tokenValidationRequestId = 0;
+  document.getElementById('githubToken').addEventListener('input', async (e) => {
     clearTimeout(tokenValidationTimeout);
     const token = e.target.value.trim();
+    tokenValidationRequestId++;
+    const validationId = tokenValidationRequestId;
 
     if (!token) {
       document.getElementById('tokenStatus').textContent = '';
       document.getElementById('tokenStatus').className = 'token-status';
-      document.getElementById('clearTokenBtn').style.display = 'none';
+      syncTokenUiWithStoredCredential(Boolean(persistedToken));
       return;
     }
 
@@ -220,10 +299,26 @@ function setupEventListeners() {
     toastManager.isManualTokenEntry = true;
 
     tokenValidationTimeout = setTimeout(async () => {
-      await validateToken(token, toastManager);
-      // Auto-save token after validation
-      if (token) {
+      const validationResult = await validateToken(token, toastManager, {
+        shouldApplyResult: () =>
+          validationId === tokenValidationRequestId &&
+          document.getElementById('githubToken')?.value.trim() === token
+      });
+
+      if (validationId !== tokenValidationRequestId) {
+        return;
+      }
+
+      if (validationResult.isValid) {
         await setToken(token);
+        persistedToken = token;
+      } else if (shouldClearStoredToken(validationResult)) {
+        await clearStoredToken();
+        persistedToken = null;
+      }
+
+      if (!validationResult.isValid && persistedToken) {
+        syncTokenUiWithStoredCredential(true);
       }
     }, 500);
   });
@@ -516,20 +611,17 @@ async function loadSettings() {
     applyTheme(theme);
 
     if (githubToken) {
+      persistedToken = githubToken;
       document.getElementById('githubToken').value = githubToken;
       document.getElementById('clearTokenBtn').style.display = 'block';
       // Validate existing token
-      validateToken(githubToken, toastManager);
+      const validationResult = await validateToken(githubToken, toastManager);
+      if (shouldClearStoredToken(validationResult)) {
+        await clearStoredToken();
+        persistedToken = null;
+      }
     } else {
-      // No token - set appropriate placeholder and help text
-      const repoInput = document.getElementById('repoInput');
-      repoInput.disabled = true;
-      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
-      document.getElementById('addRepoBtn').disabled = true;
-      document.getElementById('repoHelpText').textContent = 'Add a valid GitHub token above to start adding repositories';
-      const importSection = document.getElementById('importReposSection');
-      importSection.classList.add('hidden');
-      importSection.style.display = 'none';
+      syncTokenUiWithStoredCredential(false);
     }
 
     state.watchedRepos = settings.watchedRepos || [];
@@ -1147,13 +1239,18 @@ setInterval(async () => {
 // ES6 exports for tests
 export {
   state,
+  setupTabNavigation,
   validateToken,
+  loadSettings,
+  setupEventListeners,
   addRepo,
   validateRepo,
   removeRepo,
   cleanupRepoNotifications,
   getFilteredRepos,
   renderRepoList,
+  shouldClearStoredToken,
+  syncTokenUiWithStoredCredential,
   formatNumber,
   formatDateVerbose as formatDate,  // Export verbose formatter for tests
   exportSettings,

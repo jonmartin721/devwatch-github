@@ -2,9 +2,43 @@ import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
 import { getToken, setToken } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
+import { escapeHtml } from '../../shared/sanitize.js';
 
 // Create onboarding manager instance
 const onboardingManager = new OnboardingManager();
+
+function getStatusMarkup(type, message) {
+  return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+function renderRepoSuggestion(repo) {
+  const rawOwner = repo?.owner?.login || 'unknown';
+  const rawName = repo?.name || 'unknown';
+  const owner = escapeHtml(rawOwner);
+  const name = escapeHtml(rawName);
+  const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project`);
+  const language = escapeHtml(repo?.language || '');
+  const repoFullName = `${rawOwner}/${rawName}`;
+  const stars = Number.isFinite(repo?.stargazers_count)
+    ? repo.stargazers_count.toLocaleString()
+    : '';
+
+  return `
+    <div class="repo-suggestion" data-owner="${owner}" data-name="${name}">
+      <div class="repo-info">
+        <div class="repo-name">
+          <span class="repo-owner">${owner}</span>/<span class="repo-name-text">${name}</span>
+        </div>
+        <div class="repo-desc">${description}</div>
+        <div class="repo-meta">
+          ${language ? `<span class="repo-language">${language}</span>` : ''}
+          ${stars ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${stars}</span>` : ''}
+        </div>
+      </div>
+      <button class="add-repo-btn" data-repo="${escapeHtml(repoFullName)}">+</button>
+    </div>
+  `;
+}
 
 /**
  * Onboarding view functions for popup
@@ -170,13 +204,15 @@ async function renderTokenStep() {
   let statusHtml = '';
   let buttonDisabled = '';
   let buttonText = 'Validate';
+  const safeToken = escapeHtml(tokenData?.token || '');
+  const safeTokenUrl = escapeHtml(tokenUrl);
 
   if (tokenData && tokenData.validated && tokenData.username) {
-    statusHtml = `<div class="status-success">✓ Token is valid! Logged in as ${tokenData.username}</div>`;
+    statusHtml = getStatusMarkup('success', `✓ Token is valid! Logged in as ${tokenData.username}`);
     buttonDisabled = 'disabled';
     buttonText = 'Validated';
   } else if (tokenData && tokenData.validated) {
-    statusHtml = '<div class="status-success">✓ Token is valid!</div>';
+    statusHtml = getStatusMarkup('success', '✓ Token is valid!');
     buttonDisabled = 'disabled';
     buttonText = 'Validated';
   }
@@ -189,7 +225,7 @@ async function renderTokenStep() {
       <div class="token-instructions">
         <h3>Quick setup:</h3>
         <ol>
-          <li><a href="${tokenUrl}" target="_blank" class="token-link">Create a GitHub token</a></li>
+          <li><a href="${safeTokenUrl}" target="_blank" rel="noopener noreferrer" class="token-link">Create a GitHub token</a></li>
           <li>Copy the generated token</li>
           <li>Paste it below</li>
         </ol>
@@ -202,7 +238,7 @@ async function renderTokenStep() {
           placeholder="ghp_YourTokenHere"
           class="token-input"
           autocomplete="off"
-          value="${tokenData.token || ''}"
+          value="${safeToken}"
         >
         <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
       </div>
@@ -238,21 +274,7 @@ export async function renderReposStep() {
         <h3>Popular repositories:</h3>
         <div class="repo-suggestions" id="repoSuggestions">
           ${popularRepos && popularRepos.length > 0 ?
-            popularRepos.map(repo => `
-              <div class="repo-suggestion" data-owner="${repo.owner.login}" data-name="${repo.name}">
-                <div class="repo-info">
-                  <div class="repo-name">
-                    <span class="repo-owner">${repo.owner.login}</span>/<span class="repo-name-text">${repo.name}</span>
-                  </div>
-                  <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
-                  <div class="repo-meta">
-                    ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
-                    ${repo.stargazers_count ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
-                  </div>
-                </div>
-                <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
-              </div>
-            `).join('') :
+            popularRepos.map(renderRepoSuggestion).join('') :
             '<div class="repo-loading" id="repoLoading">Loading popular repositories...</div>'
           }
         </div>
@@ -517,11 +539,11 @@ function setupTokenStepListeners() {
   validateBtn?.addEventListener('click', async () => {
     const token = tokenInput.value.trim();
     if (!token) {
-      tokenStatus.innerHTML = '<div class="status-error">Please enter a token</div>';
+      tokenStatus.innerHTML = getStatusMarkup('error', 'Please enter a token');
       return;
     }
 
-    tokenStatus.innerHTML = '<div class="status-loading">Validating token...</div>';
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Validating token...');
 
     try {
       // Test the token by making a simple API call
@@ -535,7 +557,7 @@ function setupTokenStepListeners() {
         const userData = await response.json();
         const username = userData.login;
         const tokenData = { token, validated: true, username };
-        tokenStatus.innerHTML = `<div class="status-success">✓ Token is valid! Logged in as ${username}</div>`;
+        tokenStatus.innerHTML = getStatusMarkup('success', `✓ Token is valid! Logged in as ${username}`);
         await onboardingManager.saveStepData('token', tokenData);
         // Persist the token first so any calls which read it
         // can rely on the token being present. This reduces the chance of
@@ -550,10 +572,10 @@ function setupTokenStepListeners() {
           // Silently handle prefetch errors - not critical
         }
       } else {
-        tokenStatus.innerHTML = '<div class="status-error">✗ Invalid token</div>';
+        tokenStatus.innerHTML = getStatusMarkup('error', '✗ Invalid token');
       }
     } catch (_error) {
-      tokenStatus.innerHTML = '<div class="status-error">Error validating token</div>';
+      tokenStatus.innerHTML = getStatusMarkup('error', 'Error validating token');
     }
   });
 }
@@ -567,21 +589,7 @@ async function loadPopularRepos() {
 
     if (popularRepos && popularRepos.length > 0) {
       // Success: render the repos
-      repoSuggestions.innerHTML = popularRepos.map(repo => `
-        <div class="repo-suggestion" data-owner="${repo.owner.login}" data-name="${repo.name}">
-          <div class="repo-info">
-            <div class="repo-name">
-              <span class="repo-owner">${repo.owner.login}</span>/<span class="repo-name-text">${repo.name}</span>
-            </div>
-            <div class="repo-desc">${repo.description || `${repo.language || 'Popular'} project`}</div>
-            <div class="repo-meta">
-              ${repo.language ? `<span class="repo-language">${repo.language}</span>` : ''}
-              ${repo.stargazers_count ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${repo.stargazers_count.toLocaleString()}</span>` : ''}
-            </div>
-          </div>
-          <button class="add-repo-btn" data-repo="${repo.owner.login}/${repo.name}">+</button>
-        </div>
-      `).join('');
+      repoSuggestions.innerHTML = popularRepos.map(renderRepoSuggestion).join('');
 
       // Re-attach event listeners to new buttons
       attachRepoButtonListeners();
@@ -685,7 +693,7 @@ function setupReposStepListeners() {
     let repo = manualInput.value.trim();
     if (!repo) return;
 
-    repoStatus.innerHTML = '<div class="status-loading">Validating repository...</div>';
+    repoStatus.innerHTML = getStatusMarkup('loading', 'Validating repository...');
 
     try {
       // Get token for API calls
@@ -704,14 +712,14 @@ function setupReposStepListeners() {
           repo = npmResult.repo;
           manualInput.value = repo; // Update input to show GitHub repo
         } else {
-          repoStatus.innerHTML = `<div class="status-error">${npmResult.error}</div>`;
+          repoStatus.innerHTML = getStatusMarkup('error', npmResult.error);
           return;
         }
       }
 
       // Validate owner/repo format
       if (!repo.includes('/') || repo.split('/').length !== 2 || !repo.split('/')[0] || !repo.split('/')[1]) {
-        repoStatus.innerHTML = '<div class="status-error">Invalid format. Use: owner/repo, GitHub URL, or npm package</div>';
+        repoStatus.innerHTML = getStatusMarkup('error', 'Invalid format. Use: owner/repo, GitHub URL, or npm package');
         return;
       }
 
@@ -746,19 +754,19 @@ function setupReposStepListeners() {
           await chrome.storage.sync.set({ watchedRepos: repos });
         }
         manualInput.value = '';
-        repoStatus.innerHTML = '<div class="status-success">✓ Repository added</div>';
+        repoStatus.innerHTML = getStatusMarkup('success', '✓ Repository added');
       } else {
         if (response.status === 404) {
-          repoStatus.innerHTML = '<div class="status-error">Repository not found on GitHub</div>';
+          repoStatus.innerHTML = getStatusMarkup('error', 'Repository not found on GitHub');
         } else if (response.status === 403) {
-          repoStatus.innerHTML = '<div class="status-error">GitHub API rate limit exceeded. Try again later.</div>';
+          repoStatus.innerHTML = getStatusMarkup('error', 'GitHub API rate limit exceeded. Try again later.');
         } else {
-          repoStatus.innerHTML = `<div class="status-error">Error validating repository (${response.status})</div>`;
+          repoStatus.innerHTML = getStatusMarkup('error', `Error validating repository (${response.status})`);
         }
       }
     } catch (error) {
       console.error('Error adding repository:', error);
-      repoStatus.innerHTML = '<div class="status-error">Network error. Please check your connection.</div>';
+      repoStatus.innerHTML = getStatusMarkup('error', 'Network error. Please check your connection.');
     }
   };
 

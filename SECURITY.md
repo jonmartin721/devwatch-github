@@ -28,23 +28,22 @@ These are better suited for regular issues:
 - UI/UX problems
 - Performance issues
 
-## Security Measures
+## Current Security Posture
 
-The extension implements several security practices:
+The extension includes several concrete protections, but this project has not been through a formal external security audit.
 
 ### Token Storage
-- GitHub tokens are encrypted using AES-GCM with 256-bit keys
-- Stored in Chrome's secure storage API
+- GitHub tokens are encrypted before they are written to local extension storage
+- A decrypted copy may be cached in session storage while the extension is running
 - Never transmitted to third-party servers
-- Session caching for performance without compromising security
 
 ### Content Security Policy
-- Strict CSP prevents unauthorized script execution
-- Only allows connections to GitHub API and npm registry
+- Extension pages use a CSP that limits script sources and network destinations
+- The current policy allows connections to the GitHub API and npm registry
 - No inline scripts or eval()
 
 ### Input Validation
-- All user inputs are sanitized
+- The codebase includes sanitization for rendered content
 - URLs are validated before opening
 - Repository names are validated against GitHub's format
 
@@ -55,7 +54,7 @@ The extension implements several security practices:
 
 ## Supported Versions
 
-Currently supporting version 1.0.0. Security updates will be released as patch versions (e.g., 1.0.1).
+Security fixes are targeted at the current `1.0.x` release line.
 
 ## Disclosure Policy
 

@@ -1,6 +1,6 @@
 # GitHub Devwatch for Chrome
 
-Track GitHub activity across multiple repos. Get notifications for new PRs, issues, and releases without constantly refreshing.
+Monitor pull requests, issues, and releases across multiple GitHub repositories from a Chrome extension. It keeps a local activity feed, badge counts, and optional browser notifications without adding another hosted service to the workflow.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web_Store-green?logo=google-chrome)](https://chromewebstore.google.com/detail/github-devwatch/dbgjgcaphfcfgppicmbiafcgcabikjch)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -9,13 +9,13 @@ Track GitHub activity across multiple repos. Get notifications for new PRs, issu
 
 ## Key Features
 
-- **Guided Setup** - 2-minute wizard walks you through token creation and repo selection
+- **Guided Setup** - Built-in setup flow for token creation and repository selection
 - **Browser Notifications** - Get notified about new PRs, issues, and releases
 - **Multi-Repo Monitoring** - Watch up to 50 repositories from one interface
 - **Configurable Updates** - Check every 5, 15, 30, or 60 minutes
 - **Activity Filtering** - Search and filter by repo and activity type
 - **Badge Counts** - Unread count on the extension icon
-- **Secure & Private** - Your token stays local, zero third-party data sharing
+- **Direct API Access** - Talks to GitHub directly, with optional npm registry lookups only when you use package-name import
 
 <div align="center">
   <img src="screenshots/full-tagline.png" alt="GitHub Devwatch - Track your repositories" width="800">
@@ -52,12 +52,10 @@ cd devwatch-github
 
 ### First-Time Setup
 
-An interactive wizard guides you through:
+The built-in setup flow walks you through:
 1. Create a GitHub token
 2. Add repositories to watch
 3. Choose activity types (PRs, Issues, Releases)
-
-Takes about 2 minutes. No configuration knowledge needed.
 
 <div align="center">
   <img src="screenshots/onboarding-welcome.png" alt="Interactive setup wizard welcome screen" width="500">
@@ -95,23 +93,20 @@ Here's what using the extension looks like day-to-day:
 
 The extension keeps up to 2000 items in your local history, so you can always check something you saw earlier. Badge count updates automatically as you read items.
 
-## Accessibility
+## Accessibility Notes
 
-Full WCAG 2.1 Level A compliance with keyboard navigation, screen reader support, and ARIA landmarks.
+The UI includes keyboard navigation, visible focus styles, semantic controls, and ARIA labeling in key flows. The test suite also includes automated axe-core checks and keyboard-focused UI tests.
 
-**Keyboard Shortcuts**: R (refresh), S (search), A (archive), Escape (close), Arrow keys (navigate tabs)
+That said, this project has not gone through a formal accessibility audit or documented screen reader certification. If you run into an accessibility issue, please [open an issue](https://github.com/jonmartin721/devwatch-github/issues).
 
-Tested with NVDA/JAWS screen readers and axe-core. [Report accessibility issues](https://github.com/jonmartin721/devwatch-github/issues).
+## Privacy & Security Notes
 
-## Privacy & Security
+The extension talks directly to GitHub's API and does not use a separate analytics or sync backend. It stores settings and cached activity in Chrome extension storage, and the current build encrypts the GitHub token before persisting it locally while keeping a decrypted session copy available at runtime.
 
-Your GitHub token is encrypted and stays on your machine. The extension only communicates with GitHub's API - no analytics, no tracking, no third-party services.
-
-- **Encrypted Storage** - Tokens use AES-GCM encryption in Chrome's secure storage
-- **Local Only** - All data stays on your machine, never sent to third parties
-- **GitHub API Only** - No external servers or analytics services
-- **Minimal Permissions** - Token used exclusively for fetching repository activity
-- **Open Source** - Review the entire codebase, raise issues, or submit fixes
+- **Direct network access** - Requests go to `api.github.com`, plus `registry.npmjs.org` only when you use package-name lookup
+- **Scoped browser permissions** - The manifest asks for `storage`, `alarms`, and `notifications`
+- **Defensive client code** - The codebase includes URL validation, content security policy rules, and sanitization tests
+- **No formal audit claim** - These measures improve the local handling of data, but they are not a substitute for securing the browser profile and GitHub account you use with the extension
 
 ## Data Storage
 
@@ -164,8 +159,15 @@ The extension defaults to checking every 15 minutes. You can change this to 5, 3
 
 ### Running Tests
 ```bash
+npm run lint
+npm run typecheck
 npm test
+npm run build
 ```
+
+The automated checks cover shared logic, UI behavior, and a range of mocked extension flows. They do not replace manual testing in Chrome for permissions, service worker lifecycle behavior, or end-to-end interactions against live GitHub data.
+
+Jest enforces minimum global coverage thresholds of 47% lines, 46% branches, and 44% functions. That is a floor for the suite, not a claim of exhaustive coverage.
 
 ### Local Development
 1. Clone the repository
@@ -192,7 +194,7 @@ Contributions welcome! Submit issues or pull requests. See [CONTRIBUTING.md](CON
 
 ## Roadmap
 
-This is a side project for me, so I work on it when time allows - but I'd love to see contributions! Here are some features I'm considering:
+This is an actively maintained side project. Some features under consideration:
 - **Comment notifications** - Track new comments on issues and PRs
 - **Mention tracking** - Get notified when you're mentioned
 - **Multiple GitHub accounts** - Switch between different accounts
@@ -216,11 +218,5 @@ Copyright (c) 2025 Jonathan Martin
 ---
 
 <div align="center">
-
-[⭐ Star this repo](https://github.com/jonmartin721/devwatch-github) if you find it useful!
-
-<br><br>
-
-<img src="screenshots/logo-tagline.png" alt="GitHub Devwatch - Track changes fast" width="300">
-
+  <img src="screenshots/logo-tagline.png" alt="GitHub Devwatch logo" width="300">
 </div>
