@@ -6,7 +6,7 @@ const notifications = NotificationManager.getInstance();
 
 export async function clearToken() {
   if (!confirm('Are you sure you want to clear your GitHub token?')) {
-    return;
+    return false;
   }
 
   document.getElementById('githubToken').value = '';
@@ -25,10 +25,12 @@ export async function clearToken() {
   await clearStoredToken();
 
   notifications.info('GitHub token cleared successfully');
+  return true;
 }
 
-export async function validateToken(token, toastManager) {
+export async function validateToken(token, toastManager, options = {}) {
   const statusEl = document.getElementById('tokenStatus');
+  const shouldApplyResult = options.shouldApplyResult ?? (() => true);
 
   try {
     const response = await fetch('https://api.github.com/user', {
@@ -37,6 +39,10 @@ export async function validateToken(token, toastManager) {
 
     if (response.ok) {
       const user = await response.json();
+      if (!shouldApplyResult()) {
+        return { isValid: true, user: user.login };
+      }
+
       statusEl.textContent = `✓ Valid (${user.login})`;
       statusEl.className = 'token-status valid';
       document.getElementById('clearTokenBtn').style.display = 'block';
@@ -59,7 +65,12 @@ export async function validateToken(token, toastManager) {
       }
 
       toastManager.isManualTokenEntry = false;
+      return { isValid: true, user: user.login };
     } else if (response.status === 401) {
+      if (!shouldApplyResult()) {
+        return { isValid: false, reason: 'invalid' };
+      }
+
       statusEl.textContent = '✗ Invalid token';
       statusEl.className = 'token-status invalid';
       document.getElementById('clearTokenBtn').style.display = 'none';
@@ -78,7 +89,12 @@ export async function validateToken(token, toastManager) {
         notifications.error('Invalid GitHub token. Please check your token and try again.');
         toastManager.lastInvalidToken = token;
       }
+      return { isValid: false, reason: 'invalid' };
     } else {
+      if (!shouldApplyResult()) {
+        return { isValid: false, reason: 'http', status: response.status };
+      }
+
       statusEl.textContent = `✗ Error (${response.status})`;
       statusEl.className = 'token-status invalid';
       document.getElementById('clearTokenBtn').style.display = 'none';
@@ -97,8 +113,13 @@ export async function validateToken(token, toastManager) {
         notifications.error(`GitHub API error (${response.status}). Please try again later.`);
         toastManager.lastApiError = response.status;
       }
+      return { isValid: false, reason: 'http', status: response.status };
     }
   } catch (_error) {
+    if (!shouldApplyResult()) {
+      return { isValid: false, reason: 'network' };
+    }
+
     statusEl.textContent = '✗ Network error';
     statusEl.className = 'token-status invalid';
     document.getElementById('clearTokenBtn').style.display = 'none';
@@ -112,5 +133,6 @@ export async function validateToken(token, toastManager) {
     document.getElementById('importReposSection').style.display = 'none';
 
     notifications.error('Network error while validating token. Please check your connection and try again.');
+    return { isValid: false, reason: 'network' };
   }
 }

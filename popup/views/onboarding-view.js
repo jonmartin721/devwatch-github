@@ -189,7 +189,7 @@ async function renderTokenStep() {
       <div class="token-instructions">
         <h3>Quick setup:</h3>
         <ol>
-          <li><a href="${tokenUrl}" target="_blank" class="token-link">Create a GitHub token</a></li>
+          <li><a href="${tokenUrl}" target="_blank" rel="noopener noreferrer" class="token-link">Create a GitHub token</a></li>
           <li>Copy the generated token</li>
           <li>Paste it below</li>
         </ol>
