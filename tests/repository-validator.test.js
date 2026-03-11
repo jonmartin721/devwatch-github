@@ -139,7 +139,7 @@ describe('repository-validator', () => {
       const result = await validateRepository('test/repo');
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Authentication failed');
+      expect(result.error).toContain('GitHub sign-in expired or was revoked');
     });
 
     test('handles unknown API errors', async () => {

@@ -6,7 +6,7 @@ global.chrome = {
     sync: {
       get: jest.fn((keys, callback) => {
         // Always call callback if provided
-        if (callback) callback({ githubToken: null });
+        if (callback) callback({});
       }),
       set: jest.fn((items, callback) => {
         // Always call callback if provided
@@ -180,12 +180,11 @@ describe('Options Page - Repository Management', () => {
 
   describe('validateRepo', () => {
     beforeEach(() => {
-      // Mock token storage for validateRepo tests
-      // Mock session storage to return token (getToken checks session first)
+      // Mock auth session storage for validateRepo tests
       chrome.storage.session.get.mockImplementation((keys, callback) => {
         const result = {};
-        if (keys.includes('githubToken')) {
-          result.githubToken = 'test-token';
+        if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
+          result.githubAuthSession = { accessToken: 'test-token' };
         }
         if (callback) callback(result);
         return Promise.resolve(result);
@@ -299,7 +298,7 @@ describe('Options Page - Repository Management', () => {
       const result = await validateRepo('some/repo');
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Authentication failed');
+      expect(result.error).toContain('GitHub sign-in expired or was revoked');
     });
 
     test('provides default values for missing metadata', async () => {

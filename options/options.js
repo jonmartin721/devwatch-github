@@ -815,7 +815,7 @@ async function validateRepo(repo) {
   const githubToken = await getAccessToken();
 
   if (!githubToken) {
-    return { valid: false, error: 'No GitHub token found. Please add a token first.' };
+    return { valid: false, error: 'No GitHub connection found. Connect GitHub first.' };
   }
 
   // First do basic validation
@@ -1044,7 +1044,7 @@ async function clearAllData() {
 async function resetSettings() {
   // Show confirmation dialog
   const confirmed = confirm(
-    'This will reset ALL settings to defaults and clear your GitHub token and repositories.\n\nThis action cannot be undone. Are you sure?'
+    'This will reset ALL settings to defaults and clear your GitHub connection and repositories.\n\nThis action cannot be undone. Are you sure?'
   );
 
   if (!confirmed) {

@@ -53,7 +53,7 @@ export async function handleImportFile(event, loadSettingsCallback) {
     }
 
     const confirmed = confirm(
-      'This will replace your current settings (except GitHub token). Continue?'
+      'This will replace your current settings (except your GitHub connection). Continue?'
     );
 
     if (!confirmed) {

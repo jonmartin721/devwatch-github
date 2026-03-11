@@ -56,7 +56,7 @@ describe('GitHub API Helpers', () => {
         statusText: 'Unauthorized'
       };
 
-      expect(() => handleApiResponse(mockResponse, 'owner/repo')).toThrow('Invalid GitHub token');
+      expect(() => handleApiResponse(mockResponse, 'owner/repo')).toThrow('GitHub sign-in expired or was revoked');
     });
 
     it('should throw error for 403 rate limit', () => {

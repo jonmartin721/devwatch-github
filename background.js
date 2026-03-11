@@ -86,7 +86,7 @@ async function checkGitHubActivity() {
     ]);
 
     if (!githubToken) {
-      console.warn('[DevWatch] No GitHub token found. Please add a token in settings.');
+      console.warn('[DevWatch] No GitHub connection found. Please connect GitHub in settings.');
       return;
     }
 
@@ -286,7 +286,7 @@ async function fetchRepoActivity(repo, token, since, filters) {
     // Store error for user display but don't crash
     let userMessage = 'Unable to fetch repository activity';
     if (error.message.includes('401')) {
-      userMessage = 'Authentication failed. Please check your GitHub token.';
+      userMessage = 'GitHub sign-in expired or was revoked. Reconnect GitHub in settings.';
     } else if (error.message.includes('403')) {
       userMessage = 'Access denied or rate limit exceeded.';
     } else if (error.message.includes('404')) {

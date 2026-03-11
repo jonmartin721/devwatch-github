@@ -242,7 +242,7 @@ describe('import-controller', () => {
       await openImportModal('starred', []);
 
       expect(errorState.style.display).toBe('block');
-      expect(errorMessage.textContent).toContain('Invalid GitHub token');
+      expect(errorMessage.textContent).toContain('GitHub sign-in expired or was revoked');
     });
 
     test('handles API error with 403 status', async () => {

@@ -24,7 +24,7 @@ export function handleApiResponse(response, repo = '') {
   if (!response.ok) {
     let error;
     if (response.status === 401) {
-      error = new Error('Invalid GitHub token');
+      error = new Error('GitHub sign-in expired or was revoked');
     } else if (response.status === 403) {
       error = new Error('Rate limit exceeded');
     } else if (response.status === 404) {

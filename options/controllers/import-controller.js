@@ -162,7 +162,7 @@ async function fetchReposFromGitHub(type, token) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error('Invalid GitHub token');
+        throw new Error('GitHub sign-in expired or was revoked');
       } else if (response.status === 403) {
         throw new Error('Rate limit exceeded or insufficient permissions');
       } else {

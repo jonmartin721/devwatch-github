@@ -125,20 +125,11 @@ export class OnboardingManager {
 
     async getPopularRepos() {
         try {
-            // Try to fetch trending repositories from GitHub API
-            // Get stored token (if the user entered one) and include it to
-            // improve rate limits and ensure access to any private data the
-            // token allows. We intentionally avoid setting the User-Agent
-            // header in browser fetch to avoid disallowed header errors.
-            // Prefer token stored in onboarding step data (user-entered token)
-            // so that prefetching works even if storage hasn't been updated yet
-            // by UI code that persists the token. Fallback to getToken() to
-            // support tokens set outside onboarding.
-            const tokenStep = await this.getStepData('token');
+            // Try to fetch trending repositories from GitHub API using the
+            // current authenticated session when it is available.
             const storedToken = await getAccessToken();
-            const githubToken = tokenStep?.token || storedToken;
-            const headers = githubToken
-                ? createHeaders(githubToken)
+            const headers = storedToken
+                ? createHeaders(storedToken)
                 : { 'Accept': 'application/vnd.github.v3+json' };
 
             const apiUrl = 'https://api.github.com/search/repositories?q=stars:1000..50000&sort=stars&order=desc&per_page=20';

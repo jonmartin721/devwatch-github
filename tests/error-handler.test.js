@@ -72,9 +72,9 @@ describe('Error Handler', () => {
       const error = getUserFriendlyError(new Error('Invalid token'));
 
       expect(error.type).toBe('auth');
-      expect(error.title).toBe('Token Expired');
-      expect(error.message).toContain('expired or is invalid');
-      expect(error.action).toBe('Go to Settings');
+      expect(error.title).toBe('GitHub Sign-In Needed');
+      expect(error.message).toContain('expired or was revoked');
+      expect(error.action).toBe('Open Settings');
     });
 
     it('should return user-friendly network error', () => {

@@ -167,7 +167,7 @@ describe('Onboarding - token persistence', () => {
     expect(document.getElementById('tokenStatus').textContent).toBe('');
   });
 
-  test('getPopularRepos uses stored token in request', async () => {
+  test('getPopularRepos uses stored auth session in request', async () => {
     const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -179,29 +179,29 @@ describe('Onboarding - token persistence', () => {
 
     global.fetch = mockFetch;
 
-    // Set a token in local storage
-    _localStorage.githubToken = 'ghp_TEST_TOKEN';
+    // Set an auth session in storage
+    _localStorage.githubAuthSession = {
+      accessToken: 'gho_TEST_TOKEN',
+      authType: 'oauth_device'
+    };
 
     const manager = new OnboardingManager();
-    // Clear any step token so that the function picks up chrome.storage.local token
+    // Clear any onboarding step state so the function uses the active auth session
     await manager.saveStepData('token', {});
     const result = await manager.getPopularRepos();
 
     // Ensure fetch was called with Authorization header
     expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers['Authorization']).toBe('Bearer ghp_TEST_TOKEN');
+    expect(options.headers['Authorization']).toBe('Bearer gho_TEST_TOKEN');
 
     // Should return at least 1 repo from our mocked response
     expect(result.length).toBeGreaterThan(0);
     expect(result[0].name).toBe('repo');
   });
 
-  test('getPopularRepos uses onboarding step token when storage missing', async () => {
+  test('getPopularRepos falls back to unauthenticated headers when no auth session exists', async () => {
     const manager = new OnboardingManager();
-
-    // Save token inside onboarding step data, not in chrome.local
-    await manager.saveStepData('token', { token: 'ghp_STEP_TOKEN' });
 
     const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -218,7 +218,8 @@ describe('Onboarding - token persistence', () => {
 
     expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers['Authorization']).toBe('Bearer ghp_STEP_TOKEN');
+    expect(options.headers['Authorization']).toBeUndefined();
+    expect(options.headers['Accept']).toBe('application/vnd.github.v3+json');
     expect(result.length).toBeGreaterThan(0);
   });
 

@@ -87,12 +87,12 @@ export const FEATURES = {
 // Error Messages
 export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Network connection error. Please check your internet connection.',
-  AUTH_FAILED: 'Authentication failed. Please check your GitHub token.',
+  AUTH_FAILED: 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.',
   RATE_LIMITED: 'Rate limit exceeded. Please wait before making more requests.',
   NOT_FOUND: 'Repository not found or access denied.',
   FORBIDDEN: 'Access denied. Please check your permissions.',
   SERVER_ERROR: 'GitHub API is experiencing issues. Please try again later.',
-  INVALID_TOKEN: 'Invalid GitHub token format.',
+  INVALID_TOKEN: 'GitHub sign-in is no longer valid. Reconnect GitHub and try again.',
   CORS_ERROR: 'CORS error. Please check your browser settings.',
   STORAGE_ERROR: 'Storage error. Please check your browser settings.',
   VALIDATION_ERROR: 'Invalid input. Please check your repository format.',

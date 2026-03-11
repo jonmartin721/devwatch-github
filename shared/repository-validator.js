@@ -24,7 +24,7 @@ export function isValidRepoFormat(repo) {
  * 3. Return basic metadata needed for display
  *
  * @param {string} repo - Repository identifier in format "owner/repo"
- * @param {string} [token] - Optional GitHub token for authentication
+ * @param {string} [token] - Optional GitHub access token for authentication
  * @returns {Promise<Object>} Validation result
  * @property {boolean} valid - Whether repository is valid
  * @property {Object|null} metadata - Basic repository metadata if valid
@@ -89,7 +89,7 @@ export async function validateRepository(repo, token = null) {
       case 401:
         return {
           valid: false,
-          error: 'Authentication failed. Check your GitHub token.'
+          error: 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.'
         };
       default:
         return {
@@ -117,7 +117,7 @@ export async function validateRepository(repo, token = null) {
  * This can be used when more detailed information is needed
  *
  * @param {string} repo - Repository identifier in format "owner/repo"
- * @param {string} [token] - Optional GitHub token for authentication
+ * @param {string} [token] - Optional GitHub access token for authentication
  * @returns {Promise<Object>} Enhanced validation result with additional metadata
  */
 export async function validateRepositoryEnhanced(repo, token = null) {
@@ -174,7 +174,7 @@ export async function validateRepositoryEnhanced(repo, token = null) {
 /**
  * Batch validate multiple repositories
  * @param {Array<string>} repos - Array of repository strings
- * @param {string} [token] - Optional GitHub token for authentication
+ * @param {string} [token] - Optional GitHub access token for authentication
  * @param {Function} [progressCallback] - Optional progress callback
  * @returns {Promise<Array>} Array of validation results
  */

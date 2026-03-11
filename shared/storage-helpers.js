@@ -253,7 +253,7 @@ export async function getAccessToken() {
     return authSession.accessToken;
   }
 
-  return getToken();
+  return null;
 }
 
 /**
