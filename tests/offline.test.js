@@ -47,12 +47,10 @@ describe('Offline Manager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     navigator.onLine = true;
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    console.warn.mockRestore();
     console.log.mockRestore();
   });
 
@@ -213,6 +211,7 @@ describe('Offline Manager', () => {
     });
 
     it('should handle storage errors gracefully', async () => {
+      allowUnexpectedConsole('warn');
       chrome.storage.local.set.mockRejectedValue(new Error('Storage full'));
       const data = { activities: [] };
 
@@ -260,6 +259,7 @@ describe('Offline Manager', () => {
     });
 
     it('should handle storage errors gracefully', async () => {
+      allowUnexpectedConsole('warn');
       chrome.storage.local.get.mockRejectedValue(new Error('Storage error'));
 
       const result = await getCachedData('test_key');
@@ -294,6 +294,7 @@ describe('Offline Manager', () => {
     });
 
     it('should handle storage errors gracefully', async () => {
+      allowUnexpectedConsole('warn');
       chrome.storage.local.get.mockRejectedValue(new Error('Storage error'));
 
       await clearExpiredCache();

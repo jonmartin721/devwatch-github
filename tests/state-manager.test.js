@@ -326,6 +326,7 @@ describe('state-manager', () => {
     });
 
     test('handles callback errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       const errorCallback = jest.fn(() => {
         throw new Error('Test error');
       });

@@ -61,7 +61,8 @@ export default [
         exports: "readonly",
 
         // Test globals
-        global: "writable"
+        global: "writable",
+        allowUnexpectedConsole: "readonly"
       }
     },
     rules: {

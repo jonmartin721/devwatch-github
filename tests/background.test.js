@@ -845,12 +845,13 @@ describe('Background Service Worker', () => {
     });
 
     test('continues with active snoozes even if storage write fails', async () => {
+      allowUnexpectedConsole('error');
       const now = Date.now();
       const activeSnooze = { repo: 'active/repo', expiresAt: now + 3600000 };
       const expiredSnooze = { repo: 'expired/repo', expiresAt: now - 1000 };
 
       // Mock storage failure
-      chrome.storage.sync.set.mockImplementation(() => {
+      chrome.storage.sync.set.mockImplementationOnce(() => {
         throw new Error('Storage quota exceeded');
       });
 
@@ -953,6 +954,16 @@ describe('Background Service Worker', () => {
         callback(result);
       });
 
+      chrome.storage.session.get.mockImplementation((keys, callback) => {
+        const result = {};
+        if (Array.isArray(keys) && keys.includes('githubToken')) {
+          result.githubToken = mockToken;
+        } else if (keys === 'githubToken') {
+          result.githubToken = mockToken;
+        }
+        callback(result);
+      });
+
       chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys)) {
@@ -979,7 +990,8 @@ describe('Background Service Worker', () => {
     });
 
     test('returns early if no token found', async () => {
-      chrome.storage.local.get.mockImplementation((keys, callback) => {
+      allowUnexpectedConsole('warn');
+      chrome.storage.session.get.mockImplementation((keys, callback) => {
         const result = {};
         if (typeof keys === 'string' && keys === 'githubToken') {
           result.githubToken = null;
@@ -996,6 +1008,7 @@ describe('Background Service Worker', () => {
     });
 
     test('returns early if no watched repos', async () => {
+      allowUnexpectedConsole('warn');
       chrome.storage.sync.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys)) {
@@ -1032,6 +1045,7 @@ describe('Background Service Worker', () => {
     });
 
     test('handles errors gracefully without crashing', async () => {
+      allowUnexpectedConsole('error');
       fetch.mockRejectedValue(new Error('Network error'));
 
       // Should not throw

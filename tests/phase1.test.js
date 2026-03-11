@@ -166,6 +166,7 @@ describe('Error Display', () => {
   });
 
   test('shows recent errors', () => {
+    allowUnexpectedConsole('error');
     const error = {
       message: 'Invalid GitHub token',
       repo: 'facebook/react',
@@ -181,6 +182,7 @@ describe('Error Display', () => {
   });
 
   test('displays all errors when shown', () => {
+    allowUnexpectedConsole('error');
     const error = {
       message: 'Old error'
     };

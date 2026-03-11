@@ -167,7 +167,6 @@ describe('Options Main Functions', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
-
   describe('formatNumber', () => {
     test('formats numbers under 1000 as-is', () => {
       expect(formatNumber(0)).toBe('0');
@@ -578,6 +577,7 @@ describe('Options Main Functions', () => {
     });
 
     test('does not throw error when cleanup fails', async () => {
+      allowUnexpectedConsole('error');
       // Mock a Chrome storage error by not calling the callback properly
       global.chrome.storage.local.get = jest.fn(() => {
         throw new Error('Storage error');

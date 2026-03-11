@@ -17,9 +17,6 @@ describe('Token Controller', () => {
     // Chrome mocks are provided by setup.js
     global.confirm = jest.fn(() => true);
     global.fetch = jest.fn();
-    chrome.storage.local.set.mockImplementation((items, callback) => {
-      if (callback) callback();
-    });
   });
 
   test('clearToken does nothing when cancelled', async () => {
@@ -101,7 +98,6 @@ describe('Token Controller', () => {
     expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
     expect(toastManager.lastInvalidToken).toBeUndefined();
   });
-
   test('clearToken clears all fields when confirmed', async () => {
     global.confirm.mockReturnValue(true);
 

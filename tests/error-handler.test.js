@@ -23,11 +23,6 @@ describe('Error Handler', () => {
     jest.clearAllMocks();
     clearError('errorMessage');
     clearError('statusMessage');
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    console.error.mockRestore();
   });
 
   describe('classifyError', () => {
@@ -148,6 +143,7 @@ describe('Error Handler', () => {
     });
 
     it('should display error message in element', () => {
+      allowUnexpectedConsole('error');
       const error = new Error('Test error');
       showError('errorMessage', error);
 
@@ -161,6 +157,7 @@ describe('Error Handler', () => {
     });
 
     it('should auto-hide after duration', () => {
+      allowUnexpectedConsole('error');
       const error = new Error('Test error');
       showError('errorMessage', error, null, {}, 1000);
 
@@ -172,6 +169,7 @@ describe('Error Handler', () => {
     });
 
     it('should not auto-hide if duration is 0', () => {
+      allowUnexpectedConsole('error');
       const error = new Error('Test error');
       showError('errorMessage', error, null, {}, 0);
 
@@ -183,6 +181,7 @@ describe('Error Handler', () => {
     });
 
     it('should include dismiss button', () => {
+      allowUnexpectedConsole('error');
       const error = new Error('Invalid token');
       showError('errorMessage', error);
 
@@ -193,6 +192,7 @@ describe('Error Handler', () => {
     });
 
     it('should log technical details', () => {
+      allowUnexpectedConsole('error');
       const error = new Error('Technical details');
       showError('errorMessage', error);
 
@@ -208,6 +208,7 @@ describe('Error Handler', () => {
 
   describe('clearError', () => {
     it('should clear error message', () => {
+      allowUnexpectedConsole('error');
       // First show an error
       showError('errorMessage', new Error('test'));
       let element = document.getElementById('errorMessage');

@@ -2,7 +2,6 @@
  * GitHub API helper functions tests
  */
 
-import { jest } from '@jest/globals';
 import {
   createHeaders,
   handleApiResponse,
@@ -119,14 +118,6 @@ describe('GitHub API Helpers', () => {
   });
 
   describe('mapActivity', () => {
-    beforeEach(() => {
-      jest.spyOn(console, 'error').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      console.error.mockRestore();
-    });
-
     describe('Pull Requests', () => {
       it('should map pull request with all fields', () => {
         const prItem = {
