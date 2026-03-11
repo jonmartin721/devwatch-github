@@ -16,9 +16,12 @@ describe('Options Main Functions', () => {
   beforeEach(() => {
     // Setup complete DOM structure for options page
     document.body.innerHTML = `
-      <input id="githubToken" type="password" />
+      <button id="connectGitHubBtn">Connect GitHub</button>
+      <div id="deviceCodeSection" class="hidden" style="display: none;">
+        <input id="githubToken" type="text" />
+      </div>
       <div id="tokenStatus" class="token-status"></div>
-      <button id="clearTokenBtn">Clear</button>
+      <button id="clearTokenBtn">Disconnect</button>
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
@@ -126,6 +129,9 @@ describe('Options Main Functions', () => {
       },
       runtime: {
         sendMessage: jest.fn(() => Promise.resolve())
+      },
+      tabs: {
+        create: jest.fn()
       }
     };
 
@@ -295,8 +301,9 @@ describe('Options Main Functions', () => {
       expect(shouldClearStoredToken({ isValid: true, user: 'testuser' })).toBe(false);
     });
 
-    test('restores authenticated UI when a stored token still exists', () => {
+    test('restores authenticated UI when a stored session exists', () => {
       const clearBtn = document.getElementById('clearTokenBtn');
+      const connectBtn = document.getElementById('connectGitHubBtn');
       const repoInput = document.getElementById('repoInput');
       const addBtn = document.getElementById('addRepoBtn');
       const helpText = document.getElementById('repoHelpText');
@@ -311,6 +318,7 @@ describe('Options Main Functions', () => {
 
       syncTokenUiWithStoredCredential(true);
 
+      expect(connectBtn.textContent).toBe('Reconnect GitHub');
       expect(clearBtn.style.display).toBe('block');
       expect(repoInput.disabled).toBe(false);
       expect(addBtn.disabled).toBe(false);
@@ -321,6 +329,7 @@ describe('Options Main Functions', () => {
 
     test('restores unauthenticated UI when no stored token is available', () => {
       const clearBtn = document.getElementById('clearTokenBtn');
+      const connectBtn = document.getElementById('connectGitHubBtn');
       const repoInput = document.getElementById('repoInput');
       const addBtn = document.getElementById('addRepoBtn');
       const helpText = document.getElementById('repoHelpText');
@@ -328,17 +337,23 @@ describe('Options Main Functions', () => {
 
       syncTokenUiWithStoredCredential(false);
 
+      expect(connectBtn.textContent).toBe('Connect GitHub');
       expect(clearBtn.style.display).toBe('none');
       expect(repoInput.disabled).toBe(true);
       expect(addBtn.disabled).toBe(true);
-      expect(helpText.textContent).toContain('Add a valid GitHub token above');
+      expect(helpText.textContent).toContain('Connect GitHub above');
       expect(importSection.classList.contains('hidden')).toBe(true);
       expect(importSection.style.display).toBe('none');
     });
 
-    test('loadSettings preserves stored token on transient validation failures', async () => {
+    test('loadSettings restores a stored auth session', async () => {
       chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubToken: 'persisted-token' });
+        callback({
+          githubAuthSession: {
+            accessToken: 'persisted-token',
+            username: 'persisted-user'
+          }
+        });
       });
       chrome.storage.sync.get.mockImplementation((keys, callback) => {
         const result = Array.isArray(keys) && keys.includes('snoozedRepos')
@@ -350,168 +365,76 @@ describe('Options Main Functions', () => {
         }
         return Promise.resolve(result);
       });
-      global.fetch.mockResolvedValue({
-        ok: false,
-        status: 500
-      });
 
       await loadSettings();
 
-      expect(document.getElementById('githubToken').value).toBe('persisted-token');
-      expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
-      expect(document.getElementById('repoInput').disabled).toBe(true);
-      expect(chrome.storage.local.set).not.toHaveBeenCalledWith(
-        expect.objectContaining({ encryptedGithubToken: null }),
-        expect.any(Function)
-      );
+      expect(document.getElementById('tokenStatus').textContent).toContain('persisted-user');
+      expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
+      expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+      expect(document.getElementById('repoInput').disabled).toBe(false);
     });
 
-    test('loadSettings clears stored token when validation reports invalid credentials', async () => {
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubToken: 'expired-token' });
-      });
-      chrome.storage.sync.get.mockImplementation((keys, callback) => {
-        const result = Array.isArray(keys) && keys.includes('snoozedRepos')
-          ? { snoozedRepos: [] }
-          : {};
-        if (callback) {
-          callback(result);
-          return;
-        }
-        return Promise.resolve(result);
-      });
-      global.fetch.mockResolvedValue({
-        ok: false,
-        status: 401
-      });
-
-      await loadSettings();
-
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ encryptedGithubToken: null }),
-        expect.any(Function)
-      );
-    });
-
-    test('setupEventListeners clears persisted token after the clear action succeeds', async () => {
+    test('setupEventListeners clears persisted auth after the disconnect action succeeds', async () => {
       setupEventListeners();
 
       document.getElementById('clearTokenBtn').click();
       await Promise.resolve();
 
-      expect(chrome.storage.session.remove).toHaveBeenCalledWith(['githubToken'], expect.any(Function));
+      expect(chrome.storage.session.remove).toHaveBeenCalledWith(['githubAuthSession'], expect.any(Function));
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ encryptedGithubToken: null }),
+        expect.objectContaining({ encryptedGithubAuthSession: null }),
         expect.any(Function)
       );
     });
 
-    test('empty token input restores stored-token UI state', async () => {
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubToken: 'persisted-token' });
-      });
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ login: 'persisted-user' })
-      });
-
-      await loadSettings();
+    test('connect button starts the device flow and stores the session', async () => {
       setupEventListeners();
 
-      const tokenInput = document.getElementById('githubToken');
-      tokenInput.value = '';
-      tokenInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
-      expect(document.getElementById('repoInput').disabled).toBe(false);
-    });
-
-    test('token input persists newly validated replacement tokens', async () => {
-      jest.useFakeTimers();
-      setupEventListeners();
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ login: 'new-user' })
-      });
-
-      const tokenInput = document.getElementById('githubToken');
-      tokenInput.value = 'new-token';
-      tokenInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      await jest.advanceTimersByTimeAsync(500);
-      await Promise.resolve();
-
-      expect(chrome.storage.session.set).toHaveBeenCalledWith(
-        { githubToken: 'new-token' },
-        expect.any(Function)
-      );
-      expect(chrome.storage.local.set).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ encryptedGithubToken: expect.any(Object) }),
-        expect.any(Function)
-      );
-    });
-
-    test('token input clears persisted credentials after confirmed invalid replacement', async () => {
-      jest.useFakeTimers();
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubToken: 'persisted-token' });
-      });
       global.fetch
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ login: 'persisted-user' })
+          text: async () => JSON.stringify({
+            device_code: 'device-code',
+            user_code: 'ABCD-EFGH',
+            verification_uri: 'https://github.com/login/device',
+            expires_in: 900,
+            interval: 0
+          })
         })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 401
-        });
-
-      await loadSettings();
-      setupEventListeners();
-
-      const tokenInput = document.getElementById('githubToken');
-      tokenInput.value = 'expired-token';
-      tokenInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      await jest.advanceTimersByTimeAsync(500);
-      await Promise.resolve();
-
-      expect(chrome.storage.session.remove).toHaveBeenCalledWith(['githubToken'], expect.any(Function));
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ encryptedGithubToken: null }),
-        expect.any(Function)
-      );
-    });
-
-    test('token input keeps repository controls enabled after transient replacement failure', async () => {
-      jest.useFakeTimers();
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubToken: 'persisted-token' });
-      });
-      global.fetch
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ login: 'persisted-user' })
+          text: async () => JSON.stringify({
+            access_token: 'oauth-token',
+            token_type: 'bearer',
+            scope: 'repo read:user'
+          })
         })
         .mockResolvedValueOnce({
-          ok: false,
-          status: 500
+          ok: true,
+          json: async () => ({ login: 'new-user' })
         });
 
-      await loadSettings();
-      setupEventListeners();
-
-      const tokenInput = document.getElementById('githubToken');
-      tokenInput.value = 'replacement-token';
-      tokenInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      await jest.advanceTimersByTimeAsync(500);
+      document.getElementById('connectGitHubBtn').click();
       await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
       expect(document.getElementById('repoInput').disabled).toBe(false);
       expect(document.getElementById('addRepoBtn').disabled).toBe(false);
+      expect(chrome.storage.session.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          githubAuthSession: expect.objectContaining({
+            accessToken: 'oauth-token',
+            username: 'new-user'
+          })
+        }),
+        expect.any(Function)
+      );
+      expect(chrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://github.com/login/device'
+      });
     });
   });
 

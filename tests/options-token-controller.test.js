@@ -1,257 +1,141 @@
-import { jest, describe, test, beforeEach, expect } from '@jest/globals';
+import { jest } from '@jest/globals';
 
-const { clearToken, validateToken } = await import('../options/controllers/token-controller.js');
+const mockCompleteGitHubDeviceAuth = jest.fn();
+const mockClearAuthSession = jest.fn(() => Promise.resolve());
+const mockClearLegacyToken = jest.fn(() => Promise.resolve());
+const mockGetAuthSession = jest.fn(() => Promise.resolve(null));
+const mockSetAuthSession = jest.fn(() => Promise.resolve());
+
+jest.unstable_mockModule('../shared/auth.js', () => ({
+  completeGitHubDeviceAuth: mockCompleteGitHubDeviceAuth
+}));
+
+jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
+  clearAuthSession: mockClearAuthSession,
+  clearToken: mockClearLegacyToken,
+  getAuthSession: mockGetAuthSession,
+  setAuthSession: mockSetAuthSession
+}));
+
+const {
+  applyStoredConnection,
+  clearToken,
+  connectGitHub
+} = await import('../options/controllers/token-controller.js');
 
 describe('Token Controller', () => {
   beforeEach(() => {
     document.body.innerHTML = `
-      <input id="githubToken" type="password" value="test-token" />
+      <button id="connectGitHubBtn">Connect GitHub</button>
+      <button id="clearTokenBtn" style="display: none;">Disconnect</button>
+      <div id="deviceCodeSection" class="hidden" style="display: none;">
+        <input id="githubToken" type="text" value="" />
+      </div>
       <div id="tokenStatus" class="token-status"></div>
-      <button id="clearTokenBtn" style="display: block;">Clear</button>
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
-      <div id="importReposSection" style="display: block;"></div>
+      <div id="importReposSection" class="hidden" style="display: none;"></div>
     `;
 
-    // Chrome mocks are provided by setup.js
+    jest.clearAllMocks();
     global.confirm = jest.fn(() => true);
-    global.fetch = jest.fn();
+  });
+
+  test('applyStoredConnection restores signed-out state', () => {
+    applyStoredConnection(null);
+
+    expect(document.getElementById('connectGitHubBtn').textContent).toBe('Connect GitHub');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
+    expect(document.getElementById('repoInput').disabled).toBe(true);
+    expect(document.getElementById('addRepoBtn').disabled).toBe(true);
+    expect(document.getElementById('repoHelpText').textContent).toContain('Connect GitHub above');
+  });
+
+  test('applyStoredConnection restores connected state', () => {
+    applyStoredConnection({
+      accessToken: 'oauth-token',
+      username: 'octocat'
+    });
+
+    expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
+    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+    expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
+    expect(document.getElementById('repoInput').disabled).toBe(false);
+    expect(document.getElementById('importReposSection').style.display).toBe('block');
   });
 
   test('clearToken does nothing when cancelled', async () => {
     global.confirm.mockReturnValue(false);
 
-    await clearToken();
+    const result = await clearToken();
 
-    expect(document.getElementById('githubToken').value).toBe('test-token');
+    expect(result).toBe(false);
+    expect(mockClearAuthSession).not.toHaveBeenCalled();
+    expect(mockClearLegacyToken).not.toHaveBeenCalled();
   });
 
-  test('validateToken handles valid token', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ login: 'testuser' })
+  test('clearToken clears auth state when confirmed', async () => {
+    applyStoredConnection({
+      accessToken: 'oauth-token',
+      username: 'octocat'
     });
 
-    const toastManager = {};
-    const result = await validateToken('test-token', toastManager);
+    const result = await clearToken();
 
-    const statusEl = document.getElementById('tokenStatus');
-    expect(statusEl.textContent).toContain('testuser');
-    expect(result).toEqual({ isValid: true, user: 'testuser' });
-  });
-
-  test('validateToken skips UI updates for stale responses', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ login: 'stale-user' })
-    });
-
-    document.getElementById('tokenStatus').textContent = 'Checking...';
-    document.getElementById('tokenStatus').className = 'token-status checking';
-    document.getElementById('clearTokenBtn').style.display = 'none';
-
-    const toastManager = { isManualTokenEntry: true };
-    const result = await validateToken('stale-token', toastManager, {
-      shouldApplyResult: () => false
-    });
-
-    expect(result).toEqual({ isValid: true, user: 'stale-user' });
-    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
-    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(result).toBe(true);
+    expect(mockClearAuthSession).toHaveBeenCalled();
+    expect(mockClearLegacyToken).toHaveBeenCalled();
     expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
-    expect(toastManager.lastValidToken).toBeUndefined();
+    expect(document.getElementById('repoInput').disabled).toBe(true);
   });
 
-  test('validateToken handles invalid token', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 401
+  test('connectGitHub stores auth session after a successful device flow', async () => {
+    mockCompleteGitHubDeviceAuth.mockImplementation(async ({ onCode }) => {
+      await onCode({ userCode: 'ABCD-EFGH' });
+      return {
+        user: { login: 'octocat' },
+        authSession: {
+          accessToken: 'oauth-token',
+          username: 'octocat'
+        }
+      };
     });
 
-    const toastManager = {};
-    const result = await validateToken('bad-token', toastManager);
+    const result = await connectGitHub({});
 
-    const statusEl = document.getElementById('tokenStatus');
-    expect(statusEl.textContent).toContain('Invalid');
-    expect(result).toEqual({ isValid: false, reason: 'invalid' });
+    expect(result).toEqual({
+      isValid: true,
+      user: 'octocat',
+      authSession: {
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      }
+    });
+    expect(mockSetAuthSession).toHaveBeenCalledWith({
+      accessToken: 'oauth-token',
+      username: 'octocat'
+    });
+    expect(mockClearLegacyToken).toHaveBeenCalled();
+    expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
+    expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
+    expect(document.getElementById('githubToken').value).toBe('');
   });
 
-  test('validateToken skips stale invalid-token UI updates', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 401
+  test('connectGitHub keeps the existing session enabled when reconnect fails', async () => {
+    mockGetAuthSession.mockResolvedValueOnce({
+      accessToken: 'existing-token',
+      username: 'existing-user'
     });
+    mockCompleteGitHubDeviceAuth.mockRejectedValueOnce(Object.assign(new Error('cancelled'), {
+      code: 'access_denied'
+    }));
 
-    document.getElementById('tokenStatus').textContent = 'Checking...';
-    document.getElementById('tokenStatus').className = 'token-status checking';
-    document.getElementById('clearTokenBtn').style.display = 'block';
+    const result = await connectGitHub({});
 
-    const toastManager = {};
-    const result = await validateToken('stale-bad-token', toastManager, {
-      shouldApplyResult: () => false
-    });
-
-    expect(result).toEqual({ isValid: false, reason: 'invalid' });
-    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
-    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
+    expect(result).toEqual({ isValid: false, reason: 'access_denied' });
     expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
-    expect(toastManager.lastInvalidToken).toBeUndefined();
-  });
-  test('clearToken clears all fields when confirmed', async () => {
-    global.confirm.mockReturnValue(true);
-
-    const tokenInput = document.getElementById('githubToken');
-    const statusEl = document.getElementById('tokenStatus');
-    const clearBtn = document.getElementById('clearTokenBtn');
-    const repoInput = document.getElementById('repoInput');
-    const addBtn = document.getElementById('addRepoBtn');
-    const importSection = document.getElementById('importReposSection');
-
-    await clearToken();
-
-    expect(tokenInput.value).toBe('');
-    expect(statusEl.textContent).toBe('');
-    expect(clearBtn.style.display).toBe('none');
-    expect(repoInput.disabled).toBe(true);
-    expect(addBtn.disabled).toBe(true);
-    expect(importSection.style.display).toBe('none');
-  });
-
-  test('validateToken handles other HTTP errors', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 500
-    });
-
-    const toastManager = {};
-    const result = await validateToken('token', toastManager);
-
-    const statusEl = document.getElementById('tokenStatus');
-    expect(statusEl.textContent).toContain('Error (500)');
-    expect(statusEl.className).toContain('invalid');
-    expect(result).toEqual({ isValid: false, reason: 'http', status: 500 });
-  });
-
-  test('validateToken skips stale API error UI updates', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 500
-    });
-
-    document.getElementById('tokenStatus').textContent = 'Checking...';
-    document.getElementById('tokenStatus').className = 'token-status checking';
-    document.getElementById('clearTokenBtn').style.display = 'block';
-
-    const toastManager = {};
-    const result = await validateToken('stale-token', toastManager, {
-      shouldApplyResult: () => false
-    });
-
-    expect(result).toEqual({ isValid: false, reason: 'http', status: 500 });
-    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
-    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
-    expect(toastManager.lastApiError).toBeUndefined();
-  });
-
-  test('validateToken handles network errors', async () => {
-    global.fetch.mockRejectedValue(new Error('Network error'));
-
-    const toastManager = {};
-    const result = await validateToken('token', toastManager);
-
-    const statusEl = document.getElementById('tokenStatus');
-    expect(statusEl.textContent).toContain('Network error');
-    expect(statusEl.className).toContain('invalid');
-    expect(result).toEqual({ isValid: false, reason: 'network' });
-  });
-
-  test('validateToken skips stale network-error UI updates', async () => {
-    global.fetch.mockRejectedValue(new Error('Network error'));
-
-    document.getElementById('tokenStatus').textContent = 'Checking...';
-    document.getElementById('tokenStatus').className = 'token-status checking';
-    document.getElementById('clearTokenBtn').style.display = 'block';
-
-    const toastManager = {};
-    const result = await validateToken('stale-token', toastManager, {
-      shouldApplyResult: () => false
-    });
-
-    expect(result).toEqual({ isValid: false, reason: 'network' });
-    expect(document.getElementById('tokenStatus').textContent).toBe('Checking...');
-    expect(document.getElementById('tokenStatus').className).toBe('token-status checking');
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
-  });
-
-  test('validateToken shows success toast only on first validation', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ login: 'testuser' })
-    });
-
-    const toastManager = { isManualTokenEntry: true };
-
-    await validateToken('new-token', toastManager);
-    expect(toastManager.lastValidToken).toBe('new-token');
-
-    // Second validation with same token shouldn't show toast
-    await validateToken('new-token', toastManager);
-  });
-
-  test('validateToken shows error toast only once per token', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 401
-    });
-
-    const toastManager = {};
-
-    await validateToken('bad-token', toastManager);
-    expect(toastManager.lastInvalidToken).toBe('bad-token');
-  });
-
-  test('validateToken shows API error toast only once per status', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 500
-    });
-
-    const toastManager = {};
-
-    await validateToken('token', toastManager);
-    expect(toastManager.lastApiError).toBe(500);
-  });
-
-  test('validateToken enables import section on valid token', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ login: 'testuser' })
-    });
-
-    const toastManager = {};
-    const importSection = document.getElementById('importReposSection');
-    importSection.classList.add('hidden');
-
-    await validateToken('token', toastManager);
-
-    expect(importSection.classList.contains('hidden')).toBe(false);
-    expect(importSection.style.display).toBe('block');
-  });
-
-  test('validateToken disables import section on invalid token', async () => {
-    global.fetch.mockResolvedValue({
-      ok: false,
-      status: 401
-    });
-
-    const toastManager = {};
-    const importSection = document.getElementById('importReposSection');
-
-    await validateToken('token', toastManager);
-
-    expect(importSection.classList.contains('hidden')).toBe(true);
-    expect(importSection.style.display).toBe('none');
+    expect(document.getElementById('repoInput').disabled).toBe(false);
+    expect(document.getElementById('tokenStatus').textContent).toContain('cancelled');
   });
 });

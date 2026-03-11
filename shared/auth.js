@@ -214,3 +214,23 @@ export async function fetchGitHubUser(accessToken) {
 
   return response.json();
 }
+
+export async function completeGitHubDeviceAuth(options = {}) {
+  const deviceCodeData = await requestGitHubDeviceCode();
+
+  options.onCode?.(deviceCodeData);
+  openGitHubDevicePage(deviceCodeData);
+
+  const tokenData = await pollForGitHubAccessToken(deviceCodeData, {
+    signal: options.signal,
+    onPoll: options.onPoll
+  });
+  const user = await fetchGitHubUser(tokenData.accessToken);
+
+  return {
+    deviceCodeData,
+    tokenData,
+    user,
+    authSession: createGitHubAuthSession(tokenData, user)
+  };
+}
