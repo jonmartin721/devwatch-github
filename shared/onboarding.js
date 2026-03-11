@@ -316,10 +316,6 @@ export class OnboardingManager {
         return shuffled;
     }
 
-    getGitHubTokenUrl() {
-        return 'https://github.com/settings/tokens/new?scopes=repo,notifications&description=DevWatch%20Chrome%20Extension';
-    }
-
     async getProgress() {
         const state = await this.getState();
 

@@ -9,7 +9,7 @@ Monitor pull requests, issues, and releases across multiple GitHub repositories 
 
 ## Key Features
 
-- **Guided Setup** - Built-in setup flow for token creation and repository selection
+- **Guided Setup** - Built-in GitHub sign-in flow and repository selection
 - **Browser Notifications** - Get notified about new PRs, issues, and releases
 - **Multi-Repo Monitoring** - Watch up to 50 repositories from one interface
 - **Configurable Updates** - Check every 5, 15, 30, or 60 minutes
@@ -30,7 +30,7 @@ Monitor pull requests, issues, and releases across multiple GitHub repositories 
 3. Grant permissions when prompted
 4. Follow the guided setup wizard on first launch
 
-**GitHub Token Permissions**: You'll need a [Personal Access Token](https://github.com/settings/tokens/new) with `repo` (for private repos) or `public_repo` (for public only).
+**GitHub Sign-In Permissions**: DevWatch uses GitHub OAuth device flow and requests `repo` plus `read:user` so it can monitor private repositories and show the connected account in the UI.
 
 ### Manual Installation (For Development)
 
@@ -53,7 +53,7 @@ cd devwatch-github
 ### First-Time Setup
 
 The built-in setup flow walks you through:
-1. Create a GitHub token
+1. Connect your GitHub account
 2. Add repositories to watch
 3. Choose activity types (PRs, Issues, Releases)
 
@@ -74,7 +74,7 @@ The built-in setup flow walks you through:
 Filter by type (All/PRs/Issues/Releases), search activities, refresh manually, or browse the archive. Click any item to open in GitHub.
 
 ### Settings Page
-Manage your GitHub token, watched repositories, activity filters, check interval, notifications, and theme. Export/import settings for backup.
+Manage your GitHub connection, watched repositories, activity filters, check interval, notifications, and theme. Export/import settings for backup.
 
 <div align="center">
   <img src="screenshots/settings-page.png" alt="Settings page for configuring repositories" width="600">
@@ -101,7 +101,7 @@ That said, this project has not gone through a formal accessibility audit or doc
 
 ## Privacy & Security Notes
 
-The extension talks directly to GitHub's API and does not use a separate analytics or sync backend. It stores settings and cached activity in Chrome extension storage, and the current build encrypts the GitHub token before persisting it locally while keeping a decrypted session copy available at runtime.
+The extension talks directly to GitHub's API and does not use a separate analytics or sync backend. It stores settings and cached activity in Chrome extension storage, and the current build encrypts the GitHub auth session before persisting it locally while keeping a decrypted session copy available at runtime.
 
 - **Direct network access** - Requests go to `api.github.com`, plus `registry.npmjs.org` only when you use package-name lookup
 - **Scoped browser permissions** - The manifest asks for `storage`, `alarms`, and `notifications`

@@ -1,7 +1,6 @@
 import { completeGitHubDeviceAuth } from '../../shared/auth.js';
 import {
   clearAuthSession,
-  clearToken as clearLegacyToken,
   getAuthSession,
   setAuthSession
 } from '../../shared/storage-helpers.js';
@@ -91,7 +90,6 @@ export async function clearToken() {
   }
 
   await clearAuthSession();
-  await clearLegacyToken();
 
   applyStoredConnection(null);
   notifications.info('GitHub disconnected');
@@ -133,7 +131,6 @@ export async function connectGitHub(_toastManager) {
     });
 
     await setAuthSession(result.authSession);
-    await clearLegacyToken();
 
     applyStoredConnection(result.authSession);
     nextButtonLabel = 'Reconnect GitHub';

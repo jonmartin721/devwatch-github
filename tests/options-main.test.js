@@ -312,7 +312,7 @@ describe('Options Main Functions', () => {
       clearBtn.style.display = 'none';
       repoInput.disabled = true;
       addBtn.disabled = true;
-      helpText.textContent = 'Invalid token. Please check your GitHub token and try again.';
+      helpText.textContent = 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.';
       importSection.classList.add('hidden');
       importSection.style.display = 'none';
 

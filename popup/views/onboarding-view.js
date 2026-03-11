@@ -1,7 +1,7 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import { completeGitHubDeviceAuth } from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
-import { clearToken as clearLegacyToken, getAccessToken, setAuthSession } from '../../shared/storage-helpers.js';
+import { getAccessToken, setAuthSession } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
@@ -540,7 +540,6 @@ function setupTokenStepListeners() {
       });
 
       await setAuthSession(result.authSession);
-      await clearLegacyToken();
       tokenStatus.innerHTML = getStatusMarkup('success', `Connected as ${result.user.login}`);
       await onboardingManager.saveStepData('token', {
         validated: true,

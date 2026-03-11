@@ -78,6 +78,7 @@
 	                <button id="clearTokenBtn" class="danger hidden" aria-label="Disconnect GitHub">Disconnect</button>
 	              </div>
 	              <div id="deviceCodeSection" class="token-input-wrapper hidden">
+	                <label for="githubToken" class="device-code-label">Verification code</label>
 	                <input type="text" id="githubToken" placeholder="Verification code appears here" aria-describedby="token-help tokenStatus" autocomplete="off" readonly>
 	              </div>
 	              <span id="tokenStatus" class="token-status" aria-live="polite"></span>
@@ -613,7 +614,7 @@
           </svg>
           <div class="data-info">
             <h3>Reset to Defaults</h3>
-            <p>Reset all settings to default values. Your token and repositories will be cleared.</p>
+            <p>Reset all settings to default values. Your GitHub connection and repositories will be cleared.</p>
           </div>
           <button class="data-action-btn danger-btn" id="resetSettingsBtn">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">

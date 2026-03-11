@@ -2,7 +2,6 @@ import { jest } from '@jest/globals';
 
 const mockCompleteGitHubDeviceAuth = jest.fn();
 const mockClearAuthSession = jest.fn(() => Promise.resolve());
-const mockClearLegacyToken = jest.fn(() => Promise.resolve());
 const mockGetAuthSession = jest.fn(() => Promise.resolve(null));
 const mockSetAuthSession = jest.fn(() => Promise.resolve());
 
@@ -12,7 +11,6 @@ jest.unstable_mockModule('../shared/auth.js', () => ({
 
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
   clearAuthSession: mockClearAuthSession,
-  clearToken: mockClearLegacyToken,
   getAuthSession: mockGetAuthSession,
   setAuthSession: mockSetAuthSession
 }));
@@ -72,7 +70,6 @@ describe('Token Controller', () => {
 
     expect(result).toBe(false);
     expect(mockClearAuthSession).not.toHaveBeenCalled();
-    expect(mockClearLegacyToken).not.toHaveBeenCalled();
   });
 
   test('clearToken clears auth state when confirmed', async () => {
@@ -85,7 +82,6 @@ describe('Token Controller', () => {
 
     expect(result).toBe(true);
     expect(mockClearAuthSession).toHaveBeenCalled();
-    expect(mockClearLegacyToken).toHaveBeenCalled();
     expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
     expect(document.getElementById('repoInput').disabled).toBe(true);
   });
@@ -116,7 +112,6 @@ describe('Token Controller', () => {
       accessToken: 'oauth-token',
       username: 'octocat'
     });
-    expect(mockClearLegacyToken).toHaveBeenCalled();
     expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
     expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
     expect(document.getElementById('githubToken').value).toBe('');

@@ -25,9 +25,7 @@ const {
   getAuthSession,
   setAuthSession,
   clearAuthSession,
-  getToken,
-  setToken,
-  clearToken
+  getAccessToken
 } = await import('../shared/storage-helpers.js');
 
 describe('Storage Helpers', () => {
@@ -389,26 +387,6 @@ describe('Storage Helpers', () => {
     });
   });
 
-  describe('getToken', () => {
-    it('should return token from local storage if it exists', async () => {
-      // Mock encrypted token in local storage
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-      // Mock decryptData to return a specific token
-      mockDecryptData.mockResolvedValueOnce('decrypted-token');
-
-      const result = await getToken();
-
-      expect(result).toBe('decrypted-token');
-      expect(mockDecryptData).toHaveBeenCalled();
-    });
-
-    it('should return null if no token exists', async () => {
-      const result = await getToken();
-
-      expect(result).toBeNull();
-    });
-  });
-
   describe('auth session helpers', () => {
     it('returns auth session from encrypted local storage', async () => {
       mockLocalStorage.encryptedGithubAuthSession = { iv: [], data: [] };
@@ -470,40 +448,22 @@ describe('Storage Helpers', () => {
       expect(mockSessionStorage.githubAuthSession).toBeUndefined();
       expect(mockLocalStorage.encryptedGithubAuthSession).toBeNull();
     });
-  });
 
-  describe('setToken', () => {
-    it('should set token in local storage', async () => {
-      await setToken('new-token-789');
+    it('returns the access token from the current auth session', async () => {
+      mockSessionStorage.githubAuthSession = {
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      };
 
-      // Should store encrypted data
-      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
-      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
+      const result = await getAccessToken();
+
+      expect(result).toBe('oauth-token');
     });
 
-    it('should overwrite existing local token', async () => {
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
+    it('returns null when no auth session is stored', async () => {
+      const result = await getAccessToken();
 
-      await setToken('new-token-789');
-
-      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
-      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
-    });
-  });
-
-  describe('clearToken', () => {
-    it('should clear token from local storage', async () => {
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-
-      await clearToken();
-
-      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
-    });
-
-    it('should work even if no token exists', async () => {
-      await clearToken();
-
-      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
+      expect(result).toBeNull();
     });
   });
 });

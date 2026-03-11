@@ -2203,6 +2203,17 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   flex-wrap: wrap;
 }
 
+#deviceCodeSection {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.device-code-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 #deviceCodeSection input {
   letter-spacing: 0.12em;
   font-weight: 600;

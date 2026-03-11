@@ -15,7 +15,7 @@ I'll respond within 48 hours and work with you to understand and address the iss
 
 Things I want to know about:
 - XSS vulnerabilities or ways to inject malicious code
-- Token leakage or insecure storage
+- OAuth session leakage or insecure storage
 - Ways to access other users' data
 - Privilege escalation
 - Dependencies with known CVEs
@@ -32,8 +32,8 @@ These are better suited for regular issues:
 
 The extension includes several concrete protections, but this project has not been through a formal external security audit.
 
-### Token Storage
-- GitHub tokens are encrypted before they are written to local extension storage
+### GitHub Sign-In Storage
+- GitHub auth sessions are encrypted before they are written to local extension storage
 - A decrypted copy may be cached in session storage while the extension is running
 - Never transmitted to third-party servers
 
@@ -49,7 +49,7 @@ The extension includes several concrete protections, but this project has not be
 
 ### API Security
 - All requests use HTTPS
-- Tokens are included in headers, never in URLs
+- OAuth access tokens are included in headers, never in URLs
 - Rate limiting is respected to prevent abuse
 
 ## Supported Versions

@@ -102,7 +102,6 @@ export const ERROR_MESSAGES = {
 // Validation Patterns
 export const VALIDATION_PATTERNS = {
   REPOSITORY_NAME: /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/,
-  GITHUB_TOKEN: /^ghp_[a-zA-Z0-9]{36}$/,
   USERNAME: /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,38})[a-zA-Z0-9]$/,
   URL: /^https?:\/\/.+/,
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/

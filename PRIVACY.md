@@ -12,9 +12,10 @@ GitHub Devwatch is a Chrome extension for monitoring activity on GitHub reposito
 
 GitHub Devwatch collects and stores the following data **locally on your device only**:
 
-1. **GitHub Personal Access Token**
+1. **GitHub OAuth Session**
+   - Created when you connect GitHub through the built-in device-flow sign-in
    - Stored by the extension in Chrome storage
-   - Current builds encrypt the token before writing it to local storage and keep a decrypted session copy while the extension is running
+   - Current builds encrypt the auth session before writing it to local storage and keep a decrypted session copy while the extension is running
    - Used only to authenticate with GitHub's API
    - Not sent to third-party services operated by this project
    - Never shared with anyone
@@ -46,16 +47,16 @@ GitHub Devwatch collects and stores the following data **locally on your device 
 
 All data collected is used exclusively to provide the extension's functionality:
 
-- Your GitHub token authenticates API requests to GitHub
+- Your GitHub connection authenticates API requests to GitHub
 - Your repository list determines which repositories to monitor
 - Your settings customize how the extension behaves
 - Activity data is displayed in the extension popup for your review
 
 ## Data Storage
 
-- The extension uses Chrome storage APIs for settings, cached activity, and token handling
+- The extension uses Chrome storage APIs for settings, cached activity, and GitHub sign-in handling
 - Settings and repository lists can optionally sync across your Chrome browsers if you use Chrome Sync
-- Token handling uses local and session storage rather than Chrome sync
+- GitHub sign-in data uses local and session storage rather than Chrome sync
 - You can clear all data at any time by uninstalling the extension or using Chrome's "Clear extension data" feature
 
 ## Third-Party Services
@@ -65,7 +66,7 @@ All data collected is used exclusively to provide the extension's functionality:
 This extension communicates with GitHub's API (api.github.com) to fetch repository activity. When you use this extension:
 
 - API requests are made directly from your browser to GitHub
-- Requests include your GitHub Personal Access Token for authentication
+- Requests include your GitHub OAuth access token for authentication
 - GitHub's privacy policy and terms of service apply to these interactions
 - See GitHub's privacy policy at: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
 
@@ -90,7 +91,7 @@ GitHub Devwatch does **NOT**:
 
 The extension requests the following Chrome permissions:
 
-- **storage**: To save your settings, token, and activity data locally
+- **storage**: To save your settings, GitHub sign-in state, and activity data locally
 - **alarms**: To periodically check for new repository activity
 - **notifications**: To show you browser notifications for new activity
 - **Host permission for api.github.com**: To fetch repository activity from GitHub's API
@@ -104,14 +105,14 @@ You have complete control over your data:
 - **View Your Data**: All settings are visible in the extension's options page
 - **Delete Your Data**: Uninstall the extension to remove all data, or use the "Clear All Data" option in settings
 - **Export Your Data**: Use the backup/restore feature to export your settings
-- **Revoke Access**: Remove or regenerate your GitHub Personal Access Token at any time via GitHub's settings
+- **Revoke Access**: Disconnect locally in DevWatch, and revoke the OAuth app in GitHub's authorized applications settings at any time
 
 ## Security
 
 Current builds include several concrete safeguards:
 
 - All API requests use HTTPS
-- The token is encrypted before it is persisted locally
+- The GitHub auth session is encrypted before it is persisted locally
 - The codebase includes input sanitization and GitHub URL validation checks
 - Extension pages use a Content Security Policy
 
