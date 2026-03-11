@@ -16,6 +16,16 @@ export const API_CONFIG = {
   MAX_REPOS_PER_REQUEST: 100
 };
 
+// OAuth Configuration
+export const OAUTH_CONFIG = {
+  CLIENT_ID: 'YOUR_GITHUB_OAUTH_CLIENT_ID',
+  SCOPES: ['repo', 'read:user'],
+  DEVICE_CODE_URL: 'https://github.com/login/device/code',
+  ACCESS_TOKEN_URL: 'https://github.com/login/oauth/access_token',
+  DEVICE_VERIFY_URL: 'https://github.com/login/device',
+  AUTHORIZED_APPS_URL: 'https://github.com/settings/applications'
+};
+
 // Rate Limiting Configuration
 export const RATE_LIMIT_CONFIG = {
   DEFAULT_CHECK_INTERVAL: 15, // minutes
@@ -129,6 +139,7 @@ export const DEV_CONFIG = {
 // Export all configurations as a single object for easy access
 export const CONFIG = {
   API: API_CONFIG,
+  OAUTH: OAUTH_CONFIG,
   RATE_LIMIT: RATE_LIMIT_CONFIG,
   STORAGE: STORAGE_CONFIG,
   UI: UI_CONFIG,
