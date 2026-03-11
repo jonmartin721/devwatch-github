@@ -184,7 +184,7 @@ describe('Onboarding - token persistence', () => {
     // Ensure fetch was called with Authorization header
     expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers['Authorization']).toBe('token ghp_TEST_TOKEN');
+    expect(options.headers['Authorization']).toBe('Bearer ghp_TEST_TOKEN');
 
     // Should return at least 1 repo from our mocked response
     expect(result.length).toBeGreaterThan(0);
@@ -212,7 +212,7 @@ describe('Onboarding - token persistence', () => {
 
     expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers['Authorization']).toBe('token ghp_STEP_TOKEN');
+    expect(options.headers['Authorization']).toBe('Bearer ghp_STEP_TOKEN');
     expect(result.length).toBeGreaterThan(0);
   });
 

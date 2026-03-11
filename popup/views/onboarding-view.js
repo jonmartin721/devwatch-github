@@ -1,6 +1,6 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
-import { getToken, setToken } from '../../shared/storage-helpers.js';
+import { getToken, getAccessToken, setToken } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
@@ -619,8 +619,10 @@ function attachRepoButtonListeners() {
 
       try {
         // Fetch full repo metadata from GitHub API
-        const token = await getToken();
-        const headers = createHeaders(token);
+        const token = await getAccessToken();
+        const headers = token
+          ? createHeaders(token)
+          : { 'Accept': 'application/vnd.github.v3+json' };
         const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
         if (response.ok) {
@@ -697,7 +699,7 @@ function setupReposStepListeners() {
 
     try {
       // Get token for API calls
-      const githubToken = await getToken();
+      const githubToken = await getAccessToken();
 
       // Parse GitHub URL if provided
       const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
@@ -724,13 +726,9 @@ function setupReposStepListeners() {
       }
 
       // Validate repo exists on GitHub
-      const headers = {
-        'Accept': 'application/vnd.github.v3+json'
-      };
-
-      if (githubToken) {
-        headers['Authorization'] = `token ${githubToken}`;
-      }
+      const headers = githubToken
+        ? createHeaders(githubToken)
+        : { 'Accept': 'application/vnd.github.v3+json' };
 
       const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 

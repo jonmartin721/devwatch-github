@@ -1,4 +1,4 @@
-import { getToken } from '../../shared/storage-helpers.js';
+import { getAccessToken } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml, unescapeHtml } from '../../shared/sanitize.js';
 import { formatDateVerbose } from '../../shared/utils.js';
@@ -62,7 +62,7 @@ function formatNumber(num) {
 }
 
 export async function openImportModal(type, watchedRepos) {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return;
   }

@@ -243,6 +243,20 @@ export async function clearAuthSession() {
 }
 
 /**
+ * Get the access token used for GitHub API requests
+ * Prefers the OAuth auth session when present.
+ * @returns {Promise<string|null>} Access token or null
+ */
+export async function getAccessToken() {
+  const authSession = await getAuthSession();
+  if (authSession?.accessToken) {
+    return authSession.accessToken;
+  }
+
+  return getToken();
+}
+
+/**
  * Get GitHub token
  * Tries session storage first (decrypted cache), then local storage (encrypted)
  * @returns {Promise<string|null>} Token or null

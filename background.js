@@ -1,5 +1,5 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getToken, getFilteringSettings } from './shared/storage-helpers.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getAccessToken, getFilteringSettings } from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/repository-utils.js';
 import { safelyOpenUrl } from './shared/security.js';
 
@@ -73,8 +73,7 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    // Get token from secure local storage
-    const githubToken = await getToken();
+    const githubToken = await getAccessToken();
 
     const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
       'watchedRepos',

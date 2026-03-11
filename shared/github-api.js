@@ -4,12 +4,12 @@
 
 /**
  * Create standard GitHub API headers
- * @param {string} token - GitHub personal access token
+ * @param {string} token - GitHub access token
  * @returns {Object} Headers object for fetch
  */
 export function createHeaders(token) {
   return {
-    'Authorization': `token ${token}`,
+    'Authorization': `Bearer ${token}`,
     'Accept': 'application/vnd.github.v3+json'
   };
 }

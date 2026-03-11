@@ -3,7 +3,8 @@
  * Handles first-run experience and setup flow
  */
 
-import { getToken } from './storage-helpers.js';
+import { getAccessToken } from './storage-helpers.js';
+import { createHeaders } from './github-api.js';
 
 export class OnboardingManager {
     static STORAGE_KEY = 'onboarding_state';
@@ -134,16 +135,11 @@ export class OnboardingManager {
             // by UI code that persists the token. Fallback to getToken() to
             // support tokens set outside onboarding.
             const tokenStep = await this.getStepData('token');
-            const storedToken = await getToken();
+            const storedToken = await getAccessToken();
             const githubToken = tokenStep?.token || storedToken;
-
-            const headers = {
-                'Accept': 'application/vnd.github.v3+json'
-            };
-
-            if (githubToken) {
-                headers['Authorization'] = `token ${githubToken}`;
-            }
+            const headers = githubToken
+                ? createHeaders(githubToken)
+                : { 'Accept': 'application/vnd.github.v3+json' };
 
             const apiUrl = 'https://api.github.com/search/repositories?q=stars:1000..50000&sort=stars&order=desc&per_page=20';
 

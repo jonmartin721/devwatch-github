@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getToken, getAccessToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -859,7 +859,7 @@ function showRepoError(message) {
  * // Returns: null
  */
 async function validateRepo(repo) {
-  const githubToken = await getToken();
+  const githubToken = await getAccessToken();
 
   if (!githubToken) {
     return { valid: false, error: 'No GitHub token found. Please add a token first.' };

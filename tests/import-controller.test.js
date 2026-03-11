@@ -2,11 +2,12 @@ import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 
 // Mock dependencies
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
-  getToken: jest.fn(() => Promise.resolve('fake-token'))
+  getToken: jest.fn(() => Promise.resolve('fake-token')),
+  getAccessToken: jest.fn(() => Promise.resolve('fake-token'))
 }));
 
 jest.unstable_mockModule('../shared/github-api.js', () => ({
-  createHeaders: jest.fn((token) => ({ 'Authorization': `token ${token}` }))
+  createHeaders: jest.fn((token) => ({ 'Authorization': `Bearer ${token}` }))
 }));
 
 jest.unstable_mockModule('../shared/sanitize.js', () => ({
@@ -23,7 +24,7 @@ jest.unstable_mockModule('../shared/icons.js', () => ({
   createSvg: jest.fn(() => '<svg></svg>')
 }));
 
-const { getToken } = await import('../shared/storage-helpers.js');
+const { getToken, getAccessToken } = await import('../shared/storage-helpers.js');
 const {
   openImportModal,
   closeImportModal,
@@ -114,7 +115,7 @@ describe('import-controller', () => {
 
   describe('openImportModal', () => {
     test('does not open modal if no token', async () => {
-      getToken.mockResolvedValueOnce(null);
+      getAccessToken.mockResolvedValueOnce(null);
 
       await openImportModal('starred', []);
 
