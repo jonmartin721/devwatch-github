@@ -2,10 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - '**'
-    tags-ignore:
-      - 'v*'
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 
