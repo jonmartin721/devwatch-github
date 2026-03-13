@@ -5,6 +5,7 @@
 
 import { UI_CONFIG } from './config.js';
 import { SNOOZE_ICON, CHECK_ICON } from './icons.js';
+import { sanitizeImageUrl } from './sanitize.js';
 
 /**
  * Basic DOM renderer with simple caching to avoid unnecessary re-renders
@@ -440,7 +441,8 @@ class ActivityListRenderer {
     const sanitizedType = escapeHtml(activity.type);
     const sanitizedTypeLabel = escapeHtml(this.getActivityTypeLabel(activity.type));
     const sanitizedDescription = activity.description ? escapeHtml(activity.description) : '';
-    const sanitizedAvatar = activity.authorAvatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+    const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar)
+      || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
     const sanitizedUrl = escapeHtml(activity.url);
     const sanitizedId = escapeHtml(activity.id);
 

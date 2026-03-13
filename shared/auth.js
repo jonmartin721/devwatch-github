@@ -1,4 +1,5 @@
 import { API_CONFIG, OAUTH_CONFIG } from './config.js';
+import { isValidGitHubAuthUrl } from './security.js';
 
 function getStorageValue(area, key) {
   return new Promise((resolve) => {
@@ -181,9 +182,18 @@ export async function requestGitHubDeviceCode() {
 export function openGitHubDevicePage(deviceCodeData) {
   const targetUrl = deviceCodeData.verificationUriComplete || deviceCodeData.verificationUri || OAUTH_CONFIG.DEVICE_VERIFY_URL;
 
+  if (!isValidGitHubAuthUrl(targetUrl)) {
+    throw createOAuthError(
+      'GitHub sign-in returned an unexpected verification URL.',
+      'invalid_verification_url'
+    );
+  }
+
   if (chrome?.tabs?.create) {
     chrome.tabs.create({ url: targetUrl });
   }
+
+  return targetUrl;
 }
 
 export async function pollForGitHubAccessToken(deviceCodeData, options = {}) {

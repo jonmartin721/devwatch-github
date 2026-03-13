@@ -499,6 +499,22 @@ describe('ActivityListRenderer', () => {
       expect(html1).toBe(html2);
       expect(renderer.itemCache.has('125-false')).toBe(true);
     });
+
+    test('falls back to a safe placeholder avatar for invalid image URLs', () => {
+      const activity = {
+        id: '126',
+        type: 'IssuesEvent',
+        title: 'Unsafe avatar',
+        createdAt: new Date().toISOString(),
+        url: 'https://github.com/test/repo/issues/2',
+        authorAvatar: 'https://evil.com/avatar.png'
+      };
+
+      const html = renderer.generateSingleActivityHTML(activity);
+
+      expect(html).toContain('data:image/svg+xml');
+      expect(html).not.toContain('https://evil.com/avatar.png');
+    });
   });
 
   describe('generateActivityHTML', () => {

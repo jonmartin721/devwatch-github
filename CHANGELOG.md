@@ -5,6 +5,13 @@ All notable changes to GitHub Devwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- GitHub sign-in sessions now stay in Chrome session storage only instead of persisting to local extension storage
+- Added validation for the GitHub device-flow verification URL before opening a browser tab
+- Tightened remote image handling for activity avatars and extension page CSP rules
+
 ## [1.0.2] - 2025-11-19
 
 ### Fixed

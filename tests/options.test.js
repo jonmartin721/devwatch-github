@@ -12,7 +12,8 @@ global.chrome = {
         // Always call callback if provided
         if (callback) callback();
       }),
-      remove: jest.fn(() => {
+      remove: jest.fn((keys, callback) => {
+        if (callback) callback();
         return Promise.resolve();
       })
     },
@@ -25,7 +26,8 @@ global.chrome = {
         // Always call callback if provided
         if (callback) callback();
       }),
-      remove: jest.fn(() => {
+      remove: jest.fn((keys, callback) => {
+        if (callback) callback();
         return Promise.resolve();
       })
     },
@@ -36,7 +38,8 @@ global.chrome = {
       set: jest.fn((items, callback) => {
         if (callback) callback();
       }),
-      remove: jest.fn(() => {
+      remove: jest.fn((keys, callback) => {
+        if (callback) callback();
         return Promise.resolve();
       })
     }
@@ -45,15 +48,6 @@ global.chrome = {
 
 // Mock fetch
 global.fetch = jest.fn();
-
-
-
-// Mock crypto-utils using unstable_mockModule
-jest.unstable_mockModule('../shared/crypto-utils.js', () => ({
-  encryptData: jest.fn(() => Promise.resolve({ iv: [], data: [] })),
-  decryptData: jest.fn(() => Promise.resolve('decrypted-token'))
-}));
-
 // Import functions dynamically after mocking
 const { fetchGitHubRepoFromNpm } = await import('../shared/api/npm-api.js');
 const { trackRepoUnmuted } = await import('../options/controllers/repository-controller.js');

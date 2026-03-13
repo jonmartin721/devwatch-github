@@ -86,6 +86,15 @@ describe('GitHub OAuth helpers', () => {
     });
   });
 
+  it('rejects unexpected verification URLs', async () => {
+    const { openGitHubDevicePage } = await import('../shared/auth.js');
+
+    expect(() => openGitHubDevicePage({
+      verificationUri: 'https://evil.example/login/device'
+    })).toThrow('unexpected verification URL');
+    expect(mockCreateTab).not.toHaveBeenCalled();
+  });
+
   it('polls until the user approves sign-in', async () => {
     const { pollForGitHubAccessToken } = await import('../shared/auth.js');
 

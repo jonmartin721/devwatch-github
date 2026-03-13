@@ -1,11 +1,11 @@
 /**
  * Chrome storage helper functions with promisified APIs
  */
-import { encryptData, decryptData } from './crypto-utils.js';
 
 const AUTH_SESSION_CACHE_KEY = 'githubAuthSession';
-const AUTH_SESSION_STORAGE_KEY = 'encryptedGithubAuthSession';
+const LEGACY_AUTH_STORAGE_KEYS = ['encryptedGithubAuthSession', 'encryptionKey'];
 const WATCHED_REPOS_STORAGE_KEY = 'watchedRepos';
+let legacyAuthStorageChecked = false;
 
 /**
  * Check if running in Chrome extension context
@@ -13,6 +13,28 @@ const WATCHED_REPOS_STORAGE_KEY = 'watchedRepos';
  */
 function isChromeExtension() {
   return typeof chrome !== 'undefined' && chrome.storage !== undefined;
+}
+
+function clearLegacyAuthStorage(force = false) {
+  if (!isChromeExtension()) {
+    return Promise.resolve();
+  }
+
+  if (legacyAuthStorageChecked && !force) {
+    return Promise.resolve();
+  }
+
+  if (!chrome.storage.local?.remove) {
+    legacyAuthStorageChecked = true;
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(LEGACY_AUTH_STORAGE_KEYS, () => {
+      legacyAuthStorageChecked = true;
+      resolve();
+    });
+  });
 }
 
 /**
@@ -213,7 +235,8 @@ export function getExcludedRepos(mutedRepos = [], snoozedRepos = []) {
 
 /**
  * Get the stored GitHub auth session
- * Tries session storage first (decrypted cache), then local storage (encrypted)
+ * Auth sessions are kept in session storage only so they do not persist to disk.
+ * Legacy encrypted local storage is cleared opportunistically on access.
  * @returns {Promise<Object|null>} Auth session or null
  */
 export async function getAuthSession() {
@@ -223,33 +246,13 @@ export async function getAuthSession() {
     });
 
     if (cachedSession && typeof cachedSession === 'object') {
+      await clearLegacyAuthStorage();
       return cachedSession;
     }
   }
 
-  const encrypted = await getLocalItem(AUTH_SESSION_STORAGE_KEY);
-  if (!encrypted) {
-    return null;
-  }
-
-  try {
-    const decrypted = await decryptData(encrypted);
-    const session = typeof decrypted === 'string' ? JSON.parse(decrypted) : decrypted;
-
-    if (!session || typeof session !== 'object') {
-      return null;
-    }
-
-    if (isChromeExtension() && chrome.storage.session) {
-      await new Promise(resolve => {
-        chrome.storage.session.set({ [AUTH_SESSION_CACHE_KEY]: session }, resolve);
-      });
-    }
-
-    return session;
-  } catch (_error) {
-    return null;
-  }
+  await clearLegacyAuthStorage();
+  return null;
 }
 
 /**
@@ -263,14 +266,14 @@ export async function setAuthSession(session) {
     return;
   }
 
-  if (isChromeExtension() && chrome.storage.session) {
-    await new Promise(resolve => {
-      chrome.storage.session.set({ [AUTH_SESSION_CACHE_KEY]: session }, resolve);
-    });
+  if (!isChromeExtension() || !chrome.storage.session) {
+    throw new Error('Session storage is unavailable for GitHub sign-in.');
   }
 
-  const encrypted = await encryptData(JSON.stringify(session));
-  await setLocalItem(AUTH_SESSION_STORAGE_KEY, encrypted);
+  await new Promise(resolve => {
+    chrome.storage.session.set({ [AUTH_SESSION_CACHE_KEY]: session }, resolve);
+  });
+  await clearLegacyAuthStorage(true);
 }
 
 /**
@@ -284,7 +287,7 @@ export async function clearAuthSession() {
     });
   }
 
-  await setLocalItem(AUTH_SESSION_STORAGE_KEY, null);
+  await clearLegacyAuthStorage(true);
 }
 
 /**

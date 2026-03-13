@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { escapeHtml, unescapeHtml, sanitizeImageUrl, sanitizeObject, sanitizeActivity, sanitizeRepository } from '../shared/sanitize.js';
-import { isValidGitHubUrl, isValidApiUrl } from '../shared/security.js';
+import { isValidGitHubUrl, isValidGitHubAuthUrl, isValidApiUrl } from '../shared/security.js';
 
 describe('HTML Sanitization', () => {
   describe('escapeHtml', () => {
@@ -455,6 +455,21 @@ describe('HTML Sanitization', () => {
       expect(sanitized.stars).toBe(1000);
       expect(sanitized.forks).toBe(50);
       expect(sanitized.isPrivate).toBe(false);
+    });
+  });
+});
+
+describe('GitHub URL Validation', () => {
+  describe('isValidGitHubAuthUrl', () => {
+    it('allows the expected GitHub device flow URLs', () => {
+      expect(isValidGitHubAuthUrl('https://github.com/login/device')).toBe(true);
+      expect(isValidGitHubAuthUrl('https://github.com/login/device?user_code=ABCD-EFGH')).toBe(true);
+    });
+
+    it('rejects unexpected hosts or paths', () => {
+      expect(isValidGitHubAuthUrl('https://gist.github.com/login/device')).toBe(false);
+      expect(isValidGitHubAuthUrl('https://github.com/settings/applications')).toBe(false);
+      expect(isValidGitHubAuthUrl('javascript:alert(1)')).toBe(false);
     });
   });
 });

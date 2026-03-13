@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
+import { clearAuthSession, getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -1052,6 +1052,7 @@ async function resetSettings() {
 
   try {
     // Clear all storage (both sync and local)
+    await clearAuthSession();
     await chrome.storage.sync.clear();
     await chrome.storage.local.clear();
 

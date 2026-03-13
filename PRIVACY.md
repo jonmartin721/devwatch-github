@@ -14,8 +14,8 @@ GitHub Devwatch collects and stores the following data **locally on your device 
 
 1. **GitHub OAuth Session**
    - Created when you connect GitHub through the built-in device-flow sign-in
-   - Stored by the extension in Chrome storage
-   - Current builds encrypt the auth session before writing it to local storage and keep a decrypted session copy while the extension is running
+   - Stored by the extension in Chrome session storage for the current browser session only
+   - Cleared when the browser session ends or when you disconnect GitHub in DevWatch
    - Used only to authenticate with GitHub's API
    - Not sent to third-party services operated by this project
    - Never shared with anyone
@@ -56,7 +56,7 @@ All data collected is used exclusively to provide the extension's functionality:
 
 - The extension uses Chrome storage APIs for settings, cached activity, and GitHub sign-in handling
 - Settings and repository lists can optionally sync across your Chrome browsers if you use Chrome Sync
-- GitHub sign-in data uses local and session storage rather than Chrome sync
+- GitHub sign-in data uses session storage rather than Chrome sync and is not persisted across browser restarts
 - You can clear all data at any time by uninstalling the extension or using Chrome's "Clear extension data" feature
 
 ## Third-Party Services
@@ -112,7 +112,7 @@ You have complete control over your data:
 Current builds include several concrete safeguards:
 
 - All API requests use HTTPS
-- The GitHub auth session is encrypted before it is persisted locally
+- The GitHub auth session is kept in session storage for the current browser session only
 - The codebase includes input sanitization and GitHub URL validation checks
 - Extension pages use a Content Security Policy
 
