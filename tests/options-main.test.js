@@ -399,8 +399,8 @@ describe('Options Main Functions', () => {
       await Promise.resolve();
 
       expect(chrome.storage.session.remove).toHaveBeenCalledWith(['githubAuthSession'], expect.any(Function));
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ encryptedGithubAuthSession: null }),
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(
+        ['encryptedGithubAuthSession', 'encryptionKey'],
         expect.any(Function)
       );
     });

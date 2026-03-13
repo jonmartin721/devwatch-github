@@ -39,6 +39,28 @@ export function isValidGitHubUrl(url) {
 }
 
 /**
+ * Validates the GitHub device flow verification page before opening it.
+ * Restricts auth navigation to the expected GitHub login path.
+ * @param {string} url - URL to validate
+ * @returns {boolean} - True if URL is safe for the OAuth device flow
+ */
+export function isValidGitHubAuthUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    return parsed.protocol === 'https:'
+      && parsed.hostname === 'github.com'
+      && parsed.pathname === '/login/device';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Safely opens a URL in a new tab only if it's a valid GitHub URL
  * @param {string} url - URL to open
  * @returns {Promise<boolean>} - True if URL was opened, false if rejected

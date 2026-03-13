@@ -33,8 +33,8 @@ These are better suited for regular issues:
 The extension includes several concrete protections, but this project has not been through a formal external security audit.
 
 ### GitHub Sign-In Storage
-- GitHub auth sessions are encrypted before they are written to local extension storage
-- A decrypted copy may be cached in session storage while the extension is running
+- GitHub auth sessions are kept in `chrome.storage.session` for the current browser session only
+- Legacy on-disk auth storage is cleared by current builds during sign-in handling
 - Never transmitted to third-party servers
 
 ### Content Security Policy
