@@ -5,6 +5,7 @@ import { encryptData, decryptData } from './crypto-utils.js';
 
 const AUTH_SESSION_CACHE_KEY = 'githubAuthSession';
 const AUTH_SESSION_STORAGE_KEY = 'encryptedGithubAuthSession';
+const WATCHED_REPOS_STORAGE_KEY = 'watchedRepos';
 
 /**
  * Check if running in Chrome extension context
@@ -146,6 +147,50 @@ export function setLocalItem(key, value) {
       }
     });
   });
+}
+
+function clearLegacySyncWatchedRepos() {
+  if (!isChromeExtension()) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    chrome.storage.sync.remove([WATCHED_REPOS_STORAGE_KEY], () => {
+      resolve();
+    });
+  });
+}
+
+/**
+ * Get watched repositories from local storage, with a sync-storage fallback for legacy installs.
+ * @returns {Promise<Array>} Watched repository records
+ */
+export async function getWatchedRepos() {
+  const localRepos = await getLocalItem(WATCHED_REPOS_STORAGE_KEY, null);
+  if (Array.isArray(localRepos)) {
+    return localRepos;
+  }
+
+  const legacyRepos = await getSyncItem(WATCHED_REPOS_STORAGE_KEY, STORAGE_DEFAULTS.watchedRepos);
+
+  if (Array.isArray(legacyRepos) && legacyRepos.length > 0) {
+    await setLocalItem(WATCHED_REPOS_STORAGE_KEY, legacyRepos);
+    await clearLegacySyncWatchedRepos();
+    return legacyRepos;
+  }
+
+  return STORAGE_DEFAULTS.watchedRepos;
+}
+
+/**
+ * Persist watched repositories in local storage so larger repo lists do not hit sync item quotas.
+ * @param {Array} watchedRepos - Repository records to store
+ * @returns {Promise<void>}
+ */
+export async function setWatchedRepos(watchedRepos = []) {
+  const normalizedRepos = Array.isArray(watchedRepos) ? watchedRepos : [];
+  await setLocalItem(WATCHED_REPOS_STORAGE_KEY, normalizedRepos);
+  await clearLegacySyncWatchedRepos();
 }
 
 /**
@@ -317,10 +362,11 @@ export const STORAGE_DEFAULTS = {
  */
 export async function getSettings() {
   const result = await getSyncItems(STORAGE_KEYS.SETTINGS);
+  const watchedRepos = await getWatchedRepos();
 
   // Apply defaults for missing properties
   return {
-    watchedRepos: result.watchedRepos || STORAGE_DEFAULTS.watchedRepos,
+    watchedRepos,
     lastCheck: result.lastCheck || STORAGE_DEFAULTS.lastCheck,
     filters: { ...STORAGE_DEFAULTS.filters, ...result.filters },
     notifications: { ...STORAGE_DEFAULTS.notifications, ...result.notifications },
@@ -381,7 +427,7 @@ export async function getActivityData() {
  * @returns {Promise<void>}
  */
 export async function updateSettings(updates) {
-  await setSyncItem('watchedRepos', updates.watchedRepos);
+  await setWatchedRepos(updates.watchedRepos);
   await setSyncItem('lastCheck', updates.lastCheck);
   await setSyncItem('filters', updates.filters);
   await setSyncItem('notifications', updates.notifications);

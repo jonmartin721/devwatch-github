@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getAuthSession, getAccessToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -430,13 +430,20 @@ function setupEventListeners() {
   document.getElementById('closeImportModal').addEventListener('click', closeImportModal);
   document.getElementById('cancelImportBtn').addEventListener('click', closeImportModal);
   document.getElementById('confirmImportBtn').addEventListener('click', async () => {
-    await importSelectedRepos(state.watchedRepos, async () => {
-      // Reload repos from storage to update state
-      const result = await chrome.storage.sync.get(['watchedRepos']);
-      state.watchedRepos = result.watchedRepos || [];
-      renderRepoListWrapper();
-      toastManager.show('Repositories imported successfully', 'success');
-    });
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+    confirmImportBtn.disabled = true;
+
+    try {
+      await importSelectedRepos(state.watchedRepos, async () => {
+        // Reload repos from storage to update state
+        state.watchedRepos = await getWatchedRepos();
+        renderRepoListWrapper();
+        toastManager.show('Repositories imported successfully', 'success');
+      });
+    } catch (error) {
+      toastManager.error(error.message || 'Failed to import repositories');
+      updateSelectedCount();
+    }
   });
 
   document.getElementById('selectAllImport').addEventListener('change', (e) => {
@@ -541,7 +548,6 @@ async function loadSettings() {
     const authSession = await getAuthSession();
 
     const settings = await chrome.storage.sync.get([
-      'watchedRepos',
       'mutedRepos',
       'pinnedRepos',
       'checkInterval',
@@ -555,6 +561,7 @@ async function loadSettings() {
     ]);
 
     const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
+    const watchedRepos = await getWatchedRepos();
 
     // Safety check: if settings is undefined or null, use defaults
     if (!settings || !snoozeSettings) {
@@ -577,7 +584,7 @@ async function loadSettings() {
       syncTokenUiWithStoredCredential(false);
     }
 
-    state.watchedRepos = settings.watchedRepos || [];
+    state.watchedRepos = watchedRepos;
     state.mutedRepos = settings.mutedRepos || [];
     state.pinnedRepos = settings.pinnedRepos || [];
 
@@ -751,7 +758,7 @@ async function addRepo() {
     renderRepoListWrapper();
 
     // Auto-save
-    await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+    await setWatchedRepos(state.watchedRepos);
 
     // Show success toast
     toastManager.success(`Successfully added ${validationResult.fullName} to watched repositories`);
@@ -872,7 +879,7 @@ async function removeRepo(repoFullName) {
   renderRepoListWrapper();
 
   // Auto-save
-  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+  await setWatchedRepos(state.watchedRepos);
 
   // Show success toast
   toastManager.success(`Removed ${repoFullName} from watched repositories`);

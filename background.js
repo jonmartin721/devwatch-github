@@ -1,5 +1,5 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getAccessToken, getFilteringSettings } from './shared/storage-helpers.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getAccessToken, getFilteringSettings, getWatchedRepos } from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/repository-utils.js';
 import { safelyOpenUrl } from './shared/security.js';
 
@@ -75,8 +75,8 @@ async function checkGitHubActivity() {
   try {
     const githubToken = await getAccessToken();
 
-    const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
-      'watchedRepos',
+    const watchedRepos = await getWatchedRepos();
+    const { lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
       'lastCheck',
       'filters',
       'notifications',

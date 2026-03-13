@@ -7,7 +7,7 @@ import {
   requestGitHubDeviceCode
 } from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
-import { getAccessToken, setAuthSession } from '../../shared/storage-helpers.js';
+import { getAccessToken, getWatchedRepos, setAuthSession, setWatchedRepos } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
@@ -811,8 +811,7 @@ function attachRepoButtonListeners() {
           const data = await response.json();
 
           // Save repo to storage with full metadata
-          const result = await chrome.storage.sync.get(['watchedRepos']);
-          const repos = result.watchedRepos || [];
+          const repos = await getWatchedRepos();
 
           // Check if repo already exists
           const repoExists = repos.some(r => r.fullName === repo);
@@ -828,7 +827,7 @@ function attachRepoButtonListeners() {
               updatedAt: data.updated_at,
               addedAt: new Date().toISOString()
             });
-            await chrome.storage.sync.set({ watchedRepos: repos });
+            await setWatchedRepos(repos);
           }
 
           // Show success state
@@ -917,8 +916,7 @@ function setupReposStepListeners() {
       if (response.ok) {
         const data = await response.json();
 
-        const result = await chrome.storage.sync.get(['watchedRepos']);
-        const repos = result.watchedRepos || [];
+        const repos = await getWatchedRepos();
         const repoExists = repos.some(r => r.fullName === repo);
         if (!repoExists) {
           repos.push({
@@ -931,7 +929,7 @@ function setupReposStepListeners() {
             updatedAt: data.updated_at,
             addedAt: new Date().toISOString()
           });
-          await chrome.storage.sync.set({ watchedRepos: repos });
+          await setWatchedRepos(repos);
         }
         manualInput.value = '';
         repoStatus.innerHTML = getStatusMarkup('success', '✓ Repository added');
