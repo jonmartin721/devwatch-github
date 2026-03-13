@@ -29,7 +29,6 @@ const state = {
   searchQuery: '',
   hidePinnedRepos: false
 };
-let persistedSession = null;
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -200,16 +199,10 @@ function setupEventListeners() {
 
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('connectGitHubBtn').addEventListener('click', async () => {
-    const connectionResult = await connectGitHub(toastManager);
-    if (connectionResult.isValid) {
-      persistedSession = connectionResult.authSession;
-    }
+    await connectGitHub(toastManager);
   });
   document.getElementById('clearTokenBtn').addEventListener('click', async () => {
-    const tokenCleared = await clearToken();
-    if (tokenCleared) {
-      persistedSession = null;
-    }
+    await clearToken();
   });
 
   // Action button toggles
@@ -578,7 +571,6 @@ async function loadSettings() {
     applyTheme(theme);
 
     if (authSession?.accessToken) {
-      persistedSession = authSession;
       applyStoredConnection(authSession);
     } else {
       syncTokenUiWithStoredCredential(false);

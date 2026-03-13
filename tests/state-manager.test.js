@@ -21,6 +21,8 @@ global.chrome = {
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
   getSyncItems: jest.fn(async () => ({})),
   getLocalItems: jest.fn(async () => ({})),
+  getWatchedRepos: jest.fn(async () => []),
+  setWatchedRepos: jest.fn(async () => {}),
   STORAGE_KEYS: {
     SETTINGS: ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'],
     ACTIVITY: ['activities', 'readItems']

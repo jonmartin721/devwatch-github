@@ -88,7 +88,25 @@ describe('Options Main Functions', () => {
       storage: {
         local: {
           get: jest.fn((keys, callback) => {
-            callback({ activities: [], readItems: [] });
+            const requestedKeys = Array.isArray(keys) ? keys : [keys];
+            const result = {};
+
+            requestedKeys.forEach((key) => {
+              if (key === 'activities') {
+                result.activities = [];
+              }
+              if (key === 'readItems') {
+                result.readItems = [];
+              }
+              if (key === 'githubOAuthClientId') {
+                result.githubOAuthClientId = 'Iv1.test-client-id';
+              }
+              if (key === 'encryptedGithubAuthSession') {
+                result.encryptedGithubAuthSession = null;
+              }
+            });
+
+            callback(result);
           }),
           set: jest.fn((data, callback) => {
             if (callback) callback();
