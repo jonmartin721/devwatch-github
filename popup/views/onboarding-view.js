@@ -18,6 +18,36 @@ function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
 }
 
+async function copyTextToClipboard(text) {
+  if (!text) {
+    return false;
+  }
+
+  if (navigator?.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const activeElement = document.activeElement;
+  const tempInput = document.createElement('input');
+  tempInput.value = text;
+  tempInput.setAttribute('readonly', '');
+  tempInput.style.position = 'absolute';
+  tempInput.style.opacity = '0';
+  document.body.appendChild(tempInput);
+  tempInput.select();
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    tempInput.remove();
+    activeElement?.focus?.();
+  }
+
+  return copied;
+}
+
 function createPendingDeviceAuthState(deviceCodeData) {
   const issuedAt = Date.now();
   const expiresAt = issuedAt + ((deviceCodeData.expiresIn ?? 900) * 1000);
@@ -326,15 +356,19 @@ async function renderTokenStep() {
       </div>
 
       <div class="token-input-group">
-        <input
-          type="text"
-          id="tokenInput"
-          placeholder="Verification code appears here"
-          class="token-input"
-          autocomplete="off"
-          value="${safeUserCode}"
-          readonly
-        >
+        <div class="token-code-stack">
+          <input
+            type="text"
+            id="tokenInput"
+            placeholder="Verification code appears here"
+            class="token-input"
+            autocomplete="off"
+            value="${safeUserCode}"
+            readonly
+          >
+          <p class="token-copy-hint">Click the code to select it, or use Copy.</p>
+        </div>
+        <button id="copyTokenCodeBtn" class="copy-code-btn" ${safeUserCode ? '' : 'disabled'}>Copy</button>
         <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
       </div>
 
@@ -612,10 +646,35 @@ export async function setupOnboardingStepListeners(currentStep, loadActivitiesCa
 
 function setupTokenStepListeners() {
   const tokenInput = document.getElementById('tokenInput');
+  const copyTokenCodeBtn = document.getElementById('copyTokenCodeBtn');
   const validateBtn = document.getElementById('validateTokenBtn');
   const tokenStatus = document.getElementById('tokenStatus');
   const nextBtn = document.getElementById('nextBtn');
   const tokenElements = { tokenInput, validateBtn, tokenStatus, nextBtn };
+
+  tokenInput?.addEventListener('click', () => {
+    tokenInput.select();
+  });
+
+  tokenInput?.addEventListener('focus', () => {
+    tokenInput.select();
+  });
+
+  copyTokenCodeBtn?.addEventListener('click', async () => {
+    const userCode = tokenInput?.value?.trim();
+    if (!userCode) {
+      return;
+    }
+
+    try {
+      const copied = await copyTextToClipboard(userCode);
+      if (copied) {
+        tokenStatus.innerHTML = getStatusMarkup('success', `Copied ${userCode}. Paste it into GitHub to finish connecting.`);
+      }
+    } catch (_error) {
+      tokenStatus.innerHTML = getStatusMarkup('error', 'Could not copy the code automatically. Select it manually.');
+    }
+  });
 
   // Resume the device flow if the popup was closed while GitHub was waiting
   // for approval in another tab.
@@ -623,6 +682,9 @@ function setupTokenStepListeners() {
     const existingTokenData = await onboardingManager.getStepData('token');
     if (!existingTokenData?.validated && existingTokenData?.pendingDeviceAuth) {
       tokenInput.value = existingTokenData.userCode || existingTokenData.pendingDeviceAuth.userCode || '';
+      if (copyTokenCodeBtn) {
+        copyTokenCodeBtn.disabled = !tokenInput.value;
+      }
 
       try {
         await completePendingDeviceAuth(existingTokenData, tokenElements, {
@@ -653,6 +715,9 @@ function setupTokenStepListeners() {
       const pendingDeviceAuth = createPendingDeviceAuthState(deviceCodeData);
 
       tokenInput.value = deviceCodeData.userCode || '';
+      if (copyTokenCodeBtn) {
+        copyTokenCodeBtn.disabled = !tokenInput.value;
+      }
       tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`);
       await onboardingManager.saveStepData('token', {
         userCode: deviceCodeData.userCode,

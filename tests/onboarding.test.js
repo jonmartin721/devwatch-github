@@ -132,6 +132,12 @@ describe('Onboarding - token persistence', () => {
       configurable: true,
       value: TextEncoder
     });
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: jest.fn(async () => undefined)
+      }
+    });
     // Reload modules to reset module-level onboardingManager cache
     jest.resetModules();
     const module = await import('../popup/views/onboarding-view.js');
@@ -304,6 +310,24 @@ describe('Onboarding - token persistence', () => {
 
     expect(tokenStatus.textContent).toContain('GitHub is connected');
     expect(onboardingHtml).toContain('Connected');
+  });
+
+  test('connect step lets you copy the saved device code', async () => {
+    await renderTokenStep({
+      data: {
+        token: {
+          userCode: 'ABCD-EFGH',
+          validated: false
+        }
+      }
+    });
+
+    document.getElementById('copyTokenCodeBtn').click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('ABCD-EFGH');
+    expect(document.getElementById('tokenStatus').textContent).toContain('Copied ABCD-EFGH');
   });
 
   test('connect step shows device instructions when sign-in starts', async () => {

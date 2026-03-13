@@ -1370,6 +1370,13 @@ body.dark-mode .search-box input:focus-visible {
   padding: 16px;
 }
 
+.token-code-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .token-input {
   flex: 1;
   padding: 10px;
@@ -1379,12 +1386,45 @@ body.dark-mode .search-box input:focus-visible {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   background: var(--bg-primary);
   color: var(--text-primary);
+  letter-spacing: 0.14em;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
 }
 
 .token-input:focus {
   outline: none;
   border-color: var(--link-color);
   box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+}
+
+.token-copy-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.copy-code-btn {
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.copy-code-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--link-color);
+}
+
+.copy-code-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .validate-btn {
@@ -1411,6 +1451,17 @@ body.dark-mode .search-box input:focus-visible {
 .token-status {
   margin: 12px 0;
   min-height: 20px;
+}
+
+@media (max-width: 560px) {
+  .token-input-group {
+    flex-direction: column;
+  }
+
+  .copy-code-btn,
+  .validate-btn {
+    width: 100%;
+  }
 }
 
 .status-success {
