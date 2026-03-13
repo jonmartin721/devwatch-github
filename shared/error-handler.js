@@ -29,9 +29,9 @@ const ERROR_MESSAGES = {
     action: 'Try Again'
   },
   [ERROR_TYPES.AUTHENTICATION]: {
-    title: 'Token Expired',
-    message: 'Your GitHub token has expired or is invalid. Tokens expire after 90 days by default. Please create a new token and update it in settings.',
-    action: 'Go to Settings'
+    title: 'GitHub Sign-In Needed',
+    message: 'Your GitHub sign-in expired or was revoked. Reconnect GitHub in settings to keep monitoring repositories.',
+    action: 'Open Settings'
   },
   [ERROR_TYPES.RATE_LIMIT]: {
     title: 'Rate Limit Exceeded',
@@ -96,7 +96,14 @@ export function classifyError(error, response = null) {
   if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
     return ERROR_TYPES.NETWORK;
   }
-  if (errorMessage.includes('token') || errorMessage.includes('auth')) {
+  if (
+    errorMessage.includes('token')
+    || errorMessage.includes('auth')
+    || errorMessage.includes('sign-in')
+    || errorMessage.includes('revoked')
+    || errorMessage.includes('unauthorized')
+    || errorMessage.includes('expired')
+  ) {
     return ERROR_TYPES.AUTHENTICATION;
   }
   if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {

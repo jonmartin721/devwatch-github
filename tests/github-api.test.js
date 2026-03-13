@@ -16,7 +16,7 @@ describe('GitHub API Helpers', () => {
       const headers = createHeaders(token);
 
       expect(headers).toEqual({
-        'Authorization': 'token ghp_test1234567890',
+        'Authorization': 'Bearer ghp_test1234567890',
         'Accept': 'application/vnd.github.v3+json'
       });
     });
@@ -25,7 +25,7 @@ describe('GitHub API Helpers', () => {
       const headers = createHeaders('');
 
       expect(headers).toEqual({
-        'Authorization': 'token ',
+        'Authorization': 'Bearer ',
         'Accept': 'application/vnd.github.v3+json'
       });
     });
@@ -34,7 +34,7 @@ describe('GitHub API Helpers', () => {
       const token = 'github_pat_123ABC';
       const headers = createHeaders(token);
 
-      expect(headers.Authorization).toBe('token github_pat_123ABC');
+      expect(headers.Authorization).toBe('Bearer github_pat_123ABC');
     });
   });
 
@@ -56,7 +56,7 @@ describe('GitHub API Helpers', () => {
         statusText: 'Unauthorized'
       };
 
-      expect(() => handleApiResponse(mockResponse, 'owner/repo')).toThrow('Invalid GitHub token');
+      expect(() => handleApiResponse(mockResponse, 'owner/repo')).toThrow('GitHub sign-in expired or was revoked');
     });
 
     it('should throw error for 403 rate limit', () => {

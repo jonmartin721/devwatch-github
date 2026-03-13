@@ -1,5 +1,5 @@
 import { applyTheme } from '../shared/utils.js';
-import { getSyncItem } from '../shared/storage-helpers.js';
+import { getSyncItem, getWatchedRepos } from '../shared/storage-helpers.js';
 import { showError } from '../shared/error-handler.js';
 import {
   isOffline,
@@ -177,8 +177,7 @@ async function handleRefresh() {
 
 // Update repo count in header
 async function updateRepoCount() {
-  const result = await chrome.storage.sync.get(['watchedRepos']);
-  const watchedRepos = result.watchedRepos || [];
+  const watchedRepos = await getWatchedRepos();
   const count = watchedRepos.length;
   const repoCountEl = document.getElementById('repoCount');
   if (repoCountEl) {

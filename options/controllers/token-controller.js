@@ -1,138 +1,164 @@
-import { createHeaders } from '../../shared/github-api.js';
-import { clearToken as clearStoredToken } from '../../shared/storage-helpers.js';
+import { completeGitHubDeviceAuth } from '../../shared/auth.js';
+import {
+  clearAuthSession,
+  getAuthSession,
+  setAuthSession
+} from '../../shared/storage-helpers.js';
+import { OAUTH_CONFIG } from '../../shared/config.js';
 import { NotificationManager } from '../../shared/ui/notification-manager.js';
 
 const notifications = NotificationManager.getInstance();
 
+function setRepoAccessState(isConnected) {
+  const repoInput = document.getElementById('repoInput');
+  const addRepoBtn = document.getElementById('addRepoBtn');
+  const repoHelpText = document.getElementById('repoHelpText');
+  const importSection = document.getElementById('importReposSection');
+
+  repoInput.disabled = !isConnected;
+  repoInput.placeholder = isConnected
+    ? 'e.g., react, facebook/react, or GitHub URL'
+    : 'Connect GitHub to add repositories';
+  addRepoBtn.disabled = !isConnected;
+  repoHelpText.textContent = isConnected
+    ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
+    : 'Connect GitHub above to start adding repositories';
+  importSection.classList.toggle('hidden', !isConnected);
+  importSection.style.display = isConnected ? 'block' : 'none';
+}
+
+function setDeviceCode(userCode = '') {
+  const deviceCodeInput = document.getElementById('githubToken');
+  const deviceCodeSection = document.getElementById('deviceCodeSection');
+
+  if (!deviceCodeInput || !deviceCodeSection) {
+    return;
+  }
+
+  deviceCodeInput.value = userCode;
+  deviceCodeSection.classList.toggle('hidden', !userCode);
+  deviceCodeSection.style.display = userCode ? 'block' : 'none';
+}
+
+function setStatus(message = '', statusClass = '') {
+  const statusEl = document.getElementById('tokenStatus');
+
+  if (!statusEl) {
+    return;
+  }
+
+  statusEl.textContent = message;
+  statusEl.className = `token-status${statusClass ? ` ${statusClass}` : ''}`;
+}
+
+export function applyStoredConnection(authSession, options = {}) {
+  const connectBtn = document.getElementById('connectGitHubBtn');
+  const clearBtn = document.getElementById('clearTokenBtn');
+  const isConnected = Boolean(authSession?.accessToken);
+  const username = authSession?.username;
+
+  setRepoAccessState(isConnected);
+  setDeviceCode(options.userCode || '');
+
+  if (connectBtn) {
+    connectBtn.disabled = false;
+    connectBtn.textContent = isConnected ? 'Reconnect GitHub' : 'Connect GitHub';
+  }
+
+  if (clearBtn) {
+    clearBtn.style.display = isConnected ? 'block' : 'none';
+  }
+
+  if (options.statusMessage) {
+    setStatus(options.statusMessage, options.statusClass);
+    return;
+  }
+
+  if (isConnected) {
+    setStatus(
+      username ? `Connected as ${username}` : 'GitHub is connected',
+      'valid'
+    );
+  } else {
+    setStatus('', '');
+  }
+}
+
 export async function clearToken() {
-  if (!confirm('Are you sure you want to clear your GitHub token?')) {
+  if (!confirm('Disconnect GitHub from DevWatch?')) {
     return false;
   }
 
-  document.getElementById('githubToken').value = '';
-  document.getElementById('tokenStatus').textContent = '';
-  document.getElementById('tokenStatus').className = 'token-status';
-  document.getElementById('clearTokenBtn').style.display = 'none';
+  await clearAuthSession();
 
-  const repoInput = document.getElementById('repoInput');
-  repoInput.disabled = true;
-  repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
-  document.getElementById('addRepoBtn').disabled = true;
-  document.getElementById('repoHelpText').textContent = 'Add a valid GitHub token above to start adding repositories';
-
-  document.getElementById('importReposSection').style.display = 'none';
-
-  await clearStoredToken();
-
-  notifications.info('GitHub token cleared successfully');
+  applyStoredConnection(null);
+  notifications.info('GitHub disconnected');
   return true;
 }
 
-export async function validateToken(token, toastManager, options = {}) {
-  const statusEl = document.getElementById('tokenStatus');
-  const shouldApplyResult = options.shouldApplyResult ?? (() => true);
+function getErrorMessage(error) {
+  switch (error?.code) {
+    case 'client_id_missing':
+      return 'GitHub OAuth client ID is not configured for this build yet.';
+    case 'access_denied':
+      return 'GitHub sign-in was cancelled before access was granted.';
+    case 'expired_token':
+      return 'The GitHub sign-in code expired. Start again to reconnect.';
+    case 'aborted':
+      return 'GitHub sign-in was cancelled.';
+    default:
+      return 'GitHub sign-in failed. Try again in a moment.';
+  }
+}
+
+export async function connectGitHub(_toastManager) {
+  const previousSession = await getAuthSession();
+  const connectBtn = document.getElementById('connectGitHubBtn');
+  let nextButtonLabel = previousSession?.accessToken ? 'Reconnect GitHub' : 'Connect GitHub';
+
+  if (connectBtn) {
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Waiting for GitHub...';
+  }
+
+  setRepoAccessState(Boolean(previousSession?.accessToken));
+  setStatus('Starting GitHub sign-in...', 'checking');
 
   try {
-    const response = await fetch('https://api.github.com/user', {
-      headers: createHeaders(token)
+    const result = await completeGitHubDeviceAuth({
+      onCode: ({ userCode }) => {
+        setDeviceCode(userCode || '');
+        setStatus(`Enter ${userCode} on GitHub to finish connecting.`, 'checking');
+      }
     });
 
-    if (response.ok) {
-      const user = await response.json();
-      if (!shouldApplyResult()) {
-        return { isValid: true, user: user.login };
-      }
+    await setAuthSession(result.authSession);
 
-      statusEl.textContent = `✓ Valid (${user.login})`;
-      statusEl.className = 'token-status valid';
-      document.getElementById('clearTokenBtn').style.display = 'block';
+    applyStoredConnection(result.authSession);
+    nextButtonLabel = 'Reconnect GitHub';
+    notifications.success(`Connected to GitHub as ${result.user.login}`);
+    return { isValid: true, user: result.user.login, authSession: result.authSession };
+  } catch (error) {
+    applyStoredConnection(previousSession, {
+      statusMessage: getErrorMessage(error),
+      statusClass: 'invalid'
+    });
 
-      const repoInput = document.getElementById('repoInput');
-      repoInput.disabled = false;
-      repoInput.placeholder = 'e.g., react, facebook/react, or GitHub URL';
-      document.getElementById('addRepoBtn').disabled = false;
-      document.getElementById('repoHelpText').textContent = 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)';
-
-      const importSection = document.getElementById('importReposSection');
-      importSection.classList.remove('hidden');
-      importSection.style.display = 'block';
-
-      if (!toastManager.lastValidToken || toastManager.lastValidToken !== token) {
-        if (toastManager.isManualTokenEntry) {
-          notifications.success(`GitHub token validated successfully for user: ${user.login}`);
-        }
-        toastManager.lastValidToken = token;
-      }
-
-      toastManager.isManualTokenEntry = false;
-      return { isValid: true, user: user.login };
-    } else if (response.status === 401) {
-      if (!shouldApplyResult()) {
-        return { isValid: false, reason: 'invalid' };
-      }
-
-      statusEl.textContent = '✗ Invalid token';
-      statusEl.className = 'token-status invalid';
-      document.getElementById('clearTokenBtn').style.display = 'none';
-
-      const repoInput = document.getElementById('repoInput');
-      repoInput.disabled = true;
-      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
-      document.getElementById('addRepoBtn').disabled = true;
-      document.getElementById('repoHelpText').textContent = 'Invalid token. Please check your GitHub token and try again.';
-
-      const importSection = document.getElementById('importReposSection');
-      importSection.classList.add('hidden');
-      importSection.style.display = 'none';
-
-      if (!toastManager.lastInvalidToken || toastManager.lastInvalidToken !== token) {
-        notifications.error('Invalid GitHub token. Please check your token and try again.');
-        toastManager.lastInvalidToken = token;
-      }
-      return { isValid: false, reason: 'invalid' };
+    if (previousSession?.accessToken) {
+      notifications.warning(getErrorMessage(error));
     } else {
-      if (!shouldApplyResult()) {
-        return { isValid: false, reason: 'http', status: response.status };
-      }
-
-      statusEl.textContent = `✗ Error (${response.status})`;
-      statusEl.className = 'token-status invalid';
-      document.getElementById('clearTokenBtn').style.display = 'none';
-
-      const repoInput = document.getElementById('repoInput');
-      repoInput.disabled = true;
-      repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
-      document.getElementById('addRepoBtn').disabled = true;
-      document.getElementById('repoHelpText').textContent = 'GitHub API error. Please try again later.';
-
-      const importSection = document.getElementById('importReposSection');
-      importSection.classList.add('hidden');
-      importSection.style.display = 'none';
-
-      if (!toastManager.lastApiError || toastManager.lastApiError !== response.status) {
-        notifications.error(`GitHub API error (${response.status}). Please try again later.`);
-        toastManager.lastApiError = response.status;
-      }
-      return { isValid: false, reason: 'http', status: response.status };
-    }
-  } catch (_error) {
-    if (!shouldApplyResult()) {
-      return { isValid: false, reason: 'network' };
+      notifications.error(getErrorMessage(error));
     }
 
-    statusEl.textContent = '✗ Network error';
-    statusEl.className = 'token-status invalid';
-    document.getElementById('clearTokenBtn').style.display = 'none';
-
-    const repoInput = document.getElementById('repoInput');
-    repoInput.disabled = true;
-    repoInput.placeholder = 'Enter a valid GitHub token to add repositories';
-    document.getElementById('addRepoBtn').disabled = true;
-    document.getElementById('repoHelpText').textContent = 'Network error. Please check your connection and try again.';
-
-    document.getElementById('importReposSection').style.display = 'none';
-
-    notifications.error('Network error while validating token. Please check your connection and try again.');
-    return { isValid: false, reason: 'network' };
+    return { isValid: false, reason: error?.code || 'auth_failed' };
+  } finally {
+    if (connectBtn) {
+      connectBtn.disabled = false;
+      connectBtn.textContent = nextButtonLabel;
+    }
   }
+}
+
+export function getDisconnectHelpUrl() {
+  return OAUTH_CONFIG.AUTHORIZED_APPS_URL;
 }

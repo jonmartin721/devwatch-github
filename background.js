@@ -1,5 +1,5 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getToken, getFilteringSettings } from './shared/storage-helpers.js';
+import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getAccessToken, getFilteringSettings, getWatchedRepos } from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/repository-utils.js';
 import { safelyOpenUrl } from './shared/security.js';
 
@@ -73,11 +73,10 @@ if (typeof chrome !== 'undefined' && chrome.notifications) {
 
 async function checkGitHubActivity() {
   try {
-    // Get token from secure local storage
-    const githubToken = await getToken();
+    const githubToken = await getAccessToken();
 
-    const { watchedRepos, lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
-      'watchedRepos',
+    const watchedRepos = await getWatchedRepos();
+    const { lastCheck, filters, notifications, mutedRepos, snoozedRepos, unmutedRepos } = await getSyncItems([
       'lastCheck',
       'filters',
       'notifications',
@@ -87,7 +86,7 @@ async function checkGitHubActivity() {
     ]);
 
     if (!githubToken) {
-      console.warn('[DevWatch] No GitHub token found. Please add a token in settings.');
+      console.warn('[DevWatch] No GitHub connection found. Please connect GitHub in settings.');
       return;
     }
 
@@ -287,7 +286,7 @@ async function fetchRepoActivity(repo, token, since, filters) {
     // Store error for user display but don't crash
     let userMessage = 'Unable to fetch repository activity';
     if (error.message.includes('401')) {
-      userMessage = 'Authentication failed. Please check your GitHub token.';
+      userMessage = 'GitHub sign-in expired or was revoked. Reconnect GitHub in settings.';
     } else if (error.message.includes('403')) {
       userMessage = 'Access denied or rate limit exceeded.';
     } else if (error.message.includes('404')) {

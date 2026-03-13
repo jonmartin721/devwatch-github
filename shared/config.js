@@ -16,6 +16,17 @@ export const API_CONFIG = {
   MAX_REPOS_PER_REQUEST: 100
 };
 
+// OAuth Configuration
+export const OAUTH_CONFIG = {
+  CLIENT_ID: 'YOUR_GITHUB_OAUTH_CLIENT_ID',
+  CLIENT_ID_STORAGE_KEY: 'githubOAuthClientId',
+  SCOPES: ['repo', 'read:user'],
+  DEVICE_CODE_URL: 'https://github.com/login/device/code',
+  ACCESS_TOKEN_URL: 'https://github.com/login/oauth/access_token',
+  DEVICE_VERIFY_URL: 'https://github.com/login/device',
+  AUTHORIZED_APPS_URL: 'https://github.com/settings/applications'
+};
+
 // Rate Limiting Configuration
 export const RATE_LIMIT_CONFIG = {
   DEFAULT_CHECK_INTERVAL: 15, // minutes
@@ -77,12 +88,12 @@ export const FEATURES = {
 // Error Messages
 export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Network connection error. Please check your internet connection.',
-  AUTH_FAILED: 'Authentication failed. Please check your GitHub token.',
+  AUTH_FAILED: 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.',
   RATE_LIMITED: 'Rate limit exceeded. Please wait before making more requests.',
   NOT_FOUND: 'Repository not found or access denied.',
   FORBIDDEN: 'Access denied. Please check your permissions.',
   SERVER_ERROR: 'GitHub API is experiencing issues. Please try again later.',
-  INVALID_TOKEN: 'Invalid GitHub token format.',
+  INVALID_TOKEN: 'GitHub sign-in is no longer valid. Reconnect GitHub and try again.',
   CORS_ERROR: 'CORS error. Please check your browser settings.',
   STORAGE_ERROR: 'Storage error. Please check your browser settings.',
   VALIDATION_ERROR: 'Invalid input. Please check your repository format.',
@@ -92,7 +103,6 @@ export const ERROR_MESSAGES = {
 // Validation Patterns
 export const VALIDATION_PATTERNS = {
   REPOSITORY_NAME: /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/,
-  GITHUB_TOKEN: /^ghp_[a-zA-Z0-9]{36}$/,
   USERNAME: /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,38})[a-zA-Z0-9]$/,
   URL: /^https?:\/\/.+/,
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -129,6 +139,7 @@ export const DEV_CONFIG = {
 // Export all configurations as a single object for easy access
 export const CONFIG = {
   API: API_CONFIG,
+  OAUTH: OAUTH_CONFIG,
   RATE_LIMIT: RATE_LIMIT_CONFIG,
   STORAGE: STORAGE_CONFIG,
   UI: UI_CONFIG,

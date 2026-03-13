@@ -1,5 +1,5 @@
 import { applyTheme, formatDateVerbose } from '../shared/utils.js';
-import { getToken, setToken, clearToken as clearStoredToken, getLocalItems, setLocalItem } from '../shared/storage-helpers.js';
+import { getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
 import { validateRepository } from '../shared/repository-validator.js';
@@ -8,7 +8,7 @@ import { NotificationManager } from '../shared/ui/notification-manager.js';
 
 // Controllers
 import { setupThemeListener } from './controllers/theme-controller.js';
-import { clearToken, validateToken } from './controllers/token-controller.js';
+import { applyStoredConnection, clearToken, connectGitHub } from './controllers/token-controller.js';
 import { toggleMuteRepo, togglePinRepo } from './controllers/repository-controller.js';
 import { openImportModal, closeImportModal, filterImportRepos, importSelectedRepos, updateSelectedCount } from './controllers/import-controller.js';
 import { exportSettings, handleImportFile } from './controllers/export-import-controller.js';
@@ -29,7 +29,6 @@ const state = {
   searchQuery: '',
   hidePinnedRepos: false
 };
-let persistedToken = null;
 
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -170,20 +169,22 @@ function handleUrlParameters() {
 
 function syncTokenUiWithStoredCredential(hasStoredToken) {
   const clearTokenBtn = document.getElementById('clearTokenBtn');
+  const connectGitHubBtn = document.getElementById('connectGitHubBtn');
   const repoInput = document.getElementById('repoInput');
   const addRepoBtn = document.getElementById('addRepoBtn');
   const repoHelpText = document.getElementById('repoHelpText');
   const importSection = document.getElementById('importReposSection');
 
+  connectGitHubBtn.textContent = hasStoredToken ? 'Reconnect GitHub' : 'Connect GitHub';
   clearTokenBtn.style.display = hasStoredToken ? 'block' : 'none';
   repoInput.disabled = !hasStoredToken;
   repoInput.placeholder = hasStoredToken
     ? 'e.g., react, facebook/react, or GitHub URL'
-    : 'Enter a valid GitHub token to add repositories';
+    : 'Connect GitHub to add repositories';
   addRepoBtn.disabled = !hasStoredToken;
   repoHelpText.textContent = hasStoredToken
     ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
-    : 'Add a valid GitHub token above to start adding repositories';
+    : 'Connect GitHub above to start adding repositories';
   importSection.classList.toggle('hidden', !hasStoredToken);
   importSection.style.display = hasStoredToken ? 'block' : 'none';
 }
@@ -197,11 +198,11 @@ function setupEventListeners() {
   setupTabNavigation();
 
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
+  document.getElementById('connectGitHubBtn').addEventListener('click', async () => {
+    await connectGitHub(toastManager);
+  });
   document.getElementById('clearTokenBtn').addEventListener('click', async () => {
-    const tokenCleared = await clearToken();
-    if (tokenCleared) {
-      persistedToken = null;
-    }
+    await clearToken();
   });
 
   // Action button toggles
@@ -274,53 +275,6 @@ function setupEventListeners() {
       state.currentPage++;
       renderRepoListWrapper();
     }
-  });
-
-  // Validate and persist token only after the current input has been confirmed valid.
-  let tokenValidationTimeout;
-  let tokenValidationRequestId = 0;
-  document.getElementById('githubToken').addEventListener('input', async (e) => {
-    clearTimeout(tokenValidationTimeout);
-    const token = e.target.value.trim();
-    tokenValidationRequestId++;
-    const validationId = tokenValidationRequestId;
-
-    if (!token) {
-      document.getElementById('tokenStatus').textContent = '';
-      document.getElementById('tokenStatus').className = 'token-status';
-      syncTokenUiWithStoredCredential(Boolean(persistedToken));
-      return;
-    }
-
-    document.getElementById('tokenStatus').textContent = 'Checking...';
-    document.getElementById('tokenStatus').className = 'token-status checking';
-
-    // Mark that this is a manual token entry for toast purposes
-    toastManager.isManualTokenEntry = true;
-
-    tokenValidationTimeout = setTimeout(async () => {
-      const validationResult = await validateToken(token, toastManager, {
-        shouldApplyResult: () =>
-          validationId === tokenValidationRequestId &&
-          document.getElementById('githubToken')?.value.trim() === token
-      });
-
-      if (validationId !== tokenValidationRequestId) {
-        return;
-      }
-
-      if (validationResult.isValid) {
-        await setToken(token);
-        persistedToken = token;
-      } else if (shouldClearStoredToken(validationResult)) {
-        await clearStoredToken();
-        persistedToken = null;
-      }
-
-      if (!validationResult.isValid && persistedToken) {
-        syncTokenUiWithStoredCredential(true);
-      }
-    }, 500);
   });
 
   // Auto-save theme changes
@@ -469,13 +423,20 @@ function setupEventListeners() {
   document.getElementById('closeImportModal').addEventListener('click', closeImportModal);
   document.getElementById('cancelImportBtn').addEventListener('click', closeImportModal);
   document.getElementById('confirmImportBtn').addEventListener('click', async () => {
-    await importSelectedRepos(state.watchedRepos, async () => {
-      // Reload repos from storage to update state
-      const result = await chrome.storage.sync.get(['watchedRepos']);
-      state.watchedRepos = result.watchedRepos || [];
-      renderRepoListWrapper();
-      toastManager.show('Repositories imported successfully', 'success');
-    });
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+    confirmImportBtn.disabled = true;
+
+    try {
+      await importSelectedRepos(state.watchedRepos, async () => {
+        // Reload repos from storage to update state
+        state.watchedRepos = await getWatchedRepos();
+        renderRepoListWrapper();
+        toastManager.show('Repositories imported successfully', 'success');
+      });
+    } catch (error) {
+      toastManager.error(error.message || 'Failed to import repositories');
+      updateSelectedCount();
+    }
   });
 
   document.getElementById('selectAllImport').addEventListener('change', (e) => {
@@ -577,11 +538,9 @@ async function loadSettings() {
       return;
     }
 
-    // Get token from secure local storage (with automatic migration)
-    const githubToken = await getToken();
+    const authSession = await getAuthSession();
 
     const settings = await chrome.storage.sync.get([
-      'watchedRepos',
       'mutedRepos',
       'pinnedRepos',
       'checkInterval',
@@ -595,6 +554,7 @@ async function loadSettings() {
     ]);
 
     const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
+    const watchedRepos = await getWatchedRepos();
 
     // Safety check: if settings is undefined or null, use defaults
     if (!settings || !snoozeSettings) {
@@ -610,21 +570,13 @@ async function loadSettings() {
     const theme = settings.theme || 'system';
     applyTheme(theme);
 
-    if (githubToken) {
-      persistedToken = githubToken;
-      document.getElementById('githubToken').value = githubToken;
-      document.getElementById('clearTokenBtn').style.display = 'block';
-      // Validate existing token
-      const validationResult = await validateToken(githubToken, toastManager);
-      if (shouldClearStoredToken(validationResult)) {
-        await clearStoredToken();
-        persistedToken = null;
-      }
+    if (authSession?.accessToken) {
+      applyStoredConnection(authSession);
     } else {
       syncTokenUiWithStoredCredential(false);
     }
 
-    state.watchedRepos = settings.watchedRepos || [];
+    state.watchedRepos = watchedRepos;
     state.mutedRepos = settings.mutedRepos || [];
     state.pinnedRepos = settings.pinnedRepos || [];
 
@@ -798,7 +750,7 @@ async function addRepo() {
     renderRepoListWrapper();
 
     // Auto-save
-    await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+    await setWatchedRepos(state.watchedRepos);
 
     // Show success toast
     toastManager.success(`Successfully added ${validationResult.fullName} to watched repositories`);
@@ -859,10 +811,10 @@ function showRepoError(message) {
  * // Returns: null
  */
 async function validateRepo(repo) {
-  const githubToken = await getToken();
+  const githubToken = await getAccessToken();
 
   if (!githubToken) {
-    return { valid: false, error: 'No GitHub token found. Please add a token first.' };
+    return { valid: false, error: 'No GitHub connection found. Connect GitHub first.' };
   }
 
   // First do basic validation
@@ -919,7 +871,7 @@ async function removeRepo(repoFullName) {
   renderRepoListWrapper();
 
   // Auto-save
-  await chrome.storage.sync.set({ watchedRepos: state.watchedRepos });
+  await setWatchedRepos(state.watchedRepos);
 
   // Show success toast
   toastManager.success(`Removed ${repoFullName} from watched repositories`);
@@ -1020,7 +972,6 @@ window.updateSelectedCount = updateSelectedCount;
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     state,
-    validateToken,
     addRepo,
     validateRepo,
     removeRepo,
@@ -1092,7 +1043,7 @@ async function clearAllData() {
 async function resetSettings() {
   // Show confirmation dialog
   const confirmed = confirm(
-    'This will reset ALL settings to defaults and clear your GitHub token and repositories.\n\nThis action cannot be undone. Are you sure?'
+    'This will reset ALL settings to defaults and clear your GitHub connection and repositories.\n\nThis action cannot be undone. Are you sure?'
   );
 
   if (!confirmed) {
@@ -1240,7 +1191,6 @@ setInterval(async () => {
 export {
   state,
   setupTabNavigation,
-  validateToken,
   loadSettings,
   setupEventListeners,
   addRepo,

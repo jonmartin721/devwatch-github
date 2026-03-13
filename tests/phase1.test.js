@@ -168,7 +168,7 @@ describe('Error Display', () => {
   test('shows recent errors', () => {
     allowUnexpectedConsole('error');
     const error = {
-      message: 'Invalid GitHub token',
+      message: 'GitHub sign-in expired or was revoked',
       repo: 'facebook/react',
       timestamp: Date.now()
     };
@@ -177,8 +177,8 @@ describe('Error Display', () => {
 
     const errorMsg = document.getElementById('errorMessage');
     expect(errorMsg.style.display).toBe('block');
-    expect(errorMsg.textContent).toContain('Token Expired');
-    expect(errorMsg.textContent).toContain('invalid');
+    expect(errorMsg.textContent).toContain('GitHub Sign-In Needed');
+    expect(errorMsg.textContent).toContain('revoked');
   });
 
   test('displays all errors when shown', () => {

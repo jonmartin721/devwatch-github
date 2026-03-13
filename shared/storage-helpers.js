@@ -3,6 +3,10 @@
  */
 import { encryptData, decryptData } from './crypto-utils.js';
 
+const AUTH_SESSION_CACHE_KEY = 'githubAuthSession';
+const AUTH_SESSION_STORAGE_KEY = 'encryptedGithubAuthSession';
+const WATCHED_REPOS_STORAGE_KEY = 'watchedRepos';
+
 /**
  * Check if running in Chrome extension context
  * @returns {boolean} True if Chrome APIs are available
@@ -145,6 +149,50 @@ export function setLocalItem(key, value) {
   });
 }
 
+function clearLegacySyncWatchedRepos() {
+  if (!isChromeExtension()) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    chrome.storage.sync.remove([WATCHED_REPOS_STORAGE_KEY], () => {
+      resolve();
+    });
+  });
+}
+
+/**
+ * Get watched repositories from local storage, with a sync-storage fallback for legacy installs.
+ * @returns {Promise<Array>} Watched repository records
+ */
+export async function getWatchedRepos() {
+  const localRepos = await getLocalItem(WATCHED_REPOS_STORAGE_KEY, null);
+  if (Array.isArray(localRepos)) {
+    return localRepos;
+  }
+
+  const legacyRepos = await getSyncItem(WATCHED_REPOS_STORAGE_KEY, STORAGE_DEFAULTS.watchedRepos);
+
+  if (Array.isArray(legacyRepos) && legacyRepos.length > 0) {
+    await setLocalItem(WATCHED_REPOS_STORAGE_KEY, legacyRepos);
+    await clearLegacySyncWatchedRepos();
+    return legacyRepos;
+  }
+
+  return STORAGE_DEFAULTS.watchedRepos;
+}
+
+/**
+ * Persist watched repositories in local storage so larger repo lists do not hit sync item quotas.
+ * @param {Array} watchedRepos - Repository records to store
+ * @returns {Promise<void>}
+ */
+export async function setWatchedRepos(watchedRepos = []) {
+  const normalizedRepos = Array.isArray(watchedRepos) ? watchedRepos : [];
+  await setLocalItem(WATCHED_REPOS_STORAGE_KEY, normalizedRepos);
+  await clearLegacySyncWatchedRepos();
+}
+
 /**
  * Calculate the set of excluded repositories (muted + snoozed)
  * @param {Array<string>} mutedRepos - Array of muted repository names
@@ -164,71 +212,93 @@ export function getExcludedRepos(mutedRepos = [], snoozedRepos = []) {
 }
 
 /**
- * Get GitHub token
+ * Get the stored GitHub auth session
  * Tries session storage first (decrypted cache), then local storage (encrypted)
- * @returns {Promise<string|null>} Token or null
+ * @returns {Promise<Object|null>} Auth session or null
  */
-export async function getToken() {
-  // 1. Try session storage first (fast path, decrypted)
+export async function getAuthSession() {
   if (isChromeExtension() && chrome.storage.session) {
-    const session = await new Promise(resolve => {
-      chrome.storage.session.get(['githubToken'], result => resolve(result.githubToken));
+    const cachedSession = await new Promise(resolve => {
+      chrome.storage.session.get([AUTH_SESSION_CACHE_KEY], result => resolve(result[AUTH_SESSION_CACHE_KEY]));
     });
-    if (session) return session;
+
+    if (cachedSession && typeof cachedSession === 'object') {
+      return cachedSession;
+    }
   }
 
-  // 2. Try local storage (encrypted)
-  const encrypted = await getLocalItem('encryptedGithubToken');
+  const encrypted = await getLocalItem(AUTH_SESSION_STORAGE_KEY);
   if (!encrypted) {
     return null;
   }
 
-  // 3. Decrypt and cache in session storage
-  const token = await decryptData(encrypted);
-  if (token && isChromeExtension() && chrome.storage.session) {
-    await new Promise(resolve => {
-      chrome.storage.session.set({ githubToken: token }, resolve);
-    });
-  }
+  try {
+    const decrypted = await decryptData(encrypted);
+    const session = typeof decrypted === 'string' ? JSON.parse(decrypted) : decrypted;
 
-  return token;
+    if (!session || typeof session !== 'object') {
+      return null;
+    }
+
+    if (isChromeExtension() && chrome.storage.session) {
+      await new Promise(resolve => {
+        chrome.storage.session.set({ [AUTH_SESSION_CACHE_KEY]: session }, resolve);
+      });
+    }
+
+    return session;
+  } catch (_error) {
+    return null;
+  }
 }
 
 /**
- * Set GitHub token
- * Encrypts before storing in local storage, caches decrypted in session storage
- * @param {string} token - GitHub token to store
+ * Persist a GitHub auth session
+ * @param {Object|null} session - Auth session to store
  * @returns {Promise<void>}
  */
-export async function setToken(token) {
-  if (!token) {
-    await clearToken();
+export async function setAuthSession(session) {
+  if (!session || typeof session !== 'object' || !session.accessToken) {
+    await clearAuthSession();
     return;
   }
 
-  // 1. Cache in session storage (decrypted)
   if (isChromeExtension() && chrome.storage.session) {
     await new Promise(resolve => {
-      chrome.storage.session.set({ githubToken: token }, resolve);
+      chrome.storage.session.set({ [AUTH_SESSION_CACHE_KEY]: session }, resolve);
     });
   }
 
-  // 2. Encrypt and store in local storage
-  const encrypted = await encryptData(token);
-  await setLocalItem('encryptedGithubToken', encrypted);
+  const encrypted = await encryptData(JSON.stringify(session));
+  await setLocalItem(AUTH_SESSION_STORAGE_KEY, encrypted);
 }
 
 /**
- * Clear GitHub token from all storage
+ * Clear the stored GitHub auth session
  * @returns {Promise<void>}
  */
-export async function clearToken() {
+export async function clearAuthSession() {
   if (isChromeExtension() && chrome.storage.session) {
     await new Promise(resolve => {
-      chrome.storage.session.remove(['githubToken'], resolve);
+      chrome.storage.session.remove([AUTH_SESSION_CACHE_KEY], resolve);
     });
   }
-  await setLocalItem('encryptedGithubToken', null);
+
+  await setLocalItem(AUTH_SESSION_STORAGE_KEY, null);
+}
+
+/**
+ * Get the access token used for GitHub API requests
+ * Prefers the OAuth auth session when present.
+ * @returns {Promise<string|null>} Access token or null
+ */
+export async function getAccessToken() {
+  const authSession = await getAuthSession();
+  if (authSession?.accessToken) {
+    return authSession.accessToken;
+  }
+
+  return null;
 }
 
 // Storage configuration objects for batch operations
@@ -292,10 +362,11 @@ export const STORAGE_DEFAULTS = {
  */
 export async function getSettings() {
   const result = await getSyncItems(STORAGE_KEYS.SETTINGS);
+  const watchedRepos = await getWatchedRepos();
 
   // Apply defaults for missing properties
   return {
-    watchedRepos: result.watchedRepos || STORAGE_DEFAULTS.watchedRepos,
+    watchedRepos,
     lastCheck: result.lastCheck || STORAGE_DEFAULTS.lastCheck,
     filters: { ...STORAGE_DEFAULTS.filters, ...result.filters },
     notifications: { ...STORAGE_DEFAULTS.notifications, ...result.notifications },
@@ -356,7 +427,7 @@ export async function getActivityData() {
  * @returns {Promise<void>}
  */
 export async function updateSettings(updates) {
-  await setSyncItem('watchedRepos', updates.watchedRepos);
+  await setWatchedRepos(updates.watchedRepos);
   await setSyncItem('lastCheck', updates.lastCheck);
   await setSyncItem('filters', updates.filters);
   await setSyncItem('notifications', updates.notifications);

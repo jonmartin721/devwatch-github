@@ -22,14 +22,16 @@ const {
   setSyncItem,
   setLocalItem,
   getExcludedRepos,
-  getToken,
-  setToken,
-  clearToken
+  getAuthSession,
+  setAuthSession,
+  clearAuthSession,
+  getAccessToken
 } = await import('../shared/storage-helpers.js');
 
 describe('Storage Helpers', () => {
   let mockSyncStorage;
   let mockLocalStorage;
+  let mockSessionStorage;
 
   beforeEach(() => {
     // Reset mocks
@@ -38,6 +40,7 @@ describe('Storage Helpers', () => {
     // Mock storage with in-memory objects
     mockSyncStorage = {};
     mockLocalStorage = {};
+    mockSessionStorage = {};
 
     // Mock chrome.storage.sync
     global.chrome = {
@@ -90,6 +93,29 @@ describe('Storage Helpers', () => {
               });
               resolve();
             });
+          })
+        },
+        session: {
+          get: jest.fn((keys, callback) => {
+            const result = {};
+            const keyArray = Array.isArray(keys) ? keys : [keys];
+            keyArray.forEach(key => {
+              if (Object.prototype.hasOwnProperty.call(mockSessionStorage, key)) {
+                result[key] = mockSessionStorage[key];
+              }
+            });
+            callback(result);
+          }),
+          set: jest.fn((items, callback) => {
+            Object.assign(mockSessionStorage, items);
+            if (callback) callback();
+          }),
+          remove: jest.fn((keys, callback) => {
+            const keyArray = Array.isArray(keys) ? keys : [keys];
+            keyArray.forEach(key => {
+              delete mockSessionStorage[key];
+            });
+            if (callback) callback();
           })
         }
       }
@@ -361,58 +387,83 @@ describe('Storage Helpers', () => {
     });
   });
 
-  describe('getToken', () => {
-    it('should return token from local storage if it exists', async () => {
-      // Mock encrypted token in local storage
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-      // Mock decryptData to return a specific token
-      mockDecryptData.mockResolvedValueOnce('decrypted-token');
+  describe('auth session helpers', () => {
+    it('returns auth session from encrypted local storage', async () => {
+      mockLocalStorage.encryptedGithubAuthSession = { iv: [], data: [] };
+      mockDecryptData.mockResolvedValueOnce(JSON.stringify({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      }));
 
-      const result = await getToken();
+      const result = await getAuthSession();
 
-      expect(result).toBe('decrypted-token');
-      expect(mockDecryptData).toHaveBeenCalled();
+      expect(result).toEqual({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
+      expect(mockSessionStorage.githubAuthSession).toEqual({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
     });
 
-    it('should return null if no token exists', async () => {
-      const result = await getToken();
+    it('returns auth session from session cache when available', async () => {
+      mockSessionStorage.githubAuthSession = {
+        accessToken: 'cached-token',
+        username: 'cached-user'
+      };
+
+      const result = await getAuthSession();
+
+      expect(result).toEqual({
+        accessToken: 'cached-token',
+        username: 'cached-user'
+      });
+      expect(mockDecryptData).not.toHaveBeenCalled();
+    });
+
+    it('stores auth session in session and encrypted local storage', async () => {
+      await setAuthSession({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
+
+      expect(mockSessionStorage.githubAuthSession).toEqual({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
+      expect(mockEncryptData).toHaveBeenCalledWith(JSON.stringify({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      }));
+      expect(mockLocalStorage.encryptedGithubAuthSession).toBeDefined();
+    });
+
+    it('clears auth session from all storage', async () => {
+      mockSessionStorage.githubAuthSession = { accessToken: 'oauth-token' };
+      mockLocalStorage.encryptedGithubAuthSession = { iv: [], data: [] };
+
+      await clearAuthSession();
+
+      expect(mockSessionStorage.githubAuthSession).toBeUndefined();
+      expect(mockLocalStorage.encryptedGithubAuthSession).toBeNull();
+    });
+
+    it('returns the access token from the current auth session', async () => {
+      mockSessionStorage.githubAuthSession = {
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      };
+
+      const result = await getAccessToken();
+
+      expect(result).toBe('oauth-token');
+    });
+
+    it('returns null when no auth session is stored', async () => {
+      const result = await getAccessToken();
 
       expect(result).toBeNull();
-    });
-  });
-
-  describe('setToken', () => {
-    it('should set token in local storage', async () => {
-      await setToken('new-token-789');
-
-      // Should store encrypted data
-      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
-      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
-    });
-
-    it('should overwrite existing local token', async () => {
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-
-      await setToken('new-token-789');
-
-      expect(mockEncryptData).toHaveBeenCalledWith('new-token-789');
-      expect(mockLocalStorage.encryptedGithubToken).toBeDefined();
-    });
-  });
-
-  describe('clearToken', () => {
-    it('should clear token from local storage', async () => {
-      mockLocalStorage.encryptedGithubToken = { iv: [], data: [] };
-
-      await clearToken();
-
-      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
-    });
-
-    it('should work even if no token exists', async () => {
-      await clearToken();
-
-      expect(mockLocalStorage.encryptedGithubToken).toBeNull();
     });
   });
 });

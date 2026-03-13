@@ -3,7 +3,7 @@
  * Provides consistent state handling across popup, options, and background scripts
  */
 
-import { getSyncItems, getLocalItems } from './storage-helpers.js';
+import { getSyncItems, getLocalItems, getWatchedRepos, setWatchedRepos } from './storage-helpers.js';
 import { STORAGE_KEYS, STORAGE_DEFAULTS } from './storage-helpers.js';
 import { STORAGE_CONFIG } from './config.js';
 
@@ -67,12 +67,13 @@ class StateManager {
 
         // Load settings from storage
         const settings = await getSyncItems(STORAGE_KEYS.SETTINGS);
+        const watchedRepos = await getWatchedRepos();
         const activityData = await getLocalItems(STORAGE_KEYS.ACTIVITY);
 
         // Update state with loaded data
         this.state = {
           ...this.state,
-          watchedRepos: settings.watchedRepos || STORAGE_DEFAULTS.watchedRepos,
+          watchedRepos,
           mutedRepos: settings.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
           snoozedRepos: settings.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
           filters: { ...STORAGE_DEFAULTS.filters, ...settings.filters },
@@ -190,7 +191,11 @@ class StateManager {
     const persistPromises = [];
 
     // Persist settings that go to sync storage
-    const syncKeys = ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'];
+    if ('watchedRepos' in updatesObj) {
+      persistPromises.push(setWatchedRepos(updatesObj.watchedRepos));
+    }
+
+    const syncKeys = ['mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'];
     const syncUpdates = {};
 
     syncKeys.forEach(key => {

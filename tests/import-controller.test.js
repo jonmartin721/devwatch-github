@@ -2,11 +2,13 @@ import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 
 // Mock dependencies
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
-  getToken: jest.fn(() => Promise.resolve('fake-token'))
+  getAccessToken: jest.fn(() => Promise.resolve('fake-token')),
+  getSyncItem: jest.fn(() => Promise.resolve(false)),
+  setWatchedRepos: jest.fn(() => Promise.resolve())
 }));
 
 jest.unstable_mockModule('../shared/github-api.js', () => ({
-  createHeaders: jest.fn((token) => ({ 'Authorization': `token ${token}` }))
+  createHeaders: jest.fn((token) => ({ 'Authorization': `Bearer ${token}` }))
 }));
 
 jest.unstable_mockModule('../shared/sanitize.js', () => ({
@@ -23,7 +25,7 @@ jest.unstable_mockModule('../shared/icons.js', () => ({
   createSvg: jest.fn(() => '<svg></svg>')
 }));
 
-const { getToken } = await import('../shared/storage-helpers.js');
+const { getAccessToken, getSyncItem, setWatchedRepos } = await import('../shared/storage-helpers.js');
 const {
   openImportModal,
   closeImportModal,
@@ -88,6 +90,11 @@ describe('import-controller', () => {
     selectedCount.id = 'selectedCount';
     modal.appendChild(selectedCount);
 
+    const selectAllCheckbox = document.createElement('input');
+    selectAllCheckbox.id = 'selectAllImport';
+    selectAllCheckbox.type = 'checkbox';
+    modal.appendChild(selectAllCheckbox);
+
     confirmBtn = document.createElement('button');
     confirmBtn.id = 'confirmImportBtn';
     confirmBtn.disabled = true;
@@ -99,7 +106,7 @@ describe('import-controller', () => {
 
     document.body.appendChild(modal);
 
-    // Mock chrome.storage
+    // Mock chrome.storage for browser-only access paths
     global.chrome = {
       storage: {
         sync: {
@@ -113,8 +120,8 @@ describe('import-controller', () => {
   });
 
   describe('openImportModal', () => {
-    test('does not open modal if no token', async () => {
-      getToken.mockResolvedValueOnce(null);
+    test('does not open modal if no GitHub connection is available', async () => {
+      getAccessToken.mockResolvedValueOnce(null);
 
       await openImportModal('starred', []);
 
@@ -241,7 +248,7 @@ describe('import-controller', () => {
       await openImportModal('starred', []);
 
       expect(errorState.style.display).toBe('block');
-      expect(errorMessage.textContent).toContain('Invalid GitHub token');
+      expect(errorMessage.textContent).toContain('GitHub sign-in expired or was revoked');
     });
 
     test('handles API error with 403 status', async () => {
@@ -494,7 +501,7 @@ describe('import-controller', () => {
       expect(onReposAdded).toHaveBeenCalled();
     });
 
-    test('saves to chrome storage', async () => {
+    test('saves to sync storage helper', async () => {
       reposContainer.innerHTML = `
         <li class="repo-item import-variant selected" data-repo='{"fullName":"owner/repo1"}'>Repo 1</li>
       `;
@@ -503,11 +510,11 @@ describe('import-controller', () => {
 
       await importSelectedRepos(watchedRepos);
 
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        watchedRepos: expect.arrayContaining([
+      expect(setWatchedRepos).toHaveBeenCalledWith(
+        expect.arrayContaining([
           expect.objectContaining({ fullName: 'owner/repo1' })
         ])
-      });
+      );
     });
 
     test('does nothing when no repos selected', async () => {
@@ -520,7 +527,7 @@ describe('import-controller', () => {
       await importSelectedRepos(watchedRepos);
 
       expect(watchedRepos.length).toBe(0);
-      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+      expect(setWatchedRepos).not.toHaveBeenCalled();
     });
 
     test('excludes already-added repos from import', async () => {
@@ -546,6 +553,32 @@ describe('import-controller', () => {
       await importSelectedRepos([], null);
 
       expect(modal.classList.contains('show')).toBe(false);
+    });
+
+    test('does not mutate watched repos when the storage write fails', async () => {
+      reposContainer.innerHTML = `
+        <li class="repo-item import-variant selected" data-repo='{"fullName":"owner/repo1","description":"Test"}'>Repo 1</li>
+      `;
+      setWatchedRepos.mockRejectedValueOnce(new Error('Storage quota exceeded. Please clear old data.'));
+
+      const watchedRepos = [];
+
+      await expect(importSelectedRepos(watchedRepos)).rejects.toThrow('Storage quota exceeded');
+      expect(watchedRepos).toEqual([]);
+    });
+
+    test('rejects imports that exceed the repository limit when unlimited is off', async () => {
+      reposContainer.innerHTML = `
+        <li class="repo-item import-variant selected" data-repo='{"fullName":"owner/repo51"}'>Repo 51</li>
+      `;
+      getSyncItem.mockResolvedValueOnce(false);
+
+      const watchedRepos = Array.from({ length: 50 }, (_, index) => ({
+        fullName: `owner/repo${index + 1}`
+      }));
+
+      await expect(importSelectedRepos(watchedRepos)).rejects.toThrow('Import would exceed the 50 repository limit');
+      expect(setWatchedRepos).not.toHaveBeenCalled();
     });
   });
 

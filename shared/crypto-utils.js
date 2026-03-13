@@ -1,5 +1,5 @@
 /**
- * Cryptographic utilities for secure token storage
+ * Cryptographic utilities for secure auth session storage
  * Uses Web Crypto API (AES-GCM)
  */
 

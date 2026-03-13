@@ -4,12 +4,12 @@
 
 /**
  * Create standard GitHub API headers
- * @param {string} token - GitHub personal access token
+ * @param {string} token - GitHub access token
  * @returns {Object} Headers object for fetch
  */
 export function createHeaders(token) {
   return {
-    'Authorization': `token ${token}`,
+    'Authorization': `Bearer ${token}`,
     'Accept': 'application/vnd.github.v3+json'
   };
 }
@@ -24,7 +24,7 @@ export function handleApiResponse(response, repo = '') {
   if (!response.ok) {
     let error;
     if (response.status === 401) {
-      error = new Error('Invalid GitHub token');
+      error = new Error('GitHub sign-in expired or was revoked');
     } else if (response.status === 403) {
       error = new Error('Rate limit exceeded');
     } else if (response.status === 404) {

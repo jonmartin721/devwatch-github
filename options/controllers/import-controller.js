@@ -1,4 +1,5 @@
-import { getToken } from '../../shared/storage-helpers.js';
+import { STORAGE_CONFIG } from '../../shared/config.js';
+import { getAccessToken, getSyncItem, setWatchedRepos } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml, unescapeHtml } from '../../shared/sanitize.js';
 import { formatDateVerbose } from '../../shared/utils.js';
@@ -61,8 +62,27 @@ function formatNumber(num) {
   return num.toString();
 }
 
+function getRepoFullName(repo) {
+  if (typeof repo === 'string') {
+    return repo;
+  }
+
+  return repo?.fullName || '';
+}
+
+function normalizeImportedRepo(repo) {
+  return {
+    fullName: repo.fullName,
+    description: repo.description || 'No description provided',
+    language: repo.language || 'Unknown',
+    stars: repo.stars || 0,
+    updatedAt: repo.updatedAt || new Date().toISOString(),
+    addedAt: new Date().toISOString()
+  };
+}
+
 export async function openImportModal(type, watchedRepos) {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return;
   }
@@ -99,7 +119,9 @@ export async function openImportModal(type, watchedRepos) {
     const repos = await fetchReposFromGitHub(type, token);
 
     const alreadyAdded = new Set(
-      (watchedRepos || []).map(r => r.fullName.toLowerCase())
+      (watchedRepos || [])
+        .map(repo => getRepoFullName(repo).toLowerCase())
+        .filter(Boolean)
     );
 
     importModalState.repos = repos.map(repo => ({
@@ -162,7 +184,7 @@ async function fetchReposFromGitHub(type, token) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error('Invalid GitHub token');
+        throw new Error('GitHub sign-in expired or was revoked');
       } else if (response.status === 403) {
         throw new Error('Rate limit exceeded or insufficient permissions');
       } else {
@@ -207,6 +229,12 @@ export function closeImportModal() {
   const modal = document.getElementById('importModal');
   modal.classList.remove('show');
   document.getElementById('importRepoSearch').value = '';
+  const selectAllCheckbox = document.getElementById('selectAllImport');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.checked = false;
+  }
+  document.getElementById('selectedCount').textContent = '0';
+  document.getElementById('confirmImportBtn').disabled = true;
 
   modal.removeEventListener('keydown', handleModalFocusTrap);
 
@@ -311,14 +339,36 @@ export async function importSelectedRepos(watchedRepos, onReposAdded) {
     return;
   }
 
-  const reposWithTimestamp = reposToImport.map(repo => ({
-    ...repo,
-    addedAt: new Date().toISOString()
-  }));
+  const existingRepoNames = new Set(
+    (watchedRepos || [])
+      .map(repo => getRepoFullName(repo).toLowerCase())
+      .filter(Boolean)
+  );
+  const uniqueReposToImport = reposToImport.filter(repo => !existingRepoNames.has(repo.fullName.toLowerCase()));
 
-  watchedRepos.push(...reposWithTimestamp);
+  if (uniqueReposToImport.length === 0) {
+    return;
+  }
 
-  await chrome.storage.sync.set({ watchedRepos });
+  const allowUnlimitedRepos = await getSyncItem('allowUnlimitedRepos', false);
+
+  if (!allowUnlimitedRepos) {
+    const remainingSlots = Math.max(STORAGE_CONFIG.MAX_WATCHED_REPOS - existingRepoNames.size, 0);
+
+    if (uniqueReposToImport.length > remainingSlots) {
+      throw new Error(
+        `Import would exceed the ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repository limit. Select ${remainingSlots} or fewer repositories, or enable "Unlimited Repositories" in Advanced settings.`
+      );
+    }
+  }
+
+  const nextWatchedRepos = [
+    ...watchedRepos,
+    ...uniqueReposToImport.map(normalizeImportedRepo)
+  ];
+
+  await setWatchedRepos(nextWatchedRepos);
+  watchedRepos.splice(0, watchedRepos.length, ...nextWatchedRepos);
 
   if (onReposAdded) {
     onReposAdded();

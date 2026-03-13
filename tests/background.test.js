@@ -956,10 +956,10 @@ describe('Background Service Worker', () => {
 
       chrome.storage.session.get.mockImplementation((keys, callback) => {
         const result = {};
-        if (Array.isArray(keys) && keys.includes('githubToken')) {
-          result.githubToken = mockToken;
-        } else if (keys === 'githubToken') {
-          result.githubToken = mockToken;
+        if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
+          result.githubAuthSession = { accessToken: mockToken };
+        } else if (keys === 'githubAuthSession') {
+          result.githubAuthSession = { accessToken: mockToken };
         }
         callback(result);
       });
@@ -968,12 +968,12 @@ describe('Background Service Worker', () => {
         const result = {};
         if (Array.isArray(keys)) {
           keys.forEach(key => {
-            if (key === 'githubToken') result[key] = mockToken;
+            if (key === 'encryptedGithubAuthSession') result[key] = null;
             else if (key === 'activities') result[key] = [];
             else if (key === 'rateLimit') result[key] = null;
           });
-        } else if (keys === 'githubToken') {
-          result.githubToken = mockToken;
+        } else if (keys === 'encryptedGithubAuthSession') {
+          result.encryptedGithubAuthSession = null;
         }
         callback(result);
       });
@@ -993,10 +993,10 @@ describe('Background Service Worker', () => {
       allowUnexpectedConsole('warn');
       chrome.storage.session.get.mockImplementation((keys, callback) => {
         const result = {};
-        if (typeof keys === 'string' && keys === 'githubToken') {
-          result.githubToken = null;
-        } else if (Array.isArray(keys) && keys.includes('githubToken')) {
-          result.githubToken = null;
+        if (typeof keys === 'string' && keys === 'githubAuthSession') {
+          result.githubAuthSession = null;
+        } else if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
+          result.githubAuthSession = null;
         }
         callback(result);
       });

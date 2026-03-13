@@ -1,16 +1,18 @@
 import { NotificationManager } from '../../shared/ui/notification-manager.js';
+import { getWatchedRepos, setWatchedRepos } from '../../shared/storage-helpers.js';
 
 const notifications = NotificationManager.getInstance();
 
 export async function exportSettings() {
   try {
     const syncData = await chrome.storage.sync.get(null);
+    const watchedRepos = await getWatchedRepos();
 
     const exportData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
       settings: {
-        watchedRepos: syncData.watchedRepos || [],
+        watchedRepos,
         mutedRepos: syncData.mutedRepos || [],
         pinnedRepos: syncData.pinnedRepos || [],
         filters: syncData.filters || { prs: true, issues: true, releases: true },
@@ -53,7 +55,7 @@ export async function handleImportFile(event, loadSettingsCallback) {
     }
 
     const confirmed = confirm(
-      'This will replace your current settings (except GitHub token). Continue?'
+      'This will replace your current settings (except your GitHub connection). Continue?'
     );
 
     if (!confirmed) {
@@ -63,8 +65,8 @@ export async function handleImportFile(event, loadSettingsCallback) {
     }
 
     const settings = importData.settings;
+    await setWatchedRepos(settings.watchedRepos || []);
     await chrome.storage.sync.set({
-      watchedRepos: settings.watchedRepos || [],
       mutedRepos: settings.mutedRepos || [],
       pinnedRepos: settings.pinnedRepos || [],
       filters: settings.filters || { prs: true, issues: true, releases: true },

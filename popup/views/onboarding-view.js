@@ -1,6 +1,13 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
+import {
+  createGitHubAuthSession,
+  fetchGitHubUser,
+  openGitHubDevicePage,
+  pollForGitHubAccessToken,
+  requestGitHubDeviceCode
+} from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
-import { getToken, setToken } from '../../shared/storage-helpers.js';
+import { getAccessToken, getWatchedRepos, setAuthSession, setWatchedRepos } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
@@ -9,6 +16,124 @@ const onboardingManager = new OnboardingManager();
 
 function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) {
+    return false;
+  }
+
+  if (navigator?.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const activeElement = document.activeElement;
+  const tempInput = document.createElement('input');
+  tempInput.value = text;
+  tempInput.setAttribute('readonly', '');
+  tempInput.style.position = 'absolute';
+  tempInput.style.opacity = '0';
+  document.body.appendChild(tempInput);
+  tempInput.select();
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    tempInput.remove();
+    activeElement?.focus?.();
+  }
+
+  return copied;
+}
+
+function createPendingDeviceAuthState(deviceCodeData) {
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + ((deviceCodeData.expiresIn ?? 900) * 1000);
+
+  return {
+    deviceCode: deviceCodeData.deviceCode,
+    userCode: deviceCodeData.userCode,
+    verificationUri: deviceCodeData.verificationUri,
+    verificationUriComplete: deviceCodeData.verificationUriComplete || null,
+    interval: deviceCodeData.interval ?? 5,
+    expiresIn: deviceCodeData.expiresIn ?? 900,
+    issuedAt,
+    expiresAt
+  };
+}
+
+function getPendingDeviceCodeData(tokenData) {
+  const pending = tokenData?.pendingDeviceAuth;
+  if (!pending?.deviceCode) {
+    return null;
+  }
+
+  return {
+    deviceCode: pending.deviceCode,
+    userCode: pending.userCode,
+    verificationUri: pending.verificationUri,
+    verificationUriComplete: pending.verificationUriComplete || null,
+    interval: pending.interval ?? 5,
+    expiresIn: pending.expiresIn ?? 900,
+    expiresAt: pending.expiresAt ?? (Date.now() + ((pending.expiresIn ?? 900) * 1000))
+  };
+}
+
+async function persistConnectedTokenState(result) {
+  await setAuthSession(result.authSession);
+  await onboardingManager.saveStepData('token', {
+    validated: true,
+    username: result.user.login,
+    authType: result.authSession.authType || 'oauth_device'
+  });
+}
+
+async function completePendingDeviceAuth(tokenData, elements, options = {}) {
+  const pendingDeviceCodeData = getPendingDeviceCodeData(tokenData);
+  if (!pendingDeviceCodeData) {
+    return null;
+  }
+
+  const { tokenStatus, validateBtn, nextBtn } = elements;
+  if (options.showCheckingStatus) {
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub sign-in...');
+  }
+  validateBtn.disabled = true;
+
+  try {
+    const tokenDataResult = await pollForGitHubAccessToken(pendingDeviceCodeData);
+    const user = await fetchGitHubUser(tokenDataResult.accessToken);
+    const result = {
+      tokenData: tokenDataResult,
+      user,
+      authSession: createGitHubAuthSession(tokenDataResult, user)
+    };
+
+    await persistConnectedTokenState(result);
+
+    tokenStatus.innerHTML = getStatusMarkup('success', `Connected as ${result.user.login}`);
+    validateBtn.textContent = 'Connected';
+    if (nextBtn) {
+      nextBtn.disabled = false;
+    }
+
+    return result;
+  } catch (error) {
+    if (error?.code === 'authorization_pending') {
+      return null;
+    }
+
+    if (error?.code === 'access_denied' || error?.code === 'expired_token') {
+      await onboardingManager.saveStepData('token', {
+        validated: false,
+        authType: 'oauth_device'
+      });
+    }
+
+    throw error;
+  }
 }
 
 function renderRepoSuggestion(repo) {
@@ -197,49 +322,53 @@ function renderWelcomeStep() {
 }
 
 async function renderTokenStep() {
-  const tokenUrl = onboardingManager.getGitHubTokenUrl();
   const tokenData = await onboardingManager.getStepData('token');
 
-  // Check if we already have a validated token
   let statusHtml = '';
   let buttonDisabled = '';
-  let buttonText = 'Validate';
-  const safeToken = escapeHtml(tokenData?.token || '');
-  const safeTokenUrl = escapeHtml(tokenUrl);
+  let buttonText = 'Connect GitHub';
+  const safeUserCode = escapeHtml(tokenData?.userCode || '');
 
   if (tokenData && tokenData.validated && tokenData.username) {
-    statusHtml = getStatusMarkup('success', `✓ Token is valid! Logged in as ${tokenData.username}`);
+    statusHtml = getStatusMarkup('success', `Connected as ${tokenData.username}`);
     buttonDisabled = 'disabled';
-    buttonText = 'Validated';
+    buttonText = 'Connected';
   } else if (tokenData && tokenData.validated) {
-    statusHtml = getStatusMarkup('success', '✓ Token is valid!');
+    statusHtml = getStatusMarkup('success', 'GitHub is connected');
     buttonDisabled = 'disabled';
-    buttonText = 'Validated';
+    buttonText = 'Connected';
+  } else if (tokenData?.userCode) {
+    statusHtml = getStatusMarkup('loading', `Enter ${tokenData.userCode} on GitHub to finish connecting.`);
   }
 
   return `
     <div class="onboarding-step token-step">
-      <h2>Add your GitHub Token</h2>
-      <p>We need a GitHub token to access repository activity.</p>
+      <h2>Connect GitHub</h2>
+      <p>We'll open GitHub in a new tab and show you the verification code here.</p>
 
       <div class="token-instructions">
         <h3>Quick setup:</h3>
         <ol>
-          <li><a href="${safeTokenUrl}" target="_blank" rel="noopener noreferrer" class="token-link">Create a GitHub token</a></li>
-          <li>Copy the generated token</li>
-          <li>Paste it below</li>
+          <li>Click <strong>Connect GitHub</strong></li>
+          <li>Approve access on the GitHub page that opens</li>
+          <li>Come back here once GitHub says you're done</li>
         </ol>
       </div>
 
       <div class="token-input-group">
-        <input
-          type="password"
-          id="tokenInput"
-          placeholder="ghp_YourTokenHere"
-          class="token-input"
-          autocomplete="off"
-          value="${safeToken}"
-        >
+        <div class="token-code-stack">
+          <input
+            type="text"
+            id="tokenInput"
+            placeholder="Verification code appears here"
+            class="token-input"
+            autocomplete="off"
+            value="${safeUserCode}"
+            readonly
+          >
+          <p class="token-copy-hint">Click the code to select it, or use Copy.</p>
+        </div>
+        <button id="copyTokenCodeBtn" class="copy-code-btn" ${safeUserCode ? '' : 'disabled'}>Copy</button>
         <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
       </div>
 
@@ -250,7 +379,7 @@ async function renderTokenStep() {
       <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
       </svg>
-      Your token is encrypted with AES-GCM encryption and stored securely on your device. It's only used for GitHub API access and never shared.
+      Your GitHub sign-in session is encrypted with AES-GCM encryption and stored securely on your device. It's only used for GitHub API access and never shared.
     </p>
   `;
 }
@@ -494,27 +623,11 @@ export async function setupOnboardingStepListeners(currentStep, loadActivitiesCa
     exitOnboarding(loadActivitiesCallback);
   });
 
-  // Token validation logic
   if (currentStep === 'token') {
-    const tokenInput = document.getElementById('tokenInput');
-
-    // Initial validation state
-    const validateTokenInput = () => {
-      const token = tokenInput?.value?.trim();
-      const isValid = token && token.length > 10 && (token.startsWith('ghp_') || token.startsWith('github_pat_') || token.length >= 20);
-
-      if (nextBtn) {
-        nextBtn.disabled = !isValid;
-      }
-
-      return isValid;
-    };
-
-    // Add input listener for real-time validation
-    tokenInput?.addEventListener('input', validateTokenInput);
-
-    // Initial validation
-    validateTokenInput();
+    const tokenData = await onboardingManager.getStepData('token');
+    if (nextBtn) {
+      nextBtn.disabled = !tokenData?.validated;
+    }
   }
 
   // Step-specific listeners
@@ -533,36 +646,97 @@ export async function setupOnboardingStepListeners(currentStep, loadActivitiesCa
 
 function setupTokenStepListeners() {
   const tokenInput = document.getElementById('tokenInput');
+  const copyTokenCodeBtn = document.getElementById('copyTokenCodeBtn');
   const validateBtn = document.getElementById('validateTokenBtn');
   const tokenStatus = document.getElementById('tokenStatus');
+  const nextBtn = document.getElementById('nextBtn');
+  const tokenElements = { tokenInput, validateBtn, tokenStatus, nextBtn };
 
-  validateBtn?.addEventListener('click', async () => {
-    const token = tokenInput.value.trim();
-    if (!token) {
-      tokenStatus.innerHTML = getStatusMarkup('error', 'Please enter a token');
+  tokenInput?.addEventListener('click', () => {
+    tokenInput.select();
+  });
+
+  tokenInput?.addEventListener('focus', () => {
+    tokenInput.select();
+  });
+
+  copyTokenCodeBtn?.addEventListener('click', async () => {
+    const userCode = tokenInput?.value?.trim();
+    if (!userCode) {
       return;
     }
 
-    tokenStatus.innerHTML = getStatusMarkup('loading', 'Validating token...');
+    try {
+      const copied = await copyTextToClipboard(userCode);
+      if (copied) {
+        tokenStatus.innerHTML = getStatusMarkup('success', `Copied ${userCode}. Paste it into GitHub to finish connecting.`);
+      }
+    } catch (_error) {
+      tokenStatus.innerHTML = getStatusMarkup('error', 'Could not copy the code automatically. Select it manually.');
+    }
+  });
+
+  // Resume the device flow if the popup was closed while GitHub was waiting
+  // for approval in another tab.
+  void (async () => {
+    const existingTokenData = await onboardingManager.getStepData('token');
+    if (!existingTokenData?.validated && existingTokenData?.pendingDeviceAuth) {
+      tokenInput.value = existingTokenData.userCode || existingTokenData.pendingDeviceAuth.userCode || '';
+      if (copyTokenCodeBtn) {
+        copyTokenCodeBtn.disabled = !tokenInput.value;
+      }
+
+      try {
+        await completePendingDeviceAuth(existingTokenData, tokenElements, {
+          showCheckingStatus: true
+        });
+      } catch (error) {
+        tokenStatus.innerHTML = getStatusMarkup('error',
+          error?.code === 'client_id_missing'
+            ? 'GitHub OAuth client ID is not configured for this build.'
+            : error?.code === 'access_denied'
+              ? 'GitHub sign-in was cancelled'
+              : error?.code === 'expired_token'
+                ? 'GitHub sign-in expired. Start again.'
+                : 'GitHub sign-in failed'
+        );
+        validateBtn.disabled = false;
+        validateBtn.textContent = 'Connect GitHub';
+      }
+    }
+  })();
+
+  validateBtn?.addEventListener('click', async () => {
+    validateBtn.disabled = true;
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub sign-in...');
 
     try {
-      // Test the token by making a simple API call
-      const response = await fetch('https://api.github.com/user', {
-        headers: {
-          'Authorization': `token ${token}`
-        }
+      const deviceCodeData = await requestGitHubDeviceCode();
+      const pendingDeviceAuth = createPendingDeviceAuthState(deviceCodeData);
+
+      tokenInput.value = deviceCodeData.userCode || '';
+      if (copyTokenCodeBtn) {
+        copyTokenCodeBtn.disabled = !tokenInput.value;
+      }
+      tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`);
+      await onboardingManager.saveStepData('token', {
+        userCode: deviceCodeData.userCode,
+        validated: false,
+        authType: 'oauth_device',
+        pendingDeviceAuth
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        const username = userData.login;
-        const tokenData = { token, validated: true, username };
-        tokenStatus.innerHTML = getStatusMarkup('success', `✓ Token is valid! Logged in as ${username}`);
-        await onboardingManager.saveStepData('token', tokenData);
-        // Persist the token first so any calls which read it
-        // can rely on the token being present. This reduces the chance of
-        // unauthenticated fetches or hitting rate limits when prefetching.
-        await setToken(token);
+      openGitHubDevicePage(deviceCodeData);
+      const result = await completePendingDeviceAuth({
+        userCode: deviceCodeData.userCode,
+        validated: false,
+        authType: 'oauth_device',
+        pendingDeviceAuth
+      }, tokenElements, {
+        showCheckingStatus: false
+      });
+
+      if (result) {
         try {
           const popular = await onboardingManager.getPopularRepos();
           if (Array.isArray(popular) && popular.length > 0) {
@@ -571,11 +745,19 @@ function setupTokenStepListeners() {
         } catch (_prefetchError) {
           // Silently handle prefetch errors - not critical
         }
-      } else {
-        tokenStatus.innerHTML = getStatusMarkup('error', '✗ Invalid token');
       }
-    } catch (_error) {
-      tokenStatus.innerHTML = getStatusMarkup('error', 'Error validating token');
+    } catch (error) {
+      tokenStatus.innerHTML = getStatusMarkup('error',
+        error?.code === 'client_id_missing'
+          ? 'GitHub OAuth client ID is not configured for this build.'
+          : error?.code === 'access_denied'
+            ? 'GitHub sign-in was cancelled'
+            : error?.code === 'expired_token'
+              ? 'GitHub sign-in expired. Start again.'
+            : 'GitHub sign-in failed'
+      );
+      validateBtn.disabled = false;
+      validateBtn.textContent = 'Connect GitHub';
     }
   });
 }
@@ -619,16 +801,17 @@ function attachRepoButtonListeners() {
 
       try {
         // Fetch full repo metadata from GitHub API
-        const token = await getToken();
-        const headers = createHeaders(token);
+        const token = await getAccessToken();
+        const headers = token
+          ? createHeaders(token)
+          : { 'Accept': 'application/vnd.github.v3+json' };
         const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
         if (response.ok) {
           const data = await response.json();
 
           // Save repo to storage with full metadata
-          const result = await chrome.storage.sync.get(['watchedRepos']);
-          const repos = result.watchedRepos || [];
+          const repos = await getWatchedRepos();
 
           // Check if repo already exists
           const repoExists = repos.some(r => r.fullName === repo);
@@ -644,7 +827,7 @@ function attachRepoButtonListeners() {
               updatedAt: data.updated_at,
               addedAt: new Date().toISOString()
             });
-            await chrome.storage.sync.set({ watchedRepos: repos });
+            await setWatchedRepos(repos);
           }
 
           // Show success state
@@ -697,7 +880,7 @@ function setupReposStepListeners() {
 
     try {
       // Get token for API calls
-      const githubToken = await getToken();
+      const githubToken = await getAccessToken();
 
       // Parse GitHub URL if provided
       const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
@@ -724,21 +907,16 @@ function setupReposStepListeners() {
       }
 
       // Validate repo exists on GitHub
-      const headers = {
-        'Accept': 'application/vnd.github.v3+json'
-      };
-
-      if (githubToken) {
-        headers['Authorization'] = `token ${githubToken}`;
-      }
+      const headers = githubToken
+        ? createHeaders(githubToken)
+        : { 'Accept': 'application/vnd.github.v3+json' };
 
       const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
 
       if (response.ok) {
         const data = await response.json();
 
-        const result = await chrome.storage.sync.get(['watchedRepos']);
-        const repos = result.watchedRepos || [];
+        const repos = await getWatchedRepos();
         const repoExists = repos.some(r => r.fullName === repo);
         if (!repoExists) {
           repos.push({
@@ -751,7 +929,7 @@ function setupReposStepListeners() {
             updatedAt: data.updated_at,
             addedAt: new Date().toISOString()
           });
-          await chrome.storage.sync.set({ watchedRepos: repos });
+          await setWatchedRepos(repos);
         }
         manualInput.value = '';
         repoStatus.innerHTML = getStatusMarkup('success', '✓ Repository added');
@@ -827,36 +1005,15 @@ export async function handleNextStep() {
   // Save step data before proceeding
   switch (currentStep) {
     case 'token': {
-      const tokenInput = document.getElementById('tokenInput');
-      const token = tokenInput?.value?.trim();
-
-      if (!token) {
-        // Show error and prevent navigation
+      const existing = await onboardingManager.getStepData('token') || {};
+      if (!existing.validated) {
         const tokenStatus = document.getElementById('tokenStatus');
         if (tokenStatus) {
-          tokenStatus.textContent = 'Please enter a GitHub token to continue.';
+          tokenStatus.textContent = 'Connect GitHub to continue.';
           tokenStatus.className = 'token-status error';
         }
-        tokenInput?.focus();
-        return; // Prevent navigation
-      }
-
-      // Preserve existing validation status when saving token data
-      // This ensures that if the token was previously validated, returning to
-      // the token step will still show the success message.
-      const existing = await onboardingManager.getStepData('token') || {};
-      await onboardingManager.saveStepData('token', { ...existing, token });
-      // If token was validated, prefetch popular repos so step 2 shows them quickly
-      const validated = existing.validated;
-      if (validated) {
-        try {
-          const popular = await onboardingManager.getPopularRepos();
-          if (Array.isArray(popular) && popular.length > 0) {
-            await onboardingManager.saveStepData('popularRepos', popular);
-          }
-        } catch (_prefetchError) {
-          // Silently fail - user can still manually search for repos
-        }
+        document.getElementById('validateTokenBtn')?.focus();
+        return;
       }
       break;
     }
