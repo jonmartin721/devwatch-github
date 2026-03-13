@@ -1,5 +1,11 @@
 import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
-import { completeGitHubDeviceAuth } from '../../shared/auth.js';
+import {
+  createGitHubAuthSession,
+  fetchGitHubUser,
+  openGitHubDevicePage,
+  pollForGitHubAccessToken,
+  requestGitHubDeviceCode
+} from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
 import { getAccessToken, setAuthSession } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
@@ -10,6 +16,94 @@ const onboardingManager = new OnboardingManager();
 
 function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+function createPendingDeviceAuthState(deviceCodeData) {
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + ((deviceCodeData.expiresIn ?? 900) * 1000);
+
+  return {
+    deviceCode: deviceCodeData.deviceCode,
+    userCode: deviceCodeData.userCode,
+    verificationUri: deviceCodeData.verificationUri,
+    verificationUriComplete: deviceCodeData.verificationUriComplete || null,
+    interval: deviceCodeData.interval ?? 5,
+    expiresIn: deviceCodeData.expiresIn ?? 900,
+    issuedAt,
+    expiresAt
+  };
+}
+
+function getPendingDeviceCodeData(tokenData) {
+  const pending = tokenData?.pendingDeviceAuth;
+  if (!pending?.deviceCode) {
+    return null;
+  }
+
+  return {
+    deviceCode: pending.deviceCode,
+    userCode: pending.userCode,
+    verificationUri: pending.verificationUri,
+    verificationUriComplete: pending.verificationUriComplete || null,
+    interval: pending.interval ?? 5,
+    expiresIn: pending.expiresIn ?? 900,
+    expiresAt: pending.expiresAt ?? (Date.now() + ((pending.expiresIn ?? 900) * 1000))
+  };
+}
+
+async function persistConnectedTokenState(result) {
+  await setAuthSession(result.authSession);
+  await onboardingManager.saveStepData('token', {
+    validated: true,
+    username: result.user.login,
+    authType: result.authSession.authType || 'oauth_device'
+  });
+}
+
+async function completePendingDeviceAuth(tokenData, elements, options = {}) {
+  const pendingDeviceCodeData = getPendingDeviceCodeData(tokenData);
+  if (!pendingDeviceCodeData) {
+    return null;
+  }
+
+  const { tokenStatus, validateBtn, nextBtn } = elements;
+  if (options.showCheckingStatus) {
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub sign-in...');
+  }
+  validateBtn.disabled = true;
+
+  try {
+    const tokenDataResult = await pollForGitHubAccessToken(pendingDeviceCodeData);
+    const user = await fetchGitHubUser(tokenDataResult.accessToken);
+    const result = {
+      tokenData: tokenDataResult,
+      user,
+      authSession: createGitHubAuthSession(tokenDataResult, user)
+    };
+
+    await persistConnectedTokenState(result);
+
+    tokenStatus.innerHTML = getStatusMarkup('success', `Connected as ${result.user.login}`);
+    validateBtn.textContent = 'Connected';
+    if (nextBtn) {
+      nextBtn.disabled = false;
+    }
+
+    return result;
+  } catch (error) {
+    if (error?.code === 'authorization_pending') {
+      return null;
+    }
+
+    if (error?.code === 'access_denied' || error?.code === 'expired_token') {
+      await onboardingManager.saveStepData('token', {
+        validated: false,
+        authType: 'oauth_device'
+      });
+    }
+
+    throw error;
+  }
 }
 
 function renderRepoSuggestion(repo) {
@@ -521,50 +615,84 @@ function setupTokenStepListeners() {
   const validateBtn = document.getElementById('validateTokenBtn');
   const tokenStatus = document.getElementById('tokenStatus');
   const nextBtn = document.getElementById('nextBtn');
+  const tokenElements = { tokenInput, validateBtn, tokenStatus, nextBtn };
+
+  // Resume the device flow if the popup was closed while GitHub was waiting
+  // for approval in another tab.
+  void (async () => {
+    const existingTokenData = await onboardingManager.getStepData('token');
+    if (!existingTokenData?.validated && existingTokenData?.pendingDeviceAuth) {
+      tokenInput.value = existingTokenData.userCode || existingTokenData.pendingDeviceAuth.userCode || '';
+
+      try {
+        await completePendingDeviceAuth(existingTokenData, tokenElements, {
+          showCheckingStatus: true
+        });
+      } catch (error) {
+        tokenStatus.innerHTML = getStatusMarkup('error',
+          error?.code === 'client_id_missing'
+            ? 'GitHub OAuth client ID is not configured for this build.'
+            : error?.code === 'access_denied'
+              ? 'GitHub sign-in was cancelled'
+              : error?.code === 'expired_token'
+                ? 'GitHub sign-in expired. Start again.'
+                : 'GitHub sign-in failed'
+        );
+        validateBtn.disabled = false;
+        validateBtn.textContent = 'Connect GitHub';
+      }
+    }
+  })();
 
   validateBtn?.addEventListener('click', async () => {
     validateBtn.disabled = true;
     tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub sign-in...');
 
     try {
-      const result = await completeGitHubDeviceAuth({
-        onCode: async ({ userCode }) => {
-          tokenInput.value = userCode || '';
-          tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${userCode} on GitHub to finish connecting.`);
-          await onboardingManager.saveStepData('token', {
-            userCode,
-            validated: false,
-            authType: 'oauth_device'
-          });
-        }
-      });
+      const deviceCodeData = await requestGitHubDeviceCode();
+      const pendingDeviceAuth = createPendingDeviceAuthState(deviceCodeData);
 
-      await setAuthSession(result.authSession);
-      tokenStatus.innerHTML = getStatusMarkup('success', `Connected as ${result.user.login}`);
+      tokenInput.value = deviceCodeData.userCode || '';
+      tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`);
       await onboardingManager.saveStepData('token', {
-        validated: true,
-        username: result.user.login,
-        authType: 'oauth_device'
+        userCode: deviceCodeData.userCode,
+        validated: false,
+        authType: 'oauth_device',
+        pendingDeviceAuth
       });
 
-      try {
-        const popular = await onboardingManager.getPopularRepos();
-        if (Array.isArray(popular) && popular.length > 0) {
-          await onboardingManager.saveStepData('popularRepos', popular);
-        }
-      } catch (_prefetchError) {
-        // Silently handle prefetch errors - not critical
-      }
+      openGitHubDevicePage(deviceCodeData);
+      const result = await completePendingDeviceAuth({
+        userCode: deviceCodeData.userCode,
+        validated: false,
+        authType: 'oauth_device',
+        pendingDeviceAuth
+      }, tokenElements, {
+        showCheckingStatus: false
+      });
 
-      validateBtn.textContent = 'Connected';
-      if (nextBtn) {
-        nextBtn.disabled = false;
+      if (result) {
+        try {
+          const popular = await onboardingManager.getPopularRepos();
+          if (Array.isArray(popular) && popular.length > 0) {
+            await onboardingManager.saveStepData('popularRepos', popular);
+          }
+        } catch (_prefetchError) {
+          // Silently handle prefetch errors - not critical
+        }
       }
     } catch (error) {
-      tokenStatus.innerHTML = getStatusMarkup('error', error?.code === 'access_denied'
-        ? 'GitHub sign-in was cancelled'
-        : 'GitHub sign-in failed');
+      tokenStatus.innerHTML = getStatusMarkup('error',
+        error?.code === 'client_id_missing'
+          ? 'GitHub OAuth client ID is not configured for this build.'
+          : error?.code === 'access_denied'
+            ? 'GitHub sign-in was cancelled'
+            : error?.code === 'expired_token'
+              ? 'GitHub sign-in expired. Start again.'
+            : 'GitHub sign-in failed'
+      );
       validateBtn.disabled = false;
+      validateBtn.textContent = 'Connect GitHub';
     }
   });
 }

@@ -1,5 +1,11 @@
 import { API_CONFIG, OAUTH_CONFIG } from './config.js';
 
+function getStorageValue(area, key) {
+  return new Promise((resolve) => {
+    area.get([key], (result) => resolve(result?.[key] ?? null));
+  });
+}
+
 function buildFormBody(params) {
   const body = new URLSearchParams();
 
@@ -78,6 +84,44 @@ function getScopeString(scopes = OAUTH_CONFIG.SCOPES) {
   return scopes.join(' ');
 }
 
+function isConfiguredClientId(clientId) {
+  return Boolean(clientId) && clientId !== OAUTH_CONFIG.CLIENT_ID;
+}
+
+async function getGitHubOAuthClientId() {
+  const storageKey = OAUTH_CONFIG.CLIENT_ID_STORAGE_KEY;
+
+  if (chrome?.storage?.local) {
+    const localValue = await getStorageValue(chrome.storage.local, storageKey);
+    if (typeof localValue === 'string' && localValue.trim()) {
+      return localValue.trim();
+    }
+  }
+
+  if (chrome?.storage?.sync) {
+    const syncValue = await getStorageValue(chrome.storage.sync, storageKey);
+    if (typeof syncValue === 'string' && syncValue.trim()) {
+      return syncValue.trim();
+    }
+  }
+
+  return OAUTH_CONFIG.CLIENT_ID;
+}
+
+async function requireGitHubOAuthClientId() {
+  const clientId = await getGitHubOAuthClientId();
+
+  if (!isConfiguredClientId(clientId)) {
+    throw createOAuthError(
+      'GitHub OAuth client ID is not configured. Add one before testing sign-in.',
+      'client_id_missing',
+      { storageKey: OAUTH_CONFIG.CLIENT_ID_STORAGE_KEY }
+    );
+  }
+
+  return clientId;
+}
+
 export function createOAuthHeaders(accessToken) {
   return {
     'Authorization': `Bearer ${accessToken}`,
@@ -103,11 +147,13 @@ export function createGitHubAuthSession(tokenData, user) {
 }
 
 export async function requestGitHubDeviceCode() {
+  const clientId = await requireGitHubOAuthClientId();
+
   const response = await fetch(OAUTH_CONFIG.DEVICE_CODE_URL, {
     method: 'POST',
     headers: getOAuthHeaders(),
     body: buildFormBody({
-      client_id: OAUTH_CONFIG.CLIENT_ID,
+      client_id: clientId,
       scope: getScopeString()
     })
   });
@@ -141,9 +187,9 @@ export function openGitHubDevicePage(deviceCodeData) {
 }
 
 export async function pollForGitHubAccessToken(deviceCodeData, options = {}) {
+  const clientId = await requireGitHubOAuthClientId();
   const { signal, onPoll } = options;
-  const startedAt = Date.now();
-  const expiresAt = startedAt + ((deviceCodeData.expiresIn ?? 900) * 1000);
+  const expiresAt = deviceCodeData.expiresAt ?? (Date.now() + ((deviceCodeData.expiresIn ?? 900) * 1000));
   let intervalMs = (deviceCodeData.interval ?? 5) * 1000;
 
   while (Date.now() < expiresAt) {
@@ -157,7 +203,7 @@ export async function pollForGitHubAccessToken(deviceCodeData, options = {}) {
       method: 'POST',
       headers: getOAuthHeaders(),
       body: buildFormBody({
-        client_id: OAUTH_CONFIG.CLIENT_ID,
+        client_id: clientId,
         device_code: deviceCodeData.deviceCode,
         grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
       }),

@@ -76,6 +76,7 @@ let _renderOnboardingStep;
 
 async function renderTokenStep(stateOverrides = {}) {
   _localStorage = {
+    githubOAuthClientId: 'Iv1.test-client-id',
     onboarding_state: {
       currentStep: 1,
       completed: false,
@@ -98,6 +99,7 @@ describe('Onboarding - token persistence', () => {
   beforeEach(async () => {
     // Reset storage and mocks
     _localStorage = {
+      githubOAuthClientId: 'Iv1.test-client-id',
       onboarding_state: {
         currentStep: 1, // token step
         completed: false,

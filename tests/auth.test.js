@@ -1,8 +1,18 @@
 import { jest } from '@jest/globals';
 
 const mockCreateTab = jest.fn();
+const mockLocalGet = jest.fn((keys, callback) => callback({ githubOAuthClientId: 'Iv1.test-client-id' }));
+const mockSyncGet = jest.fn((keys, callback) => callback({}));
 
 global.chrome = {
+  storage: {
+    local: {
+      get: mockLocalGet
+    },
+    sync: {
+      get: mockSyncGet
+    }
+  },
   tabs: {
     create: mockCreateTab
   }
@@ -12,6 +22,8 @@ describe('GitHub OAuth helpers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
+    mockLocalGet.mockImplementation((keys, callback) => callback({ githubOAuthClientId: 'Iv1.test-client-id' }));
+    mockSyncGet.mockImplementation((keys, callback) => callback({}));
   });
 
   it('requests a GitHub device code', async () => {
@@ -45,9 +57,20 @@ describe('GitHub OAuth helpers', () => {
         method: 'POST',
         headers: expect.objectContaining({
           'Accept': 'application/json'
-        })
+        }),
+        body: expect.stringContaining('client_id=Iv1.test-client-id')
       })
     );
+  });
+
+  it('fails early when no OAuth client ID is configured', async () => {
+    const { requestGitHubDeviceCode } = await import('../shared/auth.js');
+    mockLocalGet.mockImplementation((keys, callback) => callback({}));
+
+    await expect(requestGitHubDeviceCode()).rejects.toMatchObject({
+      code: 'client_id_missing'
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('opens the GitHub verification page in a new tab', async () => {

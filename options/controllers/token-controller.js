@@ -98,6 +98,8 @@ export async function clearToken() {
 
 function getErrorMessage(error) {
   switch (error?.code) {
+    case 'client_id_missing':
+      return 'GitHub OAuth client ID is not configured for this build yet.';
     case 'access_denied':
       return 'GitHub sign-in was cancelled before access was granted.';
     case 'expired_token':

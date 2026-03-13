@@ -19,6 +19,7 @@ export const API_CONFIG = {
 // OAuth Configuration
 export const OAUTH_CONFIG = {
   CLIENT_ID: 'YOUR_GITHUB_OAUTH_CLIENT_ID',
+  CLIENT_ID_STORAGE_KEY: 'githubOAuthClientId',
   SCOPES: ['repo', 'read:user'],
   DEVICE_CODE_URL: 'https://github.com/login/device/code',
   ACCESS_TOKEN_URL: 'https://github.com/login/oauth/access_token',
