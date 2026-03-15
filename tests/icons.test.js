@@ -34,7 +34,7 @@ describe('Icons', () => {
 
     test('SNOOZE_ICON is defined', () => {
       expect(SNOOZE_ICON).toBeDefined();
-      expect(SNOOZE_ICON).toContain('<path');
+      expect(SNOOZE_ICON).toContain('<circle');
     });
 
     test('CHECK_ICON is defined', () => {
@@ -44,7 +44,7 @@ describe('Icons', () => {
 
     test('STAR_ICON is defined', () => {
       expect(STAR_ICON).toBeDefined();
-      expect(STAR_ICON).toContain('<path');
+      expect(STAR_ICON).toContain('<polygon');
     });
 
     test('PIN_ICON is defined', () => {
@@ -68,7 +68,7 @@ describe('Icons', () => {
       const svg = createSvg('<path d="M0 0"/>');
       expect(svg).toContain('width="16"');
       expect(svg).toContain('height="16"');
-      expect(svg).toContain('viewBox="0 0 16 16"');
+      expect(svg).toContain('viewBox="0 0 24 24"');
       expect(svg).toContain('<path d="M0 0"/>');
     });
 
@@ -88,9 +88,11 @@ describe('Icons', () => {
       expect(svg).not.toContain('class=');
     });
 
-    test('includes fill="currentColor"', () => {
+    test('includes stroke attributes for Lucide icons', () => {
       const svg = createSvg('<path d="M0 0"/>');
-      expect(svg).toContain('fill="currentColor"');
+      expect(svg).toContain('fill="none"');
+      expect(svg).toContain('stroke="currentColor"');
+      expect(svg).toContain('stroke-width="2"');
     });
   });
 

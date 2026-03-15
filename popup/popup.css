@@ -265,14 +265,8 @@ h1 {
 
 .filter-btn.active {
   background: var(--ring);
-  color: white;
-  font-weight: 600;
-  box-shadow: none;
-}
-
-body.dark-mode .filter-btn.active {
-  background: var(--ring);
   color: var(--background);
+  font-weight: 600;
   box-shadow: none;
 }
 
