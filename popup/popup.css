@@ -234,13 +234,10 @@ h1 {
   background: var(--background);
 }
 
-/* shadcn Tabs component: muted container, active tab pops out */
+/* shadcn Tabs component: filled-pill active state */
 .filters {
   display: inline-flex;
   align-items: center;
-  background: var(--muted);
-  border-radius: calc(var(--radius) + 2px);
-  padding: 4px;
   gap: 2px;
   height: 36px;
 }
@@ -267,14 +264,16 @@ h1 {
 }
 
 .filter-btn.active {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--ring);
+  color: white;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 body.dark-mode .filter-btn.active {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: var(--ring);
+  color: var(--background);
+  box-shadow: none;
 }
 
 .toolbar-actions {
