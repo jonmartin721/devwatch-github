@@ -292,6 +292,7 @@ h1 {
 .toolbar-btn svg {
   width: 15px;
   height: 15px;
+  stroke-width: 1.75;
 }
 
 .toolbar-btn:hover {
@@ -851,6 +852,7 @@ footer {
 .footer-btn svg {
   width: 16px;
   height: 16px;
+  stroke-width: 1.75;
 }
 
 .footer-btn:hover {
@@ -1414,8 +1416,8 @@ body.dark-mode .search-box input:focus-visible {
   background: var(--muted);
   border: none;
   border-radius: 12px;
-  padding: 16px;
-  margin: 16px 0;
+  padding: 14px;
+  margin: 12px 0;
   text-align: left;
 }
 
@@ -1445,38 +1447,36 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .token-input-group {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin: 16px 0;
+  margin: 12px 0 8px;
   background: var(--muted);
   border: none;
   border-radius: 12px;
-  padding: 16px;
-}
-
-.token-input-group .token-code-stack {
-  grid-column: 1 / -1;
-}
-
-.token-input-group .validate-btn {
-  grid-column: 1 / -1;
+  padding: 14px;
 }
 
 .token-code-stack {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
 }
 
-/* When token-input-group is column, make copy+validate sit in a row */
-.token-input-group .copy-code-btn,
-.token-input-group .validate-btn {
-  width: auto;
+.token-code-stack .token-input {
+  flex: 1;
 }
 
-.token-input-group > :not(.token-code-stack) {
+.token-code-stack .token-copy-hint {
+  display: none;
+}
+
+.token-input-group .copy-code-btn {
   flex-shrink: 0;
+}
+
+.token-input-group .validate-btn {
+  width: 100%;
 }
 
 /* shadcn input */
@@ -1555,8 +1555,8 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .token-status {
-  margin: 12px 0;
-  min-height: 20px;
+  margin: 4px 0;
+  min-height: 0;
 }
 
 @media (max-width: 560px) {
@@ -1590,7 +1590,7 @@ body.dark-mode .search-box input:focus-visible {
 .security-note {
   font-size: 11px;
   color: var(--muted-foreground);
-  margin-top: 10px;
+  margin-top: 4px;
   display: flex;
   align-items: flex-start;
   gap: 6px;
