@@ -417,7 +417,7 @@ body.dark-mode .filter-btn.active {
   justify-content: space-between;
   align-items: center;
   padding: 6px 16px;
-  background: var(--muted);
+  background: var(--background);
   border-bottom: 1px solid var(--border);
   font-size: 12px;
   font-weight: 500;
