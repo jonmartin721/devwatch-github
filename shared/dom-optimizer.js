@@ -364,8 +364,8 @@ class ActivityListRenderer {
           <div class="repo-group-header ${isPinned ? 'pinned' : ''}" data-repo="${escapeHtml(repo)}">
             <div class="repo-group-title">
               <button class="repo-collapse-btn" data-repo="${escapeHtml(repo)}" title="${isCollapsed ? 'Expand' : 'Collapse'}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${escapeHtml(repo)} activities">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="chevron ${isCollapsed ? 'collapsed' : ''}">
-                  <path d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron ${isCollapsed ? 'collapsed' : ''}">
+                  <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
               <span class="repo-group-name">${escapeHtml(repo)}</span>
@@ -373,20 +373,20 @@ class ActivityListRenderer {
             </div>
             <div class="repo-group-actions">
               <button class="repo-pin-btn ${isPinned ? 'pinned' : ''}" data-repo="${escapeHtml(repo)}" title="${isPinned ? 'Unpin repository' : 'Pin repository'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} ${escapeHtml(repo)} repository">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   ${isPinned
-                    ? '<path d="M4.456.734a1.75 1.75 0 012.826.504l.613 1.327a3.081 3.081 0 002.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.75.75 0 11-1.061 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 00-1.707-2.084l-1.327-.613a1.75 1.75 0 01-.504-2.826L4.456.734z"/>'
-                    : '<path d="M4.456.734a1.75 1.75 0 012.826.504l.613 1.327a3.081 3.081 0 002.084 1.707l2.454.584c1.332.317 1.8 1.972.832 2.94L11.06 10l3.72 3.72a.75.75 0 11-1.061 1.06L10 11.06l-2.204 2.205c-.968.968-2.623.5-2.94-.832l-.584-2.454a3.081 3.081 0 00-1.707-2.084l-1.327-.613a1.75 1.75 0 01-.504-2.826L4.456.734zM5.92 1.866a.25.25 0 00-.404-.072L1.794 5.516a.25.25 0 00.072.404l1.328.613A4.582 4.582 0 015.73 9.63l.584 2.454a.25.25 0 00.42.12l5.47-5.47a.25.25 0 00-.12-.42L9.63 5.73a4.581 4.581 0 01-3.098-2.537L5.92 1.866z"/>'}
+                    ? '<line x1="12" x2="12" y1="17" y2="22"/><path fill="currentColor" d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>'
+                    : '<line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>'}
                 </svg>
               </button>
               ${repoUnreadCount > 0 ? `
               <button class="repo-mark-read-btn" data-repo="${escapeHtml(repo)}" title="Mark all as read" aria-label="Mark all ${escapeHtml(repo)} activities as read">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   ${CHECK_ICON}
                 </svg>
               </button>` : ''}
               <button class="repo-snooze-btn" data-repo="${escapeHtml(repo)}" title="Snooze this repository" aria-label="Snooze ${escapeHtml(repo)} repository">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   ${SNOOZE_ICON}
                 </svg>
               </button>
@@ -462,8 +462,8 @@ class ActivityListRenderer {
         </div>
         <div class="activity-actions">
           ${!isRead ? `<button class="action-btn mark-read-btn" data-action="mark-read" title="Mark as done" aria-label="Mark ${sanitizedTitle} as done">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6 9 17l-5-5"/>
             </svg>
           </button>` : ''}
         </div>
