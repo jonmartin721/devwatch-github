@@ -1285,7 +1285,7 @@ body.dark-mode .search-box input:focus-visible {
 
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: 3px;
   background: var(--muted);
   border-radius: 9999px;
   margin-bottom: 8px;
@@ -1317,6 +1317,11 @@ body.dark-mode .search-box input:focus-visible {
   font-size: 48px;
   margin-bottom: 16px;
   display: block;
+  color: var(--foreground);
+}
+
+.step-icon svg {
+  display: inline-block;
 }
 
 .token-step .step-icon,
@@ -1355,7 +1360,7 @@ body.dark-mode .search-box input:focus-visible {
 .feature-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 10px 12px;
   background: var(--background);
   border-radius: var(--radius);
@@ -1804,9 +1809,9 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .category-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
