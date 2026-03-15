@@ -447,6 +447,10 @@ body.dark-mode .filter-btn.active {
 /* ---- Repo Groups ---- */
 .repo-group {
   position: relative;
+  margin: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .repo-group-header {
@@ -456,9 +460,6 @@ body.dark-mode .filter-btn.active {
   padding: 8px 16px;
   background: var(--muted);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: var(--list-header-height, 0px);
-  z-index: 10;
   cursor: pointer;
   transition: opacity 300ms, transform 300ms, max-height 300ms, padding 300ms, margin 300ms, border-width 300ms;
 }
@@ -642,12 +643,16 @@ body.dark-mode .filter-btn.active {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   transition: all 200ms;
   transform-origin: top;
   max-height: 220px;
   overflow: hidden;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
 }
 
 .activity-item:hover {
