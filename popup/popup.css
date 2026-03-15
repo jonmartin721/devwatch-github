@@ -125,24 +125,36 @@ header {
 
 .header-stats {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  align-items: flex-end;
+  flex-direction: row;
+  gap: 0;
+  align-items: center;
+}
+
+.header-stats .repo-count::before {
+  content: "\B7";
+  margin: 0 6px;
+  color: var(--muted-foreground);
 }
 
 .header-refresh-btn {
   padding: 6px;
-  background: transparent;
-  border: none;
-  border-radius: calc(var(--radius) - 2px);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   cursor: pointer;
   color: var(--muted-foreground);
   transition: all 150ms;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .header-refresh-btn:hover {
   background: var(--accent);
   color: var(--accent-foreground);
+  border-color: var(--ring);
 }
 
 .header-refresh-btn:focus-visible {
