@@ -1,4 +1,4 @@
-import { applyTheme } from '../shared/utils.js';
+import { applyTheme, applyColorTheme } from '../shared/utils.js';
 import { getSyncItem, getWatchedRepos } from '../shared/storage-helpers.js';
 import { showError } from '../shared/error-handler.js';
 import {
@@ -159,6 +159,12 @@ function setupEventListeners() {
     }
 
     applyTheme(theme);
+
+    // Load color theme
+    getSyncItem('colorTheme', 'polar').then(colorTheme => {
+      applyColorTheme(colorTheme);
+    });
+
     // Add a small delay to ensure DOM is ready before updating icons
     setTimeout(() => {
       updateDarkModeIcon();
