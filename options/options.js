@@ -1,4 +1,4 @@
-import { applyTheme, formatDateVerbose } from '../shared/utils.js';
+import { applyTheme, applyColorTheme, formatDateVerbose } from '../shared/utils.js';
 import { clearAuthSession, getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
 import { createHeaders } from '../shared/github-api.js';
 import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
@@ -294,7 +294,26 @@ function setupEventListeners() {
     });
   });
 
-  
+  // Auto-save color theme changes
+  document.querySelectorAll('input[name="colorTheme"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      const colorTheme = e.target.value;
+      await chrome.storage.sync.set({ colorTheme });
+      applyColorTheme(colorTheme);
+
+      const themeNames = {
+        'polar': 'Polar',
+        'graphite': 'Graphite',
+        'nightfall': 'Nightfall',
+        'obsidian': 'Obsidian',
+        'sand': 'Sand',
+        'terminal-ledger': 'Terminal Ledger'
+      };
+      toastManager.info(`Color theme changed to ${themeNames[colorTheme] || colorTheme}`);
+    });
+  });
+
+
   // Auto-save check interval changes
   document.querySelectorAll('input[name="checkInterval"]').forEach(radio => {
     radio.addEventListener('change', async (e) => {
@@ -570,6 +589,10 @@ async function loadSettings() {
     const theme = settings.theme || 'system';
     applyTheme(theme);
 
+    // Load and apply color theme
+    const colorTheme = settings.colorTheme || 'polar';
+    applyColorTheme(colorTheme);
+
     if (authSession?.accessToken) {
       applyStoredConnection(authSession);
     } else {
@@ -612,6 +635,12 @@ async function loadSettings() {
     const themeRadio = document.getElementById(`theme-${theme}`);
     if (themeRadio) {
       themeRadio.checked = true;
+    }
+
+    // Set color theme radio button
+    const colorThemeRadio = document.getElementById(`color-${colorTheme}`);
+    if (colorThemeRadio) {
+      colorThemeRadio.checked = true;
     }
 
     // Load itemExpiryHours setting
