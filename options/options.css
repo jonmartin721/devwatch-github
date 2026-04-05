@@ -703,11 +703,7 @@ button.danger:hover {
 }
 
 .activity-toggle input:checked + .toggle-slider {
-  background-color: #10b981;
-}
-
-body.dark-mode .activity-toggle input:checked + .toggle-slider {
-  background-color: #059669;
+  background-color: var(--primary);
 }
 
 .activity-toggle input:focus + .toggle-slider {
