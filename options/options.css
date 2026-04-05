@@ -565,6 +565,23 @@ button.danger:hover {
   opacity: 1;
 }
 
+.color-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.subsection-heading {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 24px;
+  margin-bottom: 4px;
+  color: var(--foreground);
+}
+
 /* Activity Cards Styles */
 .activity-cards {
   display: flex;
