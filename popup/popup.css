@@ -1,74 +1,11 @@
 /* ================================================
-   DEVWATCH POPUP — shadcn/ui Stone Theme
+   DEVWATCH POPUP — Terminal Ledger Theme
    ================================================ */
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-}
-
-/* ---- shadcn Design Tokens (Stone) ---- */
-:root {
-  --background: #FAFAF9;
-  --foreground: #1C1917;
-  --card: #FAFAF9;
-  --card-foreground: #1C1917;
-  --muted: #F5F5F4;
-  --muted-foreground: #78716C;
-  --accent: #F5F5F4;
-  --accent-foreground: #1C1917;
-  --border: #E7E5E4;
-  --input: #E7E5E4;
-  --ring: #1C1917;
-  --radius: 0.5rem;
-  --destructive: #EF4444;
-  --destructive-foreground: #FAFAF9;
-
-  /* Backward-compat aliases */
-  --bg-primary: var(--background);
-  --bg-secondary: var(--muted);
-  --bg-hover: var(--accent);
-  --bg-unread: #FFFBF5;
-  --border-color: var(--border);
-  --text-primary: var(--foreground);
-  --text-secondary: var(--muted-foreground);
-  --link-color: #1C1917;
-  --link-hover-color: #0C0A09;
-  --badge-bg: #1C1917;
-  --accent-color: #1C1917;
-  --success-bg: #F0FDF4;
-  --success-text: #166534;
-}
-
-body.dark-mode {
-  --background: #1C1917;
-  --foreground: #FAFAF9;
-  --card: #1C1917;
-  --card-foreground: #FAFAF9;
-  --muted: #292524;
-  --muted-foreground: #A8A29E;
-  --accent: #292524;
-  --accent-foreground: #FAFAF9;
-  --border: #292524;
-  --input: #292524;
-  --ring: #D6D3D1;
-  --destructive: #7F1D1D;
-  --destructive-foreground: #FAFAF9;
-
-  --bg-primary: var(--background);
-  --bg-secondary: var(--muted);
-  --bg-hover: var(--accent);
-  --bg-unread: rgba(255, 251, 245, 0.04);
-  --border-color: var(--border);
-  --text-primary: var(--foreground);
-  --text-secondary: var(--muted-foreground);
-  --link-color: #FAFAF9;
-  --link-hover-color: #E7E5E4;
-  --badge-bg: #FAFAF9;
-  --accent-color: #FAFAF9;
-  --success-bg: #052E16;
-  --success-text: #86EFAC;
 }
 
 body {
@@ -78,7 +15,9 @@ body {
   font-size: 14px;
   line-height: 1.5;
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(circle at top right, var(--bg-gradient-glow), transparent 32%),
+    linear-gradient(180deg, var(--background) 0%, var(--card) 100%);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -105,6 +44,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: transparent;
 }
 
 /* ---- Header ---- */
@@ -112,15 +52,15 @@ header {
   display: none;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border);
-  background: var(--background);
+  background: transparent;
 }
 
 .header-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header-stats {
@@ -138,7 +78,7 @@ header {
 
 .header-refresh-btn {
   padding: 6px;
-  background: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
@@ -154,7 +94,7 @@ header {
 .header-refresh-btn:hover {
   background: var(--accent);
   color: var(--accent-foreground);
-  border-color: var(--ring);
+  border-color: var(--primary);
 }
 
 .header-refresh-btn:focus-visible {
@@ -176,18 +116,20 @@ header {
 h1 {
   font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.04em;
   line-height: 1;
   color: var(--foreground);
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  text-transform: uppercase;
 }
 
 /* ---- Icon Buttons (shared) ---- */
 .icon-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   cursor: pointer;
   padding: 8px;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -203,6 +145,7 @@ h1 {
 .icon-btn:hover {
   background: var(--accent);
   color: var(--accent-foreground);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .icon-btn.spinning .refresh-icon {
@@ -216,7 +159,7 @@ h1 {
 
 @keyframes refresh-complete {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15); background: var(--foreground); color: var(--background); }
+  50% { transform: scale(1.15); background: var(--primary); color: var(--primary-foreground); }
   100% { transform: scale(1); }
 }
 
@@ -229,29 +172,30 @@ h1 {
   display: none;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--background);
+  padding: 8px 16px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0);
+  background: transparent;
 }
 
 /* shadcn Tabs component: filled-pill active state */
 .filters {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  height: 36px;
+  gap: 6px;
+  height: auto;
 }
 
 .filter-btn {
   padding: 0 14px;
-  height: 28px;
-  border: none;
+  height: 30px;
+  border: 1px solid var(--border);
   background: transparent;
   color: var(--muted-foreground);
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   transition: all 150ms;
   white-space: nowrap;
   display: inline-flex;
@@ -261,24 +205,26 @@ h1 {
 
 .filter-btn:hover {
   color: var(--foreground);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .filter-btn.active {
-  background: var(--ring);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
   font-weight: 600;
   box-shadow: none;
 }
 
 .toolbar-actions {
   display: flex;
-  gap: 2px;
+  gap: 8px;
   align-items: center;
 }
 
 .toolbar-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   cursor: pointer;
   padding: 7px;
   color: var(--muted-foreground);
@@ -286,7 +232,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 12px;
 }
 
 .toolbar-btn svg {
@@ -301,12 +247,13 @@ h1 {
 }
 
 .toolbar-btn.active {
-  color: var(--background);
-  background: var(--foreground);
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .toolbar-btn.active svg {
-  color: var(--background);
+  color: var(--primary-foreground);
 }
 
 /* ---- Search ---- */
@@ -314,28 +261,32 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--background);
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .search-label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--foreground);
   white-space: nowrap;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 /* shadcn Input component */
 .search-box input {
   width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius);
-  background: var(--background);
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 13px;
   transition: all 150ms;
 }
 
@@ -345,7 +296,7 @@ h1 {
 
 .search-box input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+  box-shadow: none;
 }
 
 /* ---- Activity List ---- */
@@ -380,16 +331,21 @@ h1 {
 
 /* ---- Empty & Loading States ---- */
 .empty-state {
-  padding: 48px 24px;
+  margin: 12px 16px 18px;
+  padding: 32px 20px;
   text-align: center;
   color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .empty-state p {
-  font-weight: 500;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 15px;
   color: var(--foreground);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
 }
 
 .empty-state small {
@@ -411,11 +367,12 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 16px;
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
+  margin: 0 16px 10px;
+  padding: 0 0 2px;
+  background: transparent;
+  border-bottom: 0;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--muted-foreground);
   position: sticky;
   top: 0;
@@ -442,18 +399,21 @@ h1 {
 /* ---- Repo Groups ---- */
 .repo-group {
   position: relative;
-  margin: 8px;
+  margin: 0 16px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 20px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
 .repo-group-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
-  background: var(--muted);
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: opacity 300ms, transform 300ms, max-height 300ms, padding 300ms, margin 300ms, border-width 300ms;
@@ -475,8 +435,7 @@ h1 {
 }
 
 .repo-group-header.pinned {
-  border-left: 2px solid var(--foreground);
-  padding-left: 14px;
+  box-shadow: inset 3px 0 0 var(--accent-color);
 }
 
 .repo-group-header.pinned:hover {
@@ -516,9 +475,10 @@ h1 {
 .repo-group-name {
   font-weight: 600;
   color: var(--foreground);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
+  text-transform: lowercase;
 }
 
 .repo-group-actions {
@@ -529,15 +489,16 @@ h1 {
 
 /* shadcn Badge — default variant */
 .repo-unread-count {
-  font-size: 12px;
+  font-size: 11px;
   padding: 0 6px;
-  height: 20px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border-radius: 9999px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 .repo-snooze-btn,
@@ -582,7 +543,7 @@ h1 {
 }
 
 .options-link {
-  color: var(--foreground);
+  color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 4px;
   font-weight: 500;
@@ -590,7 +551,8 @@ h1 {
 
 .options-link:hover {
   text-decoration: underline;
-  color: var(--foreground);
+  color: var(--primary);
+  opacity: 0.8;
 }
 
 .repo-activities {
@@ -617,15 +579,17 @@ h1 {
 
 /* shadcn ghost button style for text actions */
 .text-btn {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   color: var(--muted-foreground);
   cursor: pointer;
   font-size: 12px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: calc(var(--radius) - 2px);
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
   transition: all 150ms;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .text-btn:hover {
@@ -638,7 +602,7 @@ h1 {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   transition: all 200ms;
   transform-origin: top;
@@ -656,6 +620,7 @@ h1 {
 
 .activity-item.unread {
   background: var(--bg-unread);
+  box-shadow: inset 2px 0 0 rgba(211, 162, 75, 0.95);
 }
 
 .activity-item.unread:hover {
@@ -663,7 +628,7 @@ h1 {
 }
 
 .activity-item.read {
-  opacity: 0.5;
+  opacity: 0.56;
 }
 
 .activity-item.read:hover {
@@ -708,8 +673,8 @@ h1 {
 }
 
 .action-btn {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   cursor: pointer;
   font-size: 18px;
   padding: 5px;
@@ -718,7 +683,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 10px;
 }
 
 .action-btn:hover {
@@ -737,35 +702,37 @@ h1 {
 }
 
 .mark-read-btn:hover {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .mark-read-btn:hover svg {
-  color: var(--background);
+  color: var(--primary-foreground);
 }
 
 .activity-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  min-width: 0;
 }
 
 /* shadcn Badge — zinc pill with colored dot */
 .activity-type {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   line-height: 1.4;
-  background: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   color: var(--foreground);
+  text-transform: uppercase;
 }
 
 .activity-type::before {
@@ -786,17 +753,22 @@ body.dark-mode .activity-type.issue::before { background: #FBBF24; }
 body.dark-mode .activity-type.release::before { background: #60A5FA; }
 
 .activity-repo {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
-  font-weight: 400;
+  font-weight: 600;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .activity-title {
-  font-weight: 500;
-  margin-bottom: 2px;
+  font-weight: 600;
+  margin-bottom: 4px;
   line-height: 1.4;
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: -0.02em;
 }
 
 .activity-description {
@@ -818,9 +790,9 @@ body.dark-mode .activity-type.release::before { background: #60A5FA; }
 footer {
   position: sticky;
   bottom: 0;
-  padding: 8px 16px;
+  padding: 12px 16px 16px;
   border-top: 1px solid var(--border);
-  background: var(--background);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), var(--background) 22%);
   z-index: 20;
 }
 
@@ -832,16 +804,16 @@ footer {
 
 .footer-actions {
   display: flex;
-  gap: 2px;
+  gap: 8px;
   align-items: center;
 }
 
 .footer-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   cursor: pointer;
   padding: 6px;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -867,14 +839,16 @@ footer {
 /* shadcn outline button */
 .footer-btn.skip-btn {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 4px 10px;
   min-width: auto;
   height: auto;
   color: var(--foreground);
-  background: var(--background);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--input);
-  border-radius: var(--radius);
+  border-radius: 999px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .footer-btn.skip-btn:hover {
@@ -883,19 +857,21 @@ footer {
 }
 
 footer a {
-  color: var(--foreground);
+  color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 4px;
   font-size: 12px;
 }
 
 footer a:hover {
-  color: var(--muted-foreground);
+  opacity: 0.8;
 }
 
 .rate-limit-info {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: 0.02em;
 }
 
 /* ---- Error & Toast Messages ---- */
@@ -1023,8 +999,8 @@ body.dark-mode .error-brief {
 
 /* shadcn primary button */
 .error-dismiss {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
   padding: 6px 14px;
   border-radius: var(--radius);
@@ -1053,8 +1029,8 @@ body.dark-mode .error-brief {
 }
 
 .error-content .error-action {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
   padding: 4px 8px;
   border-radius: var(--radius);
@@ -1243,10 +1219,10 @@ body.dark-mode .search-box input:focus-visible {
    ================================================ */
 .onboarding-view {
   flex: 1;
-  padding: 20px 20px 12px;
+  padding: 18px 18px 14px;
   overflow: hidden;
   min-height: 0;
-  background: var(--background);
+  background: transparent;
   display: flex;
   flex-direction: column;
 }
@@ -1270,23 +1246,23 @@ body.dark-mode .search-box input:focus-visible {
 
 /* Progress — thin line */
 .onboarding-progress {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .progress-bar {
   width: 100%;
-  height: 2px;
+  height: 4px;
   background: var(--border);
   border-radius: 9999px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--foreground);
+  background: var(--primary);
   border-radius: 9999px;
   transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1294,8 +1270,10 @@ body.dark-mode .search-box input:focus-visible {
 .progress-text {
   font-size: 11px;
   color: var(--muted-foreground);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .onboarding-content {
@@ -1319,8 +1297,8 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .step-icon img {
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 22px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
 }
 
 .step-icon svg {
@@ -1335,18 +1313,18 @@ body.dark-mode .search-box input:focus-visible {
 
 /* Headings — large, tight, confident */
 .onboarding-step h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--foreground);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   letter-spacing: -0.04em;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .onboarding-step p {
   color: var(--muted-foreground);
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   max-width: 340px;
   margin-left: auto;
   margin-right: auto;
@@ -1367,16 +1345,16 @@ body.dark-mode .search-box input:focus-visible {
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: var(--muted);
-  border-radius: 12px;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  border: 1px solid var(--border);
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .feature-item:hover {
   background: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.12);
 }
 
 .feature-icon {
@@ -1386,10 +1364,10 @@ body.dark-mode .search-box input:focus-visible {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: var(--background);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  color: var(--foreground);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--accent-color);
 }
 
 .feature-icon svg {
@@ -1413,19 +1391,22 @@ body.dark-mode .search-box input:focus-visible {
 
 /* Token Step */
 .token-instructions {
-  background: var(--muted);
-  border: none;
-  border-radius: 12px;
-  padding: 14px;
-  margin: 12px 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  margin: 14px 0;
   text-align: left;
 }
 
 .token-instructions h3 {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .token-instructions ol {
@@ -1436,24 +1417,24 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .token-link {
-  color: var(--foreground);
+  color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 4px;
   font-weight: 500;
 }
 
 .token-link:hover {
-  color: var(--muted-foreground);
+  opacity: 0.8;
 }
 
 .token-input-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 12px 0 8px;
-  background: var(--muted);
-  border: none;
-  border-radius: 12px;
+  margin: 14px 0 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 18px;
   padding: 14px;
 }
 
@@ -1482,12 +1463,12 @@ body.dark-mode .search-box input:focus-visible {
 /* shadcn input */
 .token-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--input);
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  background: var(--background);
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
   letter-spacing: 0.14em;
   font-weight: 600;
@@ -1509,14 +1490,16 @@ body.dark-mode .search-box input:focus-visible {
 /* shadcn outline button */
 .copy-code-btn {
   padding: 8px 14px;
-  background: var(--background);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
   border: 1px solid var(--input);
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .copy-code-btn:hover:not(:disabled) {
@@ -1532,15 +1515,17 @@ body.dark-mode .search-box input:focus-visible {
 /* Primary button */
 .validate-btn {
   padding: 10px 20px;
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .validate-btn:hover {
@@ -1590,11 +1575,16 @@ body.dark-mode .search-box input:focus-visible {
 .security-note {
   font-size: 11px;
   color: var(--muted-foreground);
-  margin-top: 4px;
+  margin-top: 8px;
   display: flex;
   align-items: flex-start;
   gap: 6px;
   line-height: 1.4;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left;
 }
 
 .info-icon {
@@ -1628,16 +1618,16 @@ body.dark-mode .search-box input:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: var(--muted);
-  border: none;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .repo-suggestion:hover {
   background: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .repo-info {
@@ -1648,7 +1638,7 @@ body.dark-mode .search-box input:focus-visible {
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: 2px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .repo-desc {
@@ -1703,7 +1693,7 @@ body.dark-mode .search-box input:focus-visible {
   width: 14px;
   height: 14px;
   border: 2px solid var(--border);
-  border-top-color: var(--foreground);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-right: 8px;
@@ -1715,12 +1705,12 @@ body.dark-mode .search-box input:focus-visible {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--foreground);
-  color: var(--background);
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 400;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -1793,9 +1783,9 @@ body.dark-mode .search-box input:focus-visible {
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--input);
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 14px;
-  background: var(--background);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
 }
 
@@ -1808,14 +1798,16 @@ body.dark-mode .search-box input:focus-visible {
 .add-btn {
   padding: 0 16px;
   height: 36px;
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .add-btn:hover {
@@ -1847,16 +1839,16 @@ body.dark-mode .search-box input:focus-visible {
   align-items: center;
   gap: 14px;
   padding: 16px;
-  background: var(--muted);
-  border: none;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 18px;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .category-item:hover {
   background: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .category-icon {
@@ -1928,10 +1920,12 @@ body.dark-mode .releases-icon {
 }
 
 .toggle-label > span:first-child {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
-  font-weight: 500;
+  font-weight: 600;
   min-width: 38px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .toggle-checkbox {
@@ -1967,11 +1961,11 @@ body.dark-mode .releases-icon {
 }
 
 .toggle-checkbox:checked + .toggle-switch {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 body.dark-mode .toggle-checkbox:checked + .toggle-switch {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 .toggle-checkbox:checked + .toggle-switch:before {
@@ -2060,11 +2054,11 @@ body.dark-mode .toggle-checkbox:checked + .toggle-switch {
 }
 
 .activity-toggle input:checked + .toggle-slider {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 body.dark-mode .activity-toggle input:checked + .toggle-slider {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 .activity-toggle input:focus + .toggle-slider {
@@ -2081,11 +2075,11 @@ body.dark-mode .activity-toggle input:checked + .toggle-slider {
 }
 
 .notification-toggle input:checked + .toggle-slider {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 body.dark-mode .notification-toggle input:checked + .toggle-slider {
-  background-color: var(--foreground);
+  background-color: var(--primary);
 }
 
 .notification-toggle input:focus + .toggle-slider {
@@ -2119,6 +2113,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 .tips-grid {
@@ -2132,16 +2127,16 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: var(--muted);
-  border-radius: 12px;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  border: 1px solid var(--border);
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tip-item:hover {
   background: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .tip-icon {
@@ -2151,10 +2146,10 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: var(--background);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  color: var(--foreground);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--accent-color);
 }
 
 .tip-icon svg {
@@ -2184,9 +2179,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .final-tips {
   margin-top: 20px;
   padding: 14px 16px;
-  background: var(--muted);
-  border-radius: 12px;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  border: 1px solid var(--border);
 }
 
 .final-tips p {
@@ -2224,12 +2219,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 /* Button variants */
 .onboarding-btn {
   padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 .onboarding-btn:focus {
@@ -2238,9 +2235,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .onboarding-btn.primary {
-  background: var(--foreground);
-  color: var(--background);
-  border-color: var(--foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -2260,7 +2257,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .onboarding-btn.secondary {
-  background: var(--background);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
   border-color: var(--input);
 }
@@ -2292,8 +2289,8 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 body.dark-mode .validate-btn,
 body.dark-mode .add-btn,
 body.dark-mode .add-repo-btn {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 body.dark-mode .validate-btn:hover,
