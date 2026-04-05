@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Devwatch - Settings</title>
+  <title>GitHub DevWatch - Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/themes.css">
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
@@ -58,7 +60,7 @@
     <div class="tab-panel" id="panel-setup" role="tabpanel" data-tab="setup" aria-labelledby="tab-setup">
     <section class="section">
       <h2>Getting Started</h2>
-      <p class="help-text">Follow these steps to set up GitHub DevWatch</p>
+      <p class="help-text">Set up DevWatch and shape the review queue the way you work.</p>
 
       <div class="setup-steps">
         <div class="setup-step setup-step-primary">
@@ -67,12 +69,12 @@
               <div class="step-number">1</div>
 	            <div class="step-title-section">
 	                <h3>Connect GitHub</h3>
-	                <p>Sign in once so DevWatch can check the repositories you want to follow.</p>
+	                <p>Sign in once so DevWatch can pull activity for the repositories you follow.</p>
 	              </div>
 	            </div>
 
 	            <div class="token-form-section">
-	              <label for="connectGitHubBtn" class="token-form-label">GitHub sign-in</label>
+	              <label for="connectGitHubBtn" class="token-form-label">GitHub connection</label>
 	              <div class="token-input-wrapper auth-button-row">
 	                <button id="connectGitHubBtn" class="primary" aria-describedby="token-help tokenStatus">Connect GitHub</button>
 	                <button id="clearTokenBtn" class="danger hidden" aria-label="Disconnect GitHub">Disconnect</button>
@@ -85,7 +87,7 @@
 	            </div>
 
 	            <p id="token-help" class="help-text">
-	              Click <strong>Connect GitHub</strong>, approve access on GitHub, and come back here once the browser tab says you can close it.
+	              Click <strong>Connect GitHub</strong>, approve access in GitHub, and come back once the browser tab says you're done.
 	            </p>
 
 	            <div class="step-info-boxes">
@@ -94,7 +96,7 @@
                   <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 	                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
 	                  </svg>
-	                  <span><strong>Security:</strong> Your GitHub sign-in stays in Chrome session storage and is cleared when the browser session ends.</span>
+	                  <span><strong>Security:</strong> Your GitHub connection stays in Chrome session storage and is cleared when the browser session ends.</span>
 	                </p>
 	              </div>
 	              <div class="info-box info-box-compact">
