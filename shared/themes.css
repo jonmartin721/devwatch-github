@@ -39,10 +39,15 @@
   --error-bg: #FEF2F2;
   --error-text: #991B1B;
   --error-border: #FECACA;
-  --danger-bg: var(--destructive);
   --danger-hover: #D13F3F;
+}
 
-  /* Aliases */
+/* Aliases — MUST be on body (not :root) so var() references
+   resolve against body's theme-overridden values, not html's defaults.
+   If aliases lived on :root (html), var(--foreground) would resolve
+   using html's value and the computed result would be inherited by body,
+   ignoring body's theme overrides. */
+body {
   --bg-primary: var(--background);
   --bg-secondary: var(--muted);
   --bg-tertiary: var(--accent);
@@ -55,6 +60,7 @@
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --link-hover: var(--link-hover-color);
+  --danger-bg: var(--destructive);
   --font-size-base: 14px;
 }
 
