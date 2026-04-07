@@ -384,7 +384,7 @@ describe('Onboarding - token persistence', () => {
     await Promise.resolve();
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(document.getElementById('tokenStatus').textContent).toBe('GitHub sign-in was cancelled');
+    expect(document.getElementById('tokenStatus').textContent).toBe('GitHub connection was cancelled');
   });
 
   test('connect step handles device flow errors', async () => {
@@ -396,7 +396,7 @@ describe('Onboarding - token persistence', () => {
     await Promise.resolve();
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(document.getElementById('tokenStatus').textContent).toBe('GitHub sign-in failed');
+    expect(document.getElementById('tokenStatus').textContent).toBe('GitHub connection failed');
   });
 
   test('connect step escapes successful sign-in messages', async () => {

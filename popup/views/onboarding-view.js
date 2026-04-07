@@ -98,7 +98,7 @@ async function completePendingDeviceAuth(tokenData, elements, options = {}) {
 
   const { tokenStatus, validateBtn, nextBtn } = elements;
   if (options.showCheckingStatus) {
-    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub sign-in...');
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub connection...');
   }
   validateBtn.disabled = true;
 
@@ -141,7 +141,7 @@ function renderRepoSuggestion(repo) {
   const rawName = repo?.name || 'unknown';
   const owner = escapeHtml(rawOwner);
   const name = escapeHtml(rawName);
-  const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project`);
+  const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project worth watching`);
   const language = escapeHtml(repo?.language || '');
   const repoFullName = `${rawOwner}/${rawName}`;
   const stars = Number.isFinite(repo?.stargazers_count)
@@ -243,14 +243,14 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   // Navigation buttons
   const isFinalStep = progress.current === progress.total;
   const isTokenStep = currentStep === 'token';
-  const nextButtonText = isTokenStep ? 'Next' : (isFinalStep ? 'Get Started' : 'Next');
+  const nextButtonText = isTokenStep ? 'Continue' : (isFinalStep ? 'Open Feed' : 'Next');
   const nextButtonDisabled = isTokenStep ? 'disabled' : '';
 
   stepContent += `
     <div class="onboarding-nav">
       ${progress.current >= 1 ? '<button id="prevBtn" class="onboarding-btn secondary">Previous</button>' : '<div></div>'}
       <div class="nav-center"></div>
-      ${!isFinalStep ? `<button id="nextBtn" class="onboarding-btn primary" ${nextButtonDisabled}>${nextButtonText}</button>` : '<button id="finishBtn" class="onboarding-btn primary">Get Started</button>'}
+      ${!isFinalStep ? `<button id="nextBtn" class="onboarding-btn primary" ${nextButtonDisabled}>${nextButtonText}</button>` : '<button id="finishBtn" class="onboarding-btn primary">Open Feed</button>'}
     </div>
   `;
 
@@ -288,8 +288,8 @@ function renderWelcomeStep() {
       <div class="step-icon">
         <img src="../icons/icon128.png" alt="GitHub DevWatch Icon" width="64" height="64">
       </div>
-      <h2>Welcome to GitHub DevWatch!</h2>
-      <p>Monitor your favorite repositories and never miss important activity.</p>
+      <h2>Stay on top of the repos that matter.</h2>
+      <p>DevWatch keeps pull requests, issues, and releases in one compact review queue.</p>
       <div class="feature-list">
         <div class="feature-item">
           <span class="feature-icon">
@@ -316,7 +316,7 @@ function renderWelcomeStep() {
           <span>Customizable filters and preferences</span>
         </div>
       </div>
-      <p class="step-description">Let's get you set up with GitHub repository monitoring.</p>
+      <p class="step-description">A quick setup and your watchlist is ready.</p>
     </div>
   `;
 }
@@ -343,11 +343,11 @@ async function renderTokenStep() {
 
   return `
     <div class="onboarding-step token-step">
-      <h2>Connect GitHub</h2>
-      <p>We'll open GitHub in a new tab and show you the verification code here.</p>
+      <h2>Connect your GitHub account</h2>
+      <p>We'll open GitHub in a new tab and keep the device code ready here for you.</p>
 
       <div class="token-instructions">
-        <h3>Quick setup:</h3>
+        <h3>Quick setup</h3>
         <ol>
           <li>Click <strong>Connect GitHub</strong></li>
           <li>Approve access on the GitHub page that opens</li>
@@ -379,7 +379,7 @@ async function renderTokenStep() {
       <svg class="info-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
-      Your GitHub sign-in stays in Chrome session storage for the current browser session only. It's used only for GitHub API access and is cleared when the browser session ends.
+      Your GitHub session stays in Chrome session storage for the current browser session only. It's used for GitHub API access and is cleared when the browser session ends.
     </p>
   `;
 }
@@ -397,10 +397,10 @@ export async function renderReposStep() {
 
   return `
     <div class="onboarding-step repos-step">
-      <h2>Add Repositories to Watch</h2>
+      <h2>Build your watchlist</h2>
 
       <div class="popular-repos">
-        <h3>Popular repositories:</h3>
+        <h3>Popular repositories</h3>
         <div class="repo-suggestions" id="repoSuggestions">
           ${popularRepos && popularRepos.length > 0 ?
             popularRepos.map(renderRepoSuggestion).join('') :
@@ -410,7 +410,7 @@ export async function renderReposStep() {
       </div>
 
       <div class="manual-repo">
-        <h3>Or add a specific repository:</h3>
+        <h3>Or add one directly</h3>
         <div class="manual-input-group">
           <input
             type="text"
@@ -430,8 +430,8 @@ export async function renderReposStep() {
 function renderCategoriesStep() {
   return `
     <div class="onboarding-step categories-step">
-      <h2>Choose What to Track</h2>
-      <p class="step-subtitle">Select categories and notification preferences</p>
+      <h2>Choose what shows up</h2>
+      <p class="step-subtitle">Pick activity types and notification behavior</p>
 
       <div class="categories-list">
         <div class="category-item" data-category="pullRequests">
@@ -507,7 +507,7 @@ function renderCategoriesStep() {
         </div>
       </div>
 
-      <p class="step-note">You can change these in settings anytime.</p>
+      <p class="step-note">You can fine-tune everything later in settings.</p>
     </div>
   `;
 }
@@ -687,10 +687,10 @@ function setupTokenStepListeners() {
           error?.code === 'client_id_missing'
             ? 'GitHub OAuth client ID is not configured for this build.'
             : error?.code === 'access_denied'
-              ? 'GitHub sign-in was cancelled'
+              ? 'GitHub connection was cancelled'
               : error?.code === 'expired_token'
-                ? 'GitHub sign-in expired. Start again.'
-                : 'GitHub sign-in failed'
+                ? 'GitHub connection expired. Start again.'
+                : 'GitHub connection failed'
         );
         validateBtn.disabled = false;
         validateBtn.textContent = 'Connect GitHub';
@@ -700,7 +700,7 @@ function setupTokenStepListeners() {
 
   validateBtn?.addEventListener('click', async () => {
     validateBtn.disabled = true;
-    tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub sign-in...');
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub connection...');
 
     try {
       const deviceCodeData = await requestGitHubDeviceCode();
@@ -710,7 +710,14 @@ function setupTokenStepListeners() {
       if (copyTokenCodeBtn) {
         copyTokenCodeBtn.disabled = !tokenInput.value;
       }
-      tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`);
+
+      const copied = await copyTextToClipboard(deviceCodeData.userCode).catch(() => false);
+      tokenStatus.innerHTML = getStatusMarkup('loading',
+        copied
+          ? `Code ${deviceCodeData.userCode} copied to clipboard — paste it on the GitHub page that opens.`
+          : `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`
+      );
+
       await onboardingManager.saveStepData('token', {
         userCode: deviceCodeData.userCode,
         validated: false,
@@ -743,10 +750,10 @@ function setupTokenStepListeners() {
         error?.code === 'client_id_missing'
           ? 'GitHub OAuth client ID is not configured for this build.'
           : error?.code === 'access_denied'
-            ? 'GitHub sign-in was cancelled'
+            ? 'GitHub connection was cancelled'
             : error?.code === 'expired_token'
-              ? 'GitHub sign-in expired. Start again.'
-            : 'GitHub sign-in failed'
+              ? 'GitHub connection expired. Start again.'
+            : 'GitHub connection failed'
       );
       validateBtn.disabled = false;
       validateBtn.textContent = 'Connect GitHub';
@@ -812,7 +819,7 @@ function attachRepoButtonListeners() {
             repos.push({
               fullName: data.full_name,
               name: data.name,
-              description: data.description || 'No description provided',
+              description: data.description || 'No project description yet.',
               language: data.language || 'Unknown',
               stars: data.stargazers_count || 0,
               forks: data.forks_count || 0,
@@ -914,7 +921,7 @@ function setupReposStepListeners() {
           repos.push({
             fullName: data.full_name,
             name: data.name,
-            description: data.description || 'No description provided',
+            description: data.description || 'No project description yet.',
             language: data.language || 'Unknown',
             stars: data.stargazers_count || 0,
             forks: data.forks_count || 0,
@@ -1001,7 +1008,7 @@ export async function handleNextStep() {
       if (!existing.validated) {
         const tokenStatus = document.getElementById('tokenStatus');
         if (tokenStatus) {
-          tokenStatus.textContent = 'Connect GitHub to continue.';
+          tokenStatus.textContent = 'Connect GitHub before continuing.';
           tokenStatus.className = 'token-status error';
         }
         document.getElementById('validateTokenBtn')?.focus();
