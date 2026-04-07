@@ -148,33 +148,35 @@ function setupEventListeners() {
   });
 
   // Load theme preference - detect system theme on first load
-  getSyncItem('theme', null).then(savedTheme => {
-    let theme = savedTheme;
-
-    // If no saved theme, detect system preference
-    if (theme === null) {
-      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      // Save the detected system theme as the user's preference
-      chrome.storage.sync.set({ theme });
-    }
-
-    applyTheme(theme);
-
-    // Load color theme
-    getSyncItem('colorTheme', 'polar').then(colorTheme => {
-      applyColorTheme(colorTheme);
-    });
-
-    // Add a small delay to ensure DOM is ready before updating icons
-    setTimeout(() => {
-      updateDarkModeIcon();
-    }, 50);
+  loadAndApplyThemes().catch(error => {
+    console.error('Failed to load theme preferences:', error);
   });
 
   }
 
 // Theme functions now imported from controllers/theme-controller.js
 import { toggleDarkMode, updateDarkModeIcon } from './controllers/theme-controller.js';
+
+async function loadAndApplyThemes() {
+  const savedTheme = await getSyncItem('theme', null);
+  let theme = savedTheme;
+
+  // If no saved theme, detect system preference and persist it
+  if (theme === null) {
+    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    await chrome.storage.sync.set({ theme });
+  }
+
+  applyTheme(theme);
+
+  const colorTheme = await getSyncItem('colorTheme', 'polar');
+  applyColorTheme(colorTheme);
+
+  // Small delay so the icon swap runs after the theme class is on <body>
+  setTimeout(() => {
+    updateDarkModeIcon();
+  }, 50);
+}
 
 // Wrapper for handleRefresh to pass loadActivities callback
 async function handleRefresh() {
