@@ -63,14 +63,30 @@ describe('GitHub OAuth helpers', () => {
     );
   });
 
-  it('fails early when no OAuth client ID is configured', async () => {
+  it('uses the default client ID when no storage override exists', async () => {
     const { requestGitHubDeviceCode } = await import('../shared/auth.js');
     mockLocalGet.mockImplementation((keys, callback) => callback({}));
+    mockSyncGet.mockImplementation((keys, callback) => callback({}));
 
-    await expect(requestGitHubDeviceCode()).rejects.toMatchObject({
-      code: 'client_id_missing'
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve(JSON.stringify({
+        device_code: 'device-code',
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://github.com/login/device',
+        expires_in: 900,
+        interval: 5
+      }))
     });
-    expect(global.fetch).not.toHaveBeenCalled();
+
+    await requestGitHubDeviceCode();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://github.com/login/device/code',
+      expect.objectContaining({
+        body: expect.stringContaining('client_id=Ov23li7Mi1dWEgmZTOzB')
+      })
+    );
   });
 
   it('opens the GitHub verification page in a new tab', async () => {

@@ -86,7 +86,7 @@ function getScopeString(scopes = OAUTH_CONFIG.SCOPES) {
 }
 
 function isConfiguredClientId(clientId) {
-  return Boolean(clientId) && clientId !== OAUTH_CONFIG.CLIENT_ID;
+  return Boolean(clientId);
 }
 
 async function getGitHubOAuthClientId() {
