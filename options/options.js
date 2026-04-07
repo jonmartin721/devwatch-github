@@ -38,6 +38,7 @@ if (typeof document !== 'undefined') {
     await loadSettings();
     setupEventListeners();
     setupThemeListener();
+    setupSnoozedReposAutoRefresh();
 
     // Handle URL parameters for enhanced navigation
     handleUrlParameters();
@@ -1211,11 +1212,50 @@ function parseChangelogMarkdown(markdown) {
   return html;
 }
 
-// Auto-refresh snoozed repos list every 5 minutes
-setInterval(async () => {
-  const settings = await chrome.storage.sync.get(['snoozedRepos']);
-  renderSnoozedRepos(settings.snoozedRepos || []);
-}, 300000);
+// Auto-refresh snoozed repos list:
+// - storage.onChanged: react instantly when snoozes are added/removed
+// - interval: tick down "time remaining" so expired snoozes drop off the list
+let snoozedReposRefreshIntervalId = null;
+let snoozedReposStorageListener = null;
+
+function setupSnoozedReposAutoRefresh() {
+  if (typeof chrome === 'undefined' || !chrome.storage) {
+    return;
+  }
+
+  const refresh = async () => {
+    try {
+      const settings = await chrome.storage.sync.get(['snoozedRepos']);
+      renderSnoozedRepos(settings.snoozedRepos || []);
+    } catch (error) {
+      console.error('Failed to refresh snoozed repos:', error);
+    }
+  };
+
+  snoozedReposStorageListener = (changes, areaName) => {
+    if (areaName === 'sync' && changes.snoozedRepos) {
+      renderSnoozedRepos(changes.snoozedRepos.newValue || []);
+    }
+  };
+  chrome.storage.onChanged.addListener(snoozedReposStorageListener);
+
+  snoozedReposRefreshIntervalId = setInterval(refresh, 300000);
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', teardownSnoozedReposAutoRefresh, { once: true });
+  }
+}
+
+function teardownSnoozedReposAutoRefresh() {
+  if (snoozedReposRefreshIntervalId !== null) {
+    clearInterval(snoozedReposRefreshIntervalId);
+    snoozedReposRefreshIntervalId = null;
+  }
+  if (snoozedReposStorageListener && chrome?.storage?.onChanged) {
+    chrome.storage.onChanged.removeListener(snoozedReposStorageListener);
+    snoozedReposStorageListener = null;
+  }
+}
 
 // ES6 exports for tests
 export {
