@@ -126,9 +126,15 @@ export async function connectGitHub(_toastManager) {
 
   try {
     const result = await completeGitHubDeviceAuth({
-      onCode: ({ userCode }) => {
+      onCode: async ({ userCode }) => {
         setDeviceCode(userCode || '');
-        setStatus(`Enter ${userCode} on GitHub to finish connecting.`, 'checking');
+        const copied = await navigator.clipboard?.writeText(userCode).then(() => true).catch(() => false);
+        setStatus(
+          copied
+            ? `Code ${userCode} copied to clipboard — paste it on the GitHub page that opens.`
+            : `Enter ${userCode} on GitHub to finish connecting.`,
+          'checking'
+        );
       }
     });
 
