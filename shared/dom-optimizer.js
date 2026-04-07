@@ -274,6 +274,9 @@ class ActivityListRenderer {
 
     this.lastRenderedData = renderKey;
 
+    // Evict stale cache entries before rendering
+    this.cleanupCache();
+
     // Render synchronously to ensure DOM is ready for event listeners
     const html = this.generateActivityHTML(limitedActivities, {
       groupByRepo,
