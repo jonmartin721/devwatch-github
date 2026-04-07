@@ -341,9 +341,9 @@ describe('export-import-controller', () => {
       expect(loadSettingsCallback).toHaveBeenCalled();
     });
 
-    // TODO: This test needs to be updated for Jest 30's timer handling
-    test.skip('shows success notification and reloads page', async () => {
-      jest.useFakeTimers({ legacyFakeTimers: true });
+    test('shows success notification and schedules page reload', async () => {
+      allowUnexpectedConsole('error');
+      jest.useFakeTimers();
 
       const importData = {
         settings: {
@@ -359,7 +359,8 @@ describe('export-import-controller', () => {
         expect.stringContaining('Settings imported successfully')
       );
 
-      jest.advanceTimersByTime(1500);
+      // Verify the reload timer fires without throwing
+      await jest.advanceTimersByTimeAsync(1500);
 
       jest.useRealTimers();
     });
