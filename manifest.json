@@ -34,6 +34,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.github.com https://github.com https://registry.npmjs.org; img-src 'self' data: https://github.com https://*.github.com https://githubusercontent.com https://*.githubusercontent.com; default-src 'self'; style-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.github.com https://github.com https://registry.npmjs.org; img-src 'self' data: https://github.com https://*.github.com https://githubusercontent.com https://*.githubusercontent.com; default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"
   }
 }
