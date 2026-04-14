@@ -73,6 +73,8 @@ import { OnboardingManager } from '../shared/onboarding.js';
 let _handleNextStep;
 let _renderReposStep;
 let _renderOnboardingStep;
+let _showOnboarding;
+let _exitOnboarding;
 
 async function renderTokenStep(stateOverrides = {}) {
   _localStorage = {
@@ -144,6 +146,8 @@ describe('Onboarding - token persistence', () => {
     _handleNextStep = module.handleNextStep;
     _renderReposStep = module.renderReposStep;
     _renderOnboardingStep = module.renderOnboardingStep;
+    _showOnboarding = module.showOnboarding;
+    _exitOnboarding = module.exitOnboarding;
   });
 
   test('preserves validated auth state when navigating past the connect step', async () => {
@@ -503,5 +507,189 @@ describe('Onboarding - token persistence', () => {
     expect(cat.pullRequestsNotifications).toBe(true);
     expect(cat.issuesNotifications).toBe(false);
     expect(cat.releasesNotifications).toBe(true);
+
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      filters: {
+        prs: true,
+        issues: false,
+        releases: true
+      },
+      notifications: {
+        prs: true,
+        issues: false,
+        releases: true
+      }
+    });
+  });
+
+  test('showOnboarding hides the main feed and exitOnboarding restores it', async () => {
+    _localStorage = {
+      onboarding_state: {
+        currentStep: 0,
+        completed: false,
+        skippedSteps: [],
+        data: {}
+      }
+    };
+
+    document.body.innerHTML = `
+      <header style="display:flex"></header>
+      <div class="toolbar" style="display:flex"></div>
+      <div id="searchBox" style="display:block"></div>
+      <div id="activityList" style="display:block"></div>
+      <div id="onboardingView" class="hidden" style="display:none"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    const loadActivitiesCallback = jest.fn();
+
+    await _showOnboarding(loadActivitiesCallback);
+
+    expect(document.getElementById('onboardingView').style.display).toBe('block');
+    expect(document.getElementById('activityList').style.display).toBe('none');
+    expect(document.querySelector('.toolbar').style.display).toBe('none');
+    expect(document.querySelector('header').style.display).toBe('none');
+
+    _exitOnboarding(loadActivitiesCallback);
+
+    expect(document.getElementById('onboardingView').style.display).toBe('none');
+    expect(document.getElementById('activityList').style.display).toBe('block');
+    expect(document.querySelector('.toolbar').style.display).toBe('flex');
+    expect(document.querySelector('header').style.display).toBe('flex');
+    expect(loadActivitiesCallback).toHaveBeenCalled();
+  });
+
+  test('repos step loads popular repositories and reattaches add buttons', async () => {
+    _localStorage = {
+      githubOAuthClientId: 'Iv1.test-client-id',
+      onboarding_state: {
+        currentStep: 2,
+        completed: false,
+        skippedSteps: [],
+        data: {}
+      }
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => ({
+        items: [
+          {
+            owner: { login: 'owner' },
+            name: 'repo',
+            description: 'Repository description',
+            language: 'TypeScript',
+            stargazers_count: 5000
+          }
+        ]
+      }),
+      text: async () => ''
+    });
+
+    document.body.innerHTML = `
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    await _renderOnboardingStep();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('footerSkipBtn').style.display).toBe('block');
+    expect(document.getElementById('repoSuggestions').innerHTML).toContain('owner/repo');
+    expect(document.querySelector('.add-repo-btn').dataset.listenerAttached).toBe('true');
+  });
+
+  test('categories step disables notifications when tracking is turned off', async () => {
+    _localStorage = {
+      onboarding_state: {
+        currentStep: 3,
+        completed: false,
+        skippedSteps: [],
+        data: {
+          categories: {
+            pullRequests: true,
+            pullRequestsNotifications: true
+          }
+        }
+      }
+    };
+
+    document.body.innerHTML = `
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    await _renderOnboardingStep();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const trackToggle = document.getElementById('pullRequests');
+    const notifyToggle = document.getElementById('pullRequestsNotifications');
+    const notifyLabel = notifyToggle.closest('.toggle-label');
+
+    notifyToggle.checked = true;
+    trackToggle.checked = false;
+    trackToggle.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(notifyToggle.disabled).toBe(true);
+    expect(notifyToggle.checked).toBe(false);
+    expect(notifyLabel.classList.contains('disabled')).toBe(true);
+  });
+
+  test('navigation buttons move backward and finish onboarding from the shell flow', async () => {
+    _localStorage = {
+      onboarding_state: {
+        currentStep: 2,
+        completed: false,
+        skippedSteps: [],
+        data: {
+          popularRepos: []
+        }
+      }
+    };
+
+    document.body.innerHTML = `
+      <header style="display:none"></header>
+      <div class="toolbar" style="display:none"></div>
+      <div id="activityList" style="display:none"></div>
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    await _renderOnboardingStep();
+    document.getElementById('prevBtn').click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    let storedState = await new Promise((resolve) => {
+      chrome.storage.local.get(['onboarding_state'], (res) => resolve(res.onboarding_state));
+    });
+
+    expect(storedState.currentStep).toBe(1);
+
+    _localStorage.onboarding_state.currentStep = 4;
+    document.body.innerHTML = `
+      <header style="display:none"></header>
+      <div class="toolbar" style="display:none"></div>
+      <div id="activityList" style="display:none"></div>
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    const loadActivitiesCallback = jest.fn();
+    await _renderOnboardingStep(loadActivitiesCallback);
+    document.getElementById('finishBtn').click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    storedState = await new Promise((resolve) => {
+      chrome.storage.local.get(['onboarding_state'], (res) => resolve(res.onboarding_state));
+    });
+
+    expect(storedState.completed).toBe(true);
   });
 });

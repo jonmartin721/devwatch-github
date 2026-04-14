@@ -6,6 +6,7 @@ import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 // Import functions from background.js
 import {
   setupAlarm,
+  handleRuntimeMessage,
   checkGitHubActivity,
   fetchRepoActivity,
   storeActivities,
@@ -20,8 +21,7 @@ describe('Background Service Worker', () => {
     jest.clearAllMocks();
   });
 
-  describe.skip('fetchRepoActivity', () => {
-    // Skipped: Pre-existing async/mock setup issues not related to test quality improvements
+  describe('fetchRepoActivity', () => {
     const mockRepo = 'facebook/react';
     const mockToken = 'ghp_test123';
     const mockSince = new Date('2025-01-01');
@@ -114,6 +114,7 @@ describe('Background Service Worker', () => {
     });
 
     test('handles 401 unauthorized error', async () => {
+      allowUnexpectedConsole('error');
 
       fetch.mockResolvedValueOnce({
         ok: false,
@@ -127,6 +128,7 @@ describe('Background Service Worker', () => {
     });
 
     test('handles 403 rate limit exceeded', async () => {
+      allowUnexpectedConsole('error');
 
       fetch.mockResolvedValueOnce({
         ok: false,
@@ -140,6 +142,7 @@ describe('Background Service Worker', () => {
     });
 
     test('handles 404 repository not found', async () => {
+      allowUnexpectedConsole('error');
 
       fetch.mockResolvedValueOnce({
         ok: false,
@@ -241,8 +244,7 @@ describe('Background Service Worker', () => {
     });
   });
 
-  describe.skip('storeActivities', () => {
-    // Skipped: Pre-existing async/timeout issues not related to test quality improvements
+  describe('storeActivities', () => {
     test('prevents duplicate activities', async () => {
 
       const existingActivities = [
@@ -317,8 +319,7 @@ describe('Background Service Worker', () => {
     });
   });
 
-  describe.skip('updateBadge', () => {
-    // Skipped: Pre-existing async/timeout issues not related to test quality improvements
+  describe('updateBadge', () => {
     test('calculates unread count correctly', async () => {
 
       const activities = [
@@ -363,173 +364,71 @@ describe('Background Service Worker', () => {
   });
 
   describe('Message Handlers', () => {
-    // Note: Testing module-level event listener registration is complex with ES6 imports
-    // These tests verify handler logic but skip registration checks
-    // Registration is verified through manual testing and integration tests
-
-    test.skip('validates request object structure', () => {
-      // Skipped: Testing module-level event listener registration requires complex setup
-      // Handler logic is tested in integration tests
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
+    test('validates request object structure', () => {
       const sendResponse = jest.fn();
 
       // Invalid request should be rejected
-      handler(null, {}, sendResponse);
+      const result = handleRuntimeMessage(null, {}, sendResponse);
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: 'Invalid request'
       });
+      expect(result).toBe(false);
     });
 
-    test.skip('checkNow handler calls checkGitHubActivity', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
+    test('updateInterval reschedules alarms immediately', () => {
       const sendResponse = jest.fn();
-      const request = { action: 'checkNow' };
+      chrome.alarms.clear.mockImplementation((name, callback) => callback());
+      chrome.alarms.create.mockImplementation((name, config, callback) => callback && callback());
 
-      const result = handler(request, {}, sendResponse);
+      const result = handleRuntimeMessage({ action: 'updateInterval', interval: 30 }, {}, sendResponse);
 
-      // Should return true for async response
       expect(result).toBe(true);
-    });
-
-    test.skip('clearBadge handler clears badge text', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      const sendResponse = jest.fn();
-      const request = { action: 'clearBadge' };
-
-      handler(request, {}, sendResponse);
-
-      expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      expect(chrome.alarms.clear).toHaveBeenCalledWith('checkGitHub', expect.any(Function));
+      expect(chrome.alarms.create).toHaveBeenCalledWith(
+        'checkGitHub',
+        { periodInMinutes: 30 },
+        expect.any(Function)
+      );
     });
 
-    test.skip('markAsRead requires id parameter', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
+    test('updateInterval rejects invalid intervals', () => {
       const sendResponse = jest.fn();
-      const request = { action: 'markAsRead' };
-
-      const result = handler(request, {}, sendResponse);
+      const result = handleRuntimeMessage({ action: 'updateInterval', interval: 0 }, {}, sendResponse);
 
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
-        error: 'Missing id parameter'
+        error: 'Invalid interval parameter'
       });
       expect(result).toBe(false);
     });
 
-    test.skip('markAsRead adds ID to readItems', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      chrome.storage.local.get.mockImplementation((keys, callback) => {
-        callback({ readItems: [] });
-      });
-
-      chrome.storage.local.set.mockImplementation((items, callback) => {
-        callback();
-      });
-
+    test('reports unknown runtime actions cleanly', async () => {
       const sendResponse = jest.fn();
-      const request = { action: 'markAsRead', id: 'test-id-123' };
 
-      const result = handler(request, {}, sendResponse);
+      const result = handleRuntimeMessage({ action: 'unknownAction' }, {}, sendResponse);
 
       expect(result).toBe(true);
-    });
-
-    test.skip('markAsUnread requires id parameter', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      const sendResponse = jest.fn();
-      const request = { action: 'markAsUnread' };
-
-      const result = handler(request, {}, sendResponse);
-
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: 'Missing id parameter'
-      });
-      expect(result).toBe(false);
-    });
-
-    test.skip('markAsUnread removes ID from readItems', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      chrome.storage.local.get.mockImplementation((keys, callback) => {
-        callback({ readItems: ['test-id-123', 'other-id'] });
-      });
-
-      chrome.storage.local.set.mockImplementation((items, callback) => {
-        callback();
-      });
-
-      const sendResponse = jest.fn();
-      const request = { action: 'markAsUnread', id: 'test-id-123' };
-
-      const result = handler(request, {}, sendResponse);
-
-      expect(result).toBe(true);
-    });
-
-    test.skip('markAllAsRead marks all activities as read', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      const activities = [
-        { id: 'id-1' },
-        { id: 'id-2' },
-        { id: 'id-3' }
-      ];
-
-      chrome.storage.local.get.mockImplementation((keys, callback) => {
-        callback({ activities });
-      });
-
-      chrome.storage.local.set.mockImplementation((items, callback) => {
-        callback();
-      });
-
-      const sendResponse = jest.fn();
-      const request = { action: 'markAllAsRead' };
-
-      const result = handler(request, {}, sendResponse);
-
-      expect(result).toBe(true);
-    });
-
-    test.skip('unknown action returns error', () => {
-      const handler = chrome.runtime.onMessage.addListener.mock.calls[0]?.[0];
-      expect(handler).toBeDefined();
-      if (!handler) return;
-
-      const sendResponse = jest.fn();
-      const request = { action: 'unknownAction' };
-
-      const result = handler(request, {}, sendResponse);
-
+      await Promise.resolve();
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: 'Unknown action'
       });
-      expect(result).toBe(false);
+    });
+
+    test('reports markAsRead failures back to the sender', async () => {
+      allowUnexpectedConsole('error');
+      const sendResponse = jest.fn();
+
+      const result = handleRuntimeMessage({ action: 'markAsRead' }, {}, sendResponse);
+
+      expect(result).toBe(true);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'Missing id parameter'
+      });
     });
   });
 
@@ -1051,18 +950,76 @@ describe('Background Service Worker', () => {
       // Should not throw
       await expect(checkGitHubActivity()).resolves.not.toThrow();
     });
-  });
 
-  describe.skip('Alarm Listener', () => {
-    test('alarm listener is registered', () => {
-      // Skipped: Module-level event listener registration testing requires complex setup
-      expect(chrome.alarms.onAlarm.addListener).toHaveBeenCalled();
+    test('skips muted and snoozed repositories before fetching', async () => {
+      chrome.storage.sync.get.mockImplementation((keys, callback) => {
+        const result = {};
+        if (Array.isArray(keys)) {
+          keys.forEach(key => {
+            if (key === 'lastCheck') result[key] = new Date('2025-01-01').toISOString();
+            else if (key === 'filters') result[key] = { prs: true, issues: true, releases: true };
+            else if (key === 'notifications') result[key] = { prs: true, issues: true, releases: true };
+            else if (key === 'mutedRepos') result[key] = ['facebook/react'];
+            else if (key === 'snoozedRepos') result[key] = [{ repo: 'vuejs/vue', expiresAt: Date.now() + 60000 }];
+            else if (key === 'unmutedRepos') result[key] = [];
+          });
+        }
+        callback(result);
+      });
+
+      chrome.storage.session.get.mockImplementation((keys, callback) => {
+        callback({ githubAuthSession: { accessToken: mockToken } });
+      });
+
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
+        const result = {};
+        if (Array.isArray(keys)) {
+          keys.forEach(key => {
+            if (key === 'activities') result[key] = [];
+            else if (key === 'rateLimit') result[key] = null;
+            else if (key === 'watchedRepos') {
+              result[key] = [
+                { fullName: 'facebook/react' },
+                { fullName: 'vuejs/vue' }
+              ];
+            }
+          });
+        }
+        callback(result);
+      });
+
+      const result = await checkGitHubActivity();
+
+      expect(result).toBeUndefined();
+      expect(fetch).not.toHaveBeenCalled();
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
+        expect.objectContaining({ lastCheck: expect.any(String) })
+      );
     });
   });
 
-  describe.skip('storeActivities - quota handling', () => {
-    // Skipped: Pre-existing async/timeout issues not related to test quality improvements
+  describe('Alarm Listener', () => {
+    test('alarm listener is registered', () => {
+      expect(chrome.alarms.onAlarm.addListener).toBeDefined();
+    });
+
+    test('registers the alarm listener at module load time', async () => {
+      jest.resetModules();
+      chrome.alarms.onAlarm.addListener.mockClear();
+      chrome.runtime.onInstalled.addListener.mockClear();
+      chrome.runtime.onStartup.addListener.mockClear();
+
+      await import('../background.js');
+
+      expect(chrome.alarms.onAlarm.addListener).toHaveBeenCalledWith(expect.any(Function));
+      expect(chrome.runtime.onInstalled.addListener).toHaveBeenCalledWith(expect.any(Function));
+      expect(chrome.runtime.onStartup.addListener).toHaveBeenCalledWith(expect.any(Function));
+    });
+  });
+
+  describe('storeActivities - quota handling', () => {
     test('reduces to 50 items when quota exceeded', async () => {
+      allowUnexpectedConsole('error');
       const newActivities = [
         { id: 'new-1', repo: 'test/repo', title: 'New 1', createdAt: '2025-01-10T10:00:00Z' }
       ];
@@ -1097,6 +1054,7 @@ describe('Background Service Worker', () => {
     });
 
     test('reduces to 25 items when 50 items still exceeds quota', async () => {
+      allowUnexpectedConsole('error');
       const newActivities = [
         { id: 'new-1', repo: 'test/repo', title: 'New 1', createdAt: '2025-01-10T10:00:00Z' }
       ];
@@ -1165,14 +1123,14 @@ describe('Background Service Worker', () => {
     });
   });
 
-  describe.skip('fetchRepoActivity - rate limit', () => {
-    // Skipped: Pre-existing test data setup issues not related to test quality improvements
+  describe('fetchRepoActivity - rate limit', () => {
     const mockRepo = 'test/repo';
     const mockToken = 'ghp_test';
     const mockSince = new Date('2025-01-01');
     const mockFilters = { prs: true, issues: false, releases: false };
 
     test('checks stored rate limit before making request', async () => {
+      allowUnexpectedConsole('error');
       const futureReset = Date.now() + 3600000;
       chrome.storage.local.get.mockImplementation((keys, callback) => {
         callback({
@@ -1225,6 +1183,7 @@ describe('Background Service Worker', () => {
     });
 
     test('handles network errors gracefully', async () => {
+      allowUnexpectedConsole('error');
       chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys)) {

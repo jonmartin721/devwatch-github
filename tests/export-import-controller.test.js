@@ -14,11 +14,26 @@ jest.unstable_mockModule('../shared/ui/notification-manager.js', () => ({
 }));
 
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
-  getWatchedRepos: jest.fn(() => Promise.resolve([])),
-  setWatchedRepos: jest.fn(() => Promise.resolve())
+  getSettings: jest.fn(() => Promise.resolve({
+    watchedRepos: [],
+    mutedRepos: [],
+    pinnedRepos: [],
+    filters: { prs: true, issues: true, releases: true },
+    notifications: { prs: true, issues: true, releases: true },
+    theme: 'system',
+    colorTheme: 'polar',
+    checkInterval: 15,
+    snoozeHours: 1,
+    snoozedRepos: [],
+    itemExpiryHours: null,
+    markReadOnSnooze: false,
+    allowUnlimitedRepos: false
+  })),
+  setWatchedRepos: jest.fn(() => Promise.resolve()),
+  updateSettings: jest.fn(() => Promise.resolve())
 }));
 
-const { getWatchedRepos, setWatchedRepos } = await import('../shared/storage-helpers.js');
+const { getSettings, setWatchedRepos, updateSettings } = await import('../shared/storage-helpers.js');
 const { exportSettings, handleImportFile } = await import('../options/controllers/export-import-controller.js');
 
 describe('export-import-controller', () => {
@@ -27,8 +42,9 @@ describe('export-import-controller', () => {
     mockNotifications.success.mockClear();
     mockNotifications.error.mockClear();
     mockNotifications.info.mockClear();
-    getWatchedRepos.mockClear();
+    getSettings.mockClear();
     setWatchedRepos.mockClear();
+    updateSettings.mockClear();
 
     // Mock chrome.storage
     global.chrome = {
@@ -58,7 +74,21 @@ describe('export-import-controller', () => {
   });
   describe('exportSettings', () => {
     test('exports all settings with default values', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: [],
+        mutedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        theme: 'system',
+        colorTheme: 'polar',
+        checkInterval: 15,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
+      });
 
       await exportSettings();
 
@@ -70,18 +100,22 @@ describe('export-import-controller', () => {
 
     test('creates blob with correct content structure', async () => {
       const mockData = {
+        watchedRepos: ['owner/repo1', 'owner/repo2'],
         mutedRepos: ['owner/muted'],
         pinnedRepos: ['owner/pinned'],
         filters: { prs: true, issues: false, releases: true },
         notifications: { prs: false, issues: true, releases: true },
         theme: 'dark',
+        colorTheme: 'graphite',
         checkInterval: 30,
         snoozeHours: 2,
-        snoozedRepos: ['owner/snoozed']
+        snoozedRepos: ['owner/snoozed'],
+        itemExpiryHours: 24,
+        markReadOnSnooze: true,
+        allowUnlimitedRepos: true
       };
 
-      getWatchedRepos.mockResolvedValueOnce(['owner/repo1', 'owner/repo2']);
-      chrome.storage.sync.get.mockResolvedValueOnce(mockData);
+      getSettings.mockResolvedValueOnce(mockData);
 
       await exportSettings();
 
@@ -97,8 +131,21 @@ describe('export-import-controller', () => {
     });
 
     test('uses default values for missing settings', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
-      getWatchedRepos.mockResolvedValueOnce(['owner/repo1']);
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: ['owner/repo1'],
+        mutedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        theme: 'system',
+        colorTheme: 'polar',
+        checkInterval: 15,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
+      });
 
       await exportSettings();
 
@@ -115,7 +162,21 @@ describe('export-import-controller', () => {
     });
 
     test('creates download link with current date', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: [],
+        mutedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        theme: 'system',
+        colorTheme: 'polar',
+        checkInterval: 15,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
+      });
 
       const originalCreateElement = document.createElement.bind(document);
       let capturedLink;
@@ -140,7 +201,21 @@ describe('export-import-controller', () => {
     });
 
     test('triggers download and cleans up', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: [],
+        mutedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        theme: 'system',
+        colorTheme: 'polar',
+        checkInterval: 15,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
+      });
 
       const originalCreateElement = document.createElement.bind(document);
       let capturedLink;
@@ -163,7 +238,21 @@ describe('export-import-controller', () => {
     });
 
     test('shows success notification', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: [],
+        mutedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        theme: 'system',
+        colorTheme: 'polar',
+        checkInterval: 15,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
+      });
 
       await exportSettings();
 
@@ -172,7 +261,7 @@ describe('export-import-controller', () => {
 
     test('handles export errors', async () => {
       allowUnexpectedConsole('error');
-      chrome.storage.sync.get.mockRejectedValueOnce(new Error('Storage error'));
+      getSettings.mockRejectedValueOnce(new Error('Storage error'));
 
       await exportSettings();
 
@@ -185,8 +274,9 @@ describe('export-import-controller', () => {
       const circular = { a: 1 };
       circular.self = circular;
 
-      chrome.storage.sync.get.mockResolvedValueOnce({});
-      getWatchedRepos.mockResolvedValueOnce([circular]);
+      getSettings.mockResolvedValueOnce({
+        watchedRepos: [circular]
+      });
 
       await exportSettings();
 
@@ -219,7 +309,7 @@ describe('export-import-controller', () => {
       await handleImportFile(mockEvent);
 
       expect(mockFile.text).not.toHaveBeenCalled();
-      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+      expect(updateSettings).not.toHaveBeenCalled();
       expect(setWatchedRepos).not.toHaveBeenCalled();
     });
 
@@ -241,7 +331,7 @@ describe('export-import-controller', () => {
       await handleImportFile(mockEvent);
 
       expect(setWatchedRepos).toHaveBeenCalledWith(['owner/repo1']);
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
+      expect(updateSettings).toHaveBeenCalledWith(
         expect.objectContaining({
           mutedRepos: ['owner/muted'],
           theme: 'dark',
@@ -279,7 +369,7 @@ describe('export-import-controller', () => {
 
       await handleImportFile(mockEvent);
 
-      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+      expect(updateSettings).not.toHaveBeenCalled();
       expect(setWatchedRepos).not.toHaveBeenCalled();
       expect(mockNotifications.info).toHaveBeenCalledWith('Import cancelled');
       expect(mockEvent.target.value).toBe('');
@@ -298,7 +388,7 @@ describe('export-import-controller', () => {
       await handleImportFile(mockEvent);
 
       expect(setWatchedRepos).toHaveBeenCalledWith(['owner/repo1']);
-      const setCall = chrome.storage.sync.set.mock.calls[0][0];
+      const setCall = updateSettings.mock.calls[0][0];
       expect(setCall.mutedRepos).toEqual([]);
       expect(setCall.pinnedRepos).toEqual([]);
       expect(setCall.filters).toEqual({ prs: true, issues: true, releases: true });
@@ -414,7 +504,7 @@ describe('export-import-controller', () => {
       };
 
       mockFile.text.mockResolvedValueOnce(JSON.stringify(importData));
-      chrome.storage.sync.set.mockRejectedValueOnce(new Error('Storage error'));
+      updateSettings.mockRejectedValueOnce(new Error('Storage error'));
 
       await handleImportFile(mockEvent);
 
@@ -483,7 +573,7 @@ describe('export-import-controller', () => {
       await handleImportFile(mockEvent);
 
       expect(setWatchedRepos).toHaveBeenCalledWith(['owner/repo1', 'owner/repo2']);
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
         mutedRepos: ['owner/muted1'],
         pinnedRepos: ['owner/pinned1'],
         filters: { prs: false, issues: true, releases: false },
@@ -492,7 +582,7 @@ describe('export-import-controller', () => {
         checkInterval: 45,
         snoozeHours: 3,
         snoozedRepos: ['owner/snoozed1']
-      });
+      }));
     });
   });
 
@@ -504,11 +594,18 @@ describe('export-import-controller', () => {
         mutedRepos: ['owner/muted'],
         filters: { prs: true, issues: false, releases: true },
         theme: 'dark',
-        checkInterval: 30
+        colorTheme: 'polar',
+        notifications: { prs: true, issues: true, releases: true },
+        checkInterval: 30,
+        snoozeHours: 1,
+        snoozedRepos: [],
+        pinnedRepos: [],
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false
       };
 
-      getWatchedRepos.mockResolvedValueOnce(originalSettings.watchedRepos);
-      chrome.storage.sync.get.mockResolvedValueOnce(originalSettings);
+      getSettings.mockResolvedValueOnce(originalSettings);
 
       await exportSettings();
 
@@ -533,7 +630,7 @@ describe('export-import-controller', () => {
       await handleImportFile(mockEvent);
 
       // Verify the imported settings match the original
-      const importedSettings = chrome.storage.sync.set.mock.calls[0][0];
+      const importedSettings = updateSettings.mock.calls[0][0];
       expect(setWatchedRepos).toHaveBeenCalledWith(originalSettings.watchedRepos);
       expect(importedSettings.mutedRepos).toEqual(originalSettings.mutedRepos);
       expect(importedSettings.theme).toBe(originalSettings.theme);
