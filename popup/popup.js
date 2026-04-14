@@ -16,6 +16,7 @@ import {
   handleRefresh as handleRefreshController
 } from './controllers/activity-controller.js';
 import {
+  clearArchive as clearArchiveController,
   toggleRepoCollapse as toggleRepoCollapseController,
   togglePinRepo as togglePinRepoController,
   snoozeRepo as snoozeRepoController,
@@ -38,68 +39,68 @@ import {
   exitOnboarding
 } from './views/onboarding-view.js';
 
-// Legacy global variables for compatibility (will be phased out)
-let collapsedRepos = new Set();
-let pinnedRepos = [];
-
 // Onboarding manager
 const onboardingManager = new OnboardingManager();
 
 // Optimized DOM renderer
 let activityRenderer = null;
 
+async function initializePopup() {
+  try {
+    // Initialize state manager first
+    await stateManager.initialize();
+
+    // Initialize optimized DOM renderer
+    const activityList = document.getElementById('activityList');
+    if (activityList) {
+      activityRenderer = new ActivityListRenderer(activityList);
+    }
+
+    // Setup state change subscription
+    subscribe((currentState, previousState) => {
+      // Re-render activities when relevant state changes
+      const relevantKeys = ['allActivities', 'currentFilter', 'searchQuery', 'showArchive', 'readItems', 'collapsedRepos', 'pinnedRepos'];
+      const hasRelevantChanges = relevantKeys.some(key => currentState[key] !== previousState[key]);
+
+      if (hasRelevantChanges) {
+        renderActivities();
+      }
+    });
+
+    // Check if onboarding is needed
+    if (await onboardingManager.isInOnboarding()) {
+      await showOnboarding(() => loadActivities());
+    } else {
+      // Show main UI elements when not in onboarding
+      const header = document.querySelector('header');
+      const toolbar = document.querySelector('.toolbar');
+      const activityList = document.getElementById('activityList');
+      if (header) header.style.display = 'flex';
+      if (toolbar) toolbar.style.display = 'flex';
+      if (activityList) activityList.style.display = 'block';
+
+      // Ensure skip button is hidden when not in onboarding
+      const footerSkipBtn = document.getElementById('footerSkipBtn');
+      if (footerSkipBtn) {
+        footerSkipBtn.classList.add('hidden');
+        footerSkipBtn.style.display = 'none';
+      }
+
+      loadActivities();
+    }
+
+    setupEventListeners();
+    setupKeyboardNavigation();
+    setupOfflineHandlers();
+  } catch (error) {
+    console.error('Failed to initialize popup:', error);
+    showError('errorMessage', 'Failed to load extension data');
+  }
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      // Initialize state manager first
-      await stateManager.initialize();
-
-      // Initialize optimized DOM renderer
-      const activityList = document.getElementById('activityList');
-      if (activityList) {
-        activityRenderer = new ActivityListRenderer(activityList);
-      }
-
-      // Setup state change subscription
-      subscribe((currentState, previousState) => {
-        // Re-render activities when relevant state changes
-        const relevantKeys = ['allActivities', 'currentFilter', 'searchQuery', 'showArchive', 'readItems'];
-        const hasRelevantChanges = relevantKeys.some(key => currentState[key] !== previousState[key]);
-
-        if (hasRelevantChanges) {
-          renderActivities();
-        }
-      });
-
-      // Check if onboarding is needed
-      if (await onboardingManager.isInOnboarding()) {
-        await showOnboarding(() => loadActivities());
-      } else {
-        // Show main UI elements when not in onboarding
-        const header = document.querySelector('header');
-        const toolbar = document.querySelector('.toolbar');
-        const activityList = document.getElementById('activityList');
-        if (header) header.style.display = 'flex';
-        if (toolbar) toolbar.style.display = 'flex';
-        if (activityList) activityList.style.display = 'block';
-
-        // Ensure skip button is hidden when not in onboarding
-        const footerSkipBtn = document.getElementById('footerSkipBtn');
-        if (footerSkipBtn) {
-          footerSkipBtn.classList.add('hidden');
-          footerSkipBtn.style.display = 'none';
-        }
-
-        loadActivities();
-      }
-
-      setupEventListeners();
-      setupKeyboardNavigation();
-      setupOfflineHandlers();
-    } catch (error) {
-      console.error('Failed to initialize popup:', error);
-      showError('errorMessage', 'Failed to load extension data');
-    }
+    await initializePopup();
   });
 }
 
@@ -195,25 +196,23 @@ async function updateRepoCount() {
 
 // Wrapper for loadActivities to pass callbacks and update global state
 async function loadActivities(options = {}) {
-  await loadActivitiesController(
-    () => renderActivities(),
-    (repos) => { pinnedRepos = repos; },
-    (repos) => { collapsedRepos = repos; },
-    options
-  );
+  await loadActivitiesController(() => renderActivities(), options);
   await updateRepoCount();
 }
 
 // Wrapper for renderActivities to pass all necessary callbacks
 function renderActivities() {
+  const currentState = useState();
+
   renderActivitiesView(
     activityRenderer,
-    collapsedRepos,
-    pinnedRepos,
+    currentState.collapsedRepos,
+    currentState.pinnedRepos,
     (id) => markAsRead(id),
     (id, item) => markAsReadWithAnimation(id, item, () => renderActivities()),
     () => handleMarkAllRead(),
     () => handleCollapseAll(),
+    () => clearArchive(),
     (repo) => toggleRepoCollapse(repo),
     (repo) => togglePinRepo(repo),
     (repo) => handleSnoozeRepo(repo),
@@ -254,15 +253,15 @@ function toggleArchive() {
 
 // Wrapper for toggleRepoCollapse
 async function toggleRepoCollapse(repo) {
-  await toggleRepoCollapseController(repo, collapsedRepos, () => renderActivities());
+  await toggleRepoCollapseController(repo, useState().collapsedRepos, () => renderActivities());
 }
 
 // Wrapper for togglePinRepo
 async function togglePinRepo(repo) {
   await togglePinRepoController(
     repo,
-    pinnedRepos,
-    (repos) => { pinnedRepos = repos; },
+    useState().pinnedRepos,
+    null,
     () => renderActivities()
   );
 }
@@ -293,7 +292,11 @@ async function handleMarkAllRead() {
 
 // Wrapper for handleCollapseAll
 async function handleCollapseAll() {
-  await handleCollapseAllController(collapsedRepos, () => renderActivities());
+  await handleCollapseAllController(useState().collapsedRepos, () => renderActivities());
+}
+
+async function clearArchive() {
+  await clearArchiveController(() => renderActivities());
 }
 
 // Wrapper for setupKeyboardNavigation
@@ -337,6 +340,7 @@ function setupOfflineHandlers() {
 // Export functions for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    initializePopup,
     loadActivities,
     renderActivities,
     toggleRepoCollapse,
@@ -348,6 +352,7 @@ if (typeof module !== 'undefined' && module.exports) {
     showError,
     handleMarkAllRead,
     handleCollapseAll,
+    clearArchive,
     toggleSearch,
     toggleArchive
   };
@@ -355,6 +360,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ES6 exports for tests
 export {
+  initializePopup,
   loadActivities,
   renderActivities,
   toggleRepoCollapse,
@@ -366,6 +372,7 @@ export {
   showError,
   handleMarkAllRead,
   handleCollapseAll,
+  clearArchive,
   toggleSearch,
   toggleArchive
 };

@@ -3,9 +3,10 @@
  * Provides consistent state handling across popup, options, and background scripts
  */
 
-import { getSyncItems, getLocalItems, getWatchedRepos, setWatchedRepos } from './storage-helpers.js';
-import { STORAGE_KEYS, STORAGE_DEFAULTS } from './storage-helpers.js';
+import { getActivityData, getSettings, setWatchedRepos, getExcludedRepos } from './storage-helpers.js';
+import { STORAGE_DEFAULTS } from './storage-helpers.js';
 import { STORAGE_CONFIG } from './config.js';
+import { prepareActivitiesForStorage, filterVisibleActivities, countUnreadActivities } from './feed-policy.js';
 
 /**
  * Centralized state manager with reactive updates
@@ -26,11 +27,17 @@ class StateManager {
       watchedRepos: [],
       mutedRepos: [],
       snoozedRepos: [],
+      pinnedRepos: [...STORAGE_DEFAULTS.pinnedRepos],
+      collapsedRepos: new Set(STORAGE_DEFAULTS.collapsedRepos),
       filters: { ...STORAGE_DEFAULTS.filters },
       notifications: { ...STORAGE_DEFAULTS.notifications },
       checkInterval: STORAGE_DEFAULTS.checkInterval,
+      snoozeHours: STORAGE_DEFAULTS.snoozeHours,
       theme: STORAGE_DEFAULTS.theme,
+      colorTheme: STORAGE_DEFAULTS.colorTheme,
       itemExpiryHours: STORAGE_DEFAULTS.itemExpiryHours,
+      markReadOnSnooze: STORAGE_DEFAULTS.markReadOnSnooze,
+      allowUnlimitedRepos: STORAGE_DEFAULTS.allowUnlimitedRepos,
 
       // Loading/Error State
       isLoading: false,
@@ -66,21 +73,26 @@ class StateManager {
         }
 
         // Load settings from storage
-        const settings = await getSyncItems(STORAGE_KEYS.SETTINGS);
-        const watchedRepos = await getWatchedRepos();
-        const activityData = await getLocalItems(STORAGE_KEYS.ACTIVITY);
+        const settings = await getSettings();
+        const activityData = await getActivityData();
 
         // Update state with loaded data
         this.state = {
           ...this.state,
-          watchedRepos,
+          watchedRepos: settings.watchedRepos,
           mutedRepos: settings.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
           snoozedRepos: settings.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
+          pinnedRepos: settings.pinnedRepos || STORAGE_DEFAULTS.pinnedRepos,
+          collapsedRepos: new Set(activityData.collapsedRepos || STORAGE_DEFAULTS.collapsedRepos),
           filters: { ...STORAGE_DEFAULTS.filters, ...settings.filters },
           notifications: { ...STORAGE_DEFAULTS.notifications, ...settings.notifications },
           checkInterval: settings.checkInterval || STORAGE_DEFAULTS.checkInterval,
+          snoozeHours: settings.snoozeHours || STORAGE_DEFAULTS.snoozeHours,
           theme: settings.theme || STORAGE_DEFAULTS.theme,
+          colorTheme: settings.colorTheme || STORAGE_DEFAULTS.colorTheme,
           itemExpiryHours: settings.itemExpiryHours !== undefined ? settings.itemExpiryHours : STORAGE_DEFAULTS.itemExpiryHours,
+          markReadOnSnooze: settings.markReadOnSnooze === true,
+          allowUnlimitedRepos: settings.allowUnlimitedRepos === true,
           allActivities: activityData.activities || STORAGE_DEFAULTS.activities,
           readItems: activityData.readItems || STORAGE_DEFAULTS.readItems
         };
@@ -195,7 +207,19 @@ class StateManager {
       persistPromises.push(setWatchedRepos(updatesObj.watchedRepos));
     }
 
-    const syncKeys = ['mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'];
+    const syncKeys = [
+      'mutedRepos',
+      'snoozedRepos',
+      'filters',
+      'notifications',
+      'checkInterval',
+      'snoozeHours',
+      'theme',
+      'colorTheme',
+      'itemExpiryHours',
+      'markReadOnSnooze',
+      'allowUnlimitedRepos'
+    ];
     const syncUpdates = {};
 
     syncKeys.forEach(key => {
@@ -203,6 +227,10 @@ class StateManager {
         syncUpdates[key] = updatesObj[key];
       }
     });
+
+    if ('pinnedRepos' in updatesObj) {
+      syncUpdates.pinnedRepos = updatesObj.pinnedRepos;
+    }
 
     // Batch all sync updates into a single write operation to avoid quota issues
     if (Object.keys(syncUpdates).length > 0) {
@@ -230,6 +258,11 @@ class StateManager {
         localUpdates[key === 'allActivities' ? 'activities' : key] = updatesObj[key];
       }
     });
+
+    if ('collapsedRepos' in updatesObj) {
+      const collapsedRepos = updatesObj.collapsedRepos;
+      localUpdates.collapsedRepos = Array.from(collapsedRepos instanceof Set ? collapsedRepos : collapsedRepos || []);
+    }
 
     // Batch all local updates into a single write operation to avoid quota issues
     if (Object.keys(localUpdates).length > 0) {
@@ -263,12 +296,15 @@ class StateManager {
       // Reset specific keys
       keys.forEach(key => {
         if (key in STORAGE_DEFAULTS) {
-          updates[key] = STORAGE_DEFAULTS[key];
+          updates[key] = key === 'collapsedRepos'
+            ? new Set(STORAGE_DEFAULTS.collapsedRepos)
+            : STORAGE_DEFAULTS[key];
         }
       });
     } else {
       // Reset all to defaults
       Object.assign(updates, STORAGE_DEFAULTS);
+      updates.collapsedRepos = new Set(STORAGE_DEFAULTS.collapsedRepos);
     }
 
     await this.setState(updates);
@@ -281,10 +317,11 @@ class StateManager {
    */
   async addActivities(activities) {
     const currentActivities = this.getState('allActivities');
-    const newActivities = [...activities, ...currentActivities];
-
-    // Keep only the most recent activities to stay under Chrome storage quota
-    const trimmedActivities = newActivities.slice(0, STORAGE_CONFIG.MAX_ACTIVITIES_STORED);
+    const excludedRepos = getExcludedRepos(this.getState('mutedRepos'), this.getState('snoozedRepos'));
+    const trimmedActivities = prepareActivitiesForStorage(currentActivities, activities, {
+      excludedRepos,
+      maxStored: STORAGE_CONFIG.MAX_ACTIVITIES_STORED
+    });
 
     await this.setState({ allActivities: trimmedActivities });
   }
@@ -335,46 +372,21 @@ class StateManager {
       searchQuery,
       showArchive,
       readItems,
+      mutedRepos,
+      snoozedRepos,
       itemExpiryHours
     } = this.state;
 
-    let filtered = allActivities;
+    const excludedRepos = getExcludedRepos(mutedRepos, snoozedRepos);
 
-    // Filter by time-based expiry (if enabled)
-    if (itemExpiryHours !== null && itemExpiryHours > 0) {
-      const expiryThreshold = Date.now() - (itemExpiryHours * 60 * 60 * 1000);
-      filtered = filtered.filter(activity => {
-        const activityTime = new Date(activity.createdAt).getTime();
-        return activityTime >= expiryThreshold;
-      });
-    }
-
-    // Filter by type
-    if (currentFilter !== 'all') {
-      filtered = filtered.filter(activity => activity.type === currentFilter);
-    }
-
-    // Filter by read status (archive view shows ONLY read items, feed view shows ONLY unread items)
-    const readSet = new Set(readItems);
-    if (showArchive) {
-      // Archive view: show only read items
-      filtered = filtered.filter(activity => readSet.has(activity.id));
-    } else {
-      // Feed view: show only unread items
-      filtered = filtered.filter(activity => !readSet.has(activity.id));
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(activity =>
-        activity.title.toLowerCase().includes(query) ||
-        activity.description?.toLowerCase().includes(query) ||
-        activity.repo.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered;
+    return filterVisibleActivities(allActivities, {
+      excludedRepos,
+      itemExpiryHours,
+      currentFilter,
+      searchQuery,
+      showArchive,
+      readItems
+    });
   }
 
   /**
@@ -382,13 +394,17 @@ class StateManager {
    * @returns {Object} State statistics
    */
   getStats() {
-    const { allActivities, readItems, watchedRepos } = this.state;
-    const readSet = new Set(readItems);
+    const { allActivities, readItems, watchedRepos, mutedRepos, snoozedRepos, itemExpiryHours } = this.state;
+    const excludedRepos = getExcludedRepos(mutedRepos, snoozedRepos);
 
     return {
       totalActivities: allActivities.length,
       readActivities: readItems.length,
-      unreadActivities: allActivities.filter(a => !readSet.has(a.id)).length,
+      unreadActivities: countUnreadActivities(allActivities, {
+        excludedRepos,
+        itemExpiryHours,
+        readItems
+      }),
       watchedRepositories: watchedRepos.length,
       lastActivity: allActivities[0]?.createdAt || null
     };

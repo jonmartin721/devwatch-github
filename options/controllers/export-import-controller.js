@@ -1,26 +1,19 @@
 import { NotificationManager } from '../../shared/ui/notification-manager.js';
-import { getWatchedRepos, setWatchedRepos } from '../../shared/storage-helpers.js';
+import { getSettings, setWatchedRepos, updateSettings } from '../../shared/storage-helpers.js';
+import { normalizeSettings, pickSyncSettings } from '../../shared/settings-schema.js';
 
 const notifications = NotificationManager.getInstance();
 
 export async function exportSettings() {
   try {
-    const syncData = await chrome.storage.sync.get(null);
-    const watchedRepos = await getWatchedRepos();
+    const settings = await getSettings();
 
     const exportData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
       settings: {
-        watchedRepos,
-        mutedRepos: syncData.mutedRepos || [],
-        pinnedRepos: syncData.pinnedRepos || [],
-        filters: syncData.filters || { prs: true, issues: true, releases: true },
-        notifications: syncData.notifications || { prs: true, issues: true, releases: true },
-        theme: syncData.theme || 'system',
-        checkInterval: syncData.checkInterval || 15,
-        snoozeHours: syncData.snoozeHours || 1,
-        snoozedRepos: syncData.snoozedRepos || []
+        watchedRepos: settings.watchedRepos,
+        ...pickSyncSettings(settings)
       }
     };
 
@@ -66,16 +59,7 @@ export async function handleImportFile(event, loadSettingsCallback) {
 
     const settings = importData.settings;
     await setWatchedRepos(settings.watchedRepos || []);
-    await chrome.storage.sync.set({
-      mutedRepos: settings.mutedRepos || [],
-      pinnedRepos: settings.pinnedRepos || [],
-      filters: settings.filters || { prs: true, issues: true, releases: true },
-      notifications: settings.notifications || { prs: true, issues: true, releases: true },
-      theme: settings.theme || 'system',
-      checkInterval: settings.checkInterval || 15,
-      snoozeHours: settings.snoozeHours || 1,
-      snoozedRepos: settings.snoozedRepos || []
-    });
+    await updateSettings(normalizeSettings(settings));
 
     if (settings.checkInterval) {
       chrome.runtime.sendMessage({

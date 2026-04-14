@@ -6,6 +6,11 @@
 import { UI_CONFIG } from './config.js';
 import { SNOOZE_ICON, CHECK_ICON } from './icons.js';
 import { sanitizeImageUrl } from './sanitize.js';
+import {
+  formatRelativeTime as formatSharedRelativeTime,
+  getActivityTypeLabel as getSharedActivityTypeLabel,
+  getSortedRepoGroups
+} from './feed-presentation.js';
 
 /**
  * Basic DOM renderer with simple caching to avoid unnecessary re-renders
@@ -248,6 +253,18 @@ class ActivityListRenderer {
     this.itemCache = new Map();
   }
 
+  groupActivitiesByRepo(activities = []) {
+    return new Map(getSortedRepoGroups(activities));
+  }
+
+  getActivityTypeLabel(type) {
+    return getSharedActivityTypeLabel(type);
+  }
+
+  formatTime(timestamp) {
+    return formatSharedRelativeTime(timestamp);
+  }
+
   /**
    * Render activities list with efficient updates
    * @param {Array<Object>} activities - Activities to render
@@ -354,7 +371,7 @@ class ActivityListRenderer {
    * @returns {string} Generated HTML
    */
   generateGroupedHTML(activities, collapsedRepos = new Set(), pinnedRepos = [], readItems = []) {
-    const grouped = this.groupActivitiesByRepo(activities, pinnedRepos);
+    const grouped = getSortedRepoGroups(activities, pinnedRepos);
     let html = '';
 
     for (const [repo, repoActivities] of grouped) {
@@ -442,7 +459,7 @@ class ActivityListRenderer {
     const sanitizedAuthor = escapeHtml(activity.author);
     const sanitizedRepo = escapeHtml(activity.repo);
     const sanitizedType = escapeHtml(activity.type);
-    const sanitizedTypeLabel = escapeHtml(this.getActivityTypeLabel(activity.type));
+    const sanitizedTypeLabel = escapeHtml(getSharedActivityTypeLabel(activity.type));
     const sanitizedDescription = activity.description ? escapeHtml(activity.description) : '';
     const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar)
       || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
@@ -460,7 +477,7 @@ class ActivityListRenderer {
           <div class="activity-title">${sanitizedTitle}</div>
           ${sanitizedDescription ? `<p class="activity-description">${sanitizedDescription}</p>` : ''}
           <div class="activity-meta">
-            by ${sanitizedAuthor} • ${this.formatTime(activity.createdAt)}
+            by ${sanitizedAuthor} • ${formatSharedRelativeTime(activity.createdAt)}
           </div>
         </div>
         <div class="activity-actions">
@@ -479,85 +496,6 @@ class ActivityListRenderer {
     });
 
     return html;
-  }
-
-  /**
-   * Group activities by repository
-   * @param {Array} activities - Activities to group
-   * @param {Array} pinnedRepos - Array of pinned repository names
-   * @returns {Map} Grouped activities sorted with pinned repos first
-   */
-  groupActivitiesByRepo(activities, pinnedRepos = []) {
-    const groups = {};
-
-    // Group activities by repo
-    for (const activity of activities) {
-      if (!groups[activity.repo]) {
-        groups[activity.repo] = [];
-      }
-      groups[activity.repo].push(activity);
-    }
-
-    // Sort repos: pinned first, then by most recent activity
-    const sortedGroupsMap = new Map();
-    Object.keys(groups)
-      .sort((a, b) => {
-        const aIsPinned = pinnedRepos.includes(a);
-        const bIsPinned = pinnedRepos.includes(b);
-
-        // Pinned repos come first
-        if (aIsPinned && !bIsPinned) return -1;
-        if (!aIsPinned && bIsPinned) return 1;
-
-        // If both pinned or both not pinned, sort by most recent activity
-        const latestA = new Date(groups[a][0].createdAt);
-        const latestB = new Date(groups[b][0].createdAt);
-        return latestB - latestA;
-      })
-      .forEach(repo => {
-        // Sort activities within each repo by newest first
-        groups[repo].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        sortedGroupsMap.set(repo, groups[repo]);
-      });
-
-    return sortedGroupsMap;
-  }
-
-  /**
-   * Get human-readable activity type label
-   * @param {string} type - Activity type
-   * @returns {string} Type label
-   */
-  getActivityTypeLabel(type) {
-    const labels = {
-      'PullRequestEvent': 'Pull Request',
-      'IssuesEvent': 'Issue',
-      'ReleaseEvent': 'Release',
-      'PushEvent': 'Push',
-      'IssueCommentEvent': 'Comment'
-    };
-    return labels[type] || type;
-  }
-
-  /**
-   * Format time for display
-   * @param {string} timestamp - ISO timestamp
-   * @returns {string} Formatted time
-   */
-  formatTime(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString();
   }
 
   /**

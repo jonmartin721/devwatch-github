@@ -898,7 +898,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Primary Setup Step (Step 1 with token input) */
 .setup-step-primary {
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    radial-gradient(circle at top right, var(--bg-gradient-glow), transparent 32%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   border-color: var(--border-hover);
   padding: 24px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
@@ -915,6 +917,214 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .step-all-content {
   flex: 1;
+  width: 100%;
+}
+
+.github-connect-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.github-connect-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.github-connect-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.github-step-label {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.github-connect-copy h3 {
+  font-size: 28px;
+  line-height: 1.1;
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  letter-spacing: -0.05em;
+}
+
+.github-connect-copy p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 60ch;
+}
+
+.github-connect-facts {
+  display: grid;
+  gap: 12px;
+}
+
+.github-connect-fact {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+.github-connect-fact-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.github-connect-fact-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.github-connect-fact-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+}
+
+.github-connect-fact-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.github-connect-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 34px rgba(0, 0, 0, 0.08);
+}
+
+.github-connect-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.github-panel-label {
+  margin: 0 0 10px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.github-connect-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.github-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.github-connect-help {
+  margin: 0;
+  font-size: 13px;
+}
+
+.github-connect-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.github-connect-flow-step {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  min-height: 108px;
+}
+
+.github-connect-flow-step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.github-connect-flow-step p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.device-code-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--border-hover);
+  border-radius: 18px;
+}
+
+.device-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.device-code-note {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
 }
 
 .step-header-section {
@@ -973,6 +1183,37 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+@media (max-width: 980px) {
+  .github-connect-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .github-connect-copy h3 {
+    font-size: 24px;
+  }
+
+  .github-connect-panel-header,
+  .device-code-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .github-connect-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .github-connect-flow-step {
+    min-height: auto;
+  }
+
+  #deviceCodeSection input {
+    font-size: 16px;
+    letter-spacing: 0.16em;
+  }
 }
 
 .help-link-primary {
@@ -2213,21 +2454,33 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .device-code-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 #deviceCodeSection input {
-  letter-spacing: 0.12em;
+  letter-spacing: 0.22em;
   font-weight: 600;
   text-align: center;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 20px;
+  padding: 16px 14px;
 }
 
 .token-status {
-  display: block;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  margin-bottom: 4px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
   width: fit-content;
 }
 
@@ -2238,16 +2491,19 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .token-status.valid {
   background: var(--success-bg);
   color: var(--success-text);
+  border-color: var(--success-border);
 }
 
 .token-status.invalid {
   background: var(--error-bg);
   color: var(--error-text);
+  border-color: var(--error-border);
 }
 
 .token-status.checking {
-  color: var(--text-secondary);
-  background: transparent;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
 }
 
 .repo-actions {

@@ -1,4 +1,3 @@
-import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import {
   createGitHubAuthSession,
   fetchGitHubUser,
@@ -8,7 +7,8 @@ import {
 } from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
 import { getAccessToken, getWatchedRepos, setAuthSession, setWatchedRepos } from '../../shared/storage-helpers.js';
-import { createHeaders } from '../../shared/github-api.js';
+import { resolveWatchedRepoInput } from '../../shared/repo-service.js';
+import { CATEGORY_SETTINGS, createCategorySettings } from '../../shared/settings-schema.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
 // Create onboarding manager instance
@@ -16,6 +16,26 @@ const onboardingManager = new OnboardingManager();
 
 function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+async function addWatchedRepoFromInput(rawInput) {
+  const githubToken = await getAccessToken();
+  const existingRepos = await getWatchedRepos();
+  const resolution = await resolveWatchedRepoInput(rawInput, {
+    githubToken,
+    existingRepos
+  });
+
+  if (!resolution.valid) {
+    return resolution;
+  }
+
+  await setWatchedRepos([...existingRepos, resolution.record]);
+
+  return {
+    ...resolution,
+    alreadyExists: false
+  };
 }
 
 async function copyTextToClipboard(text) {
@@ -799,43 +819,14 @@ function attachRepoButtonListeners() {
       btn.textContent = '...';
 
       try {
-        // Fetch full repo metadata from GitHub API
-        const token = await getAccessToken();
-        const headers = token
-          ? createHeaders(token)
-          : { 'Accept': 'application/vnd.github.v3+json' };
-        const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
+        const result = await addWatchedRepoFromInput(repo);
 
-        if (response.ok) {
-          const data = await response.json();
-
-          // Save repo to storage with full metadata
-          const repos = await getWatchedRepos();
-
-          // Check if repo already exists
-          const repoExists = repos.some(r => r.fullName === repo);
-
-          if (!repoExists) {
-            repos.push({
-              fullName: data.full_name,
-              name: data.name,
-              description: data.description || 'No project description yet.',
-              language: data.language || 'Unknown',
-              stars: data.stargazers_count || 0,
-              forks: data.forks_count || 0,
-              updatedAt: data.updated_at,
-              addedAt: new Date().toISOString()
-            });
-            await setWatchedRepos(repos);
-          }
-
-          // Show success state
+        if (result.valid || result.reason === 'duplicate') {
           btn.classList.remove('loading');
           btn.classList.add('added');
           btn.disabled = true;
           btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
         } else {
-          // Handle error
           btn.classList.remove('loading');
           btn.textContent = '✗';
           setTimeout(() => {
@@ -872,74 +863,19 @@ function setupReposStepListeners() {
 
   // Add manual repo
   const addManualRepo = async () => {
-    let repo = manualInput.value.trim();
+    const repo = manualInput.value.trim();
     if (!repo) return;
 
     repoStatus.innerHTML = getStatusMarkup('loading', 'Validating repository...');
 
     try {
-      // Get token for API calls
-      const githubToken = await getAccessToken();
+      const result = await addWatchedRepoFromInput(repo);
 
-      // Parse GitHub URL if provided
-      const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
-      if (urlMatch) {
-        repo = urlMatch[1].replace(/\.git$/, '');
-        manualInput.value = repo; // Update input to show parsed format
-      }
-      // Check if it might be an NPM package (no slash or scoped package)
-      else if (!repo.includes('/') || repo.startsWith('@')) {
-        const npmResult = await fetchGitHubRepoFromNpm(repo);
-        if (npmResult.success) {
-          repo = npmResult.repo;
-          manualInput.value = repo; // Update input to show GitHub repo
-        } else {
-          repoStatus.innerHTML = getStatusMarkup('error', npmResult.error);
-          return;
-        }
-      }
-
-      // Validate owner/repo format
-      if (!repo.includes('/') || repo.split('/').length !== 2 || !repo.split('/')[0] || !repo.split('/')[1]) {
-        repoStatus.innerHTML = getStatusMarkup('error', 'Invalid format. Use: owner/repo, GitHub URL, or npm package');
-        return;
-      }
-
-      // Validate repo exists on GitHub
-      const headers = githubToken
-        ? createHeaders(githubToken)
-        : { 'Accept': 'application/vnd.github.v3+json' };
-
-      const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        const repos = await getWatchedRepos();
-        const repoExists = repos.some(r => r.fullName === repo);
-        if (!repoExists) {
-          repos.push({
-            fullName: data.full_name,
-            name: data.name,
-            description: data.description || 'No project description yet.',
-            language: data.language || 'Unknown',
-            stars: data.stargazers_count || 0,
-            forks: data.forks_count || 0,
-            updatedAt: data.updated_at,
-            addedAt: new Date().toISOString()
-          });
-          await setWatchedRepos(repos);
-        }
+      if (result.valid || result.reason === 'duplicate') {
         manualInput.value = '';
         repoStatus.innerHTML = getStatusMarkup('success', '✓ Repository added');
       } else {
-        if (response.status === 404) {
-          repoStatus.innerHTML = getStatusMarkup('error', 'Repository not found on GitHub');
-        } else if (response.status === 403) {
-          repoStatus.innerHTML = getStatusMarkup('error', 'GitHub API rate limit exceeded. Try again later.');
-        } else {
-          repoStatus.innerHTML = getStatusMarkup('error', `Error validating repository (${response.status})`);
-        }
+        repoStatus.innerHTML = getStatusMarkup('error', result.error || 'Repository validation failed');
       }
     } catch (error) {
       console.error('Error adding repository:', error);
@@ -963,15 +899,15 @@ function setupCategoriesStepListeners() {
     const saved = await onboardingManager.getStepData('categories') || {};
 
     // Populate saved values and set up dependency logic
-    ['pullRequests', 'issues', 'releases'].forEach(k => {
-      const trackCheckbox = document.getElementById(k);
-      const notifyCheckbox = document.getElementById(`${k}Notifications`);
+    CATEGORY_SETTINGS.forEach(({ onboardingTrackId, onboardingNotifyId }) => {
+      const trackCheckbox = document.getElementById(onboardingTrackId);
+      const notifyCheckbox = document.getElementById(onboardingNotifyId);
       const notifyLabel = notifyCheckbox?.closest('.toggle-label');
 
       if (trackCheckbox && notifyCheckbox) {
         // Set saved values (default: track=true, notify=false)
-        trackCheckbox.checked = saved[k] !== undefined ? saved[k] : true;
-        notifyCheckbox.checked = saved[`${k}Notifications`] !== undefined ? saved[`${k}Notifications`] : false;
+        trackCheckbox.checked = saved[onboardingTrackId] !== undefined ? saved[onboardingTrackId] : true;
+        notifyCheckbox.checked = saved[onboardingNotifyId] !== undefined ? saved[onboardingNotifyId] : false;
 
         // Initial state: disable notify if track is unchecked
         if (!trackCheckbox.checked) {
@@ -1017,31 +953,22 @@ export async function handleNextStep() {
       break;
     }
     case 'categories': {
-      const pullRequests = document.getElementById('pullRequests')?.checked || false;
-      const issues = document.getElementById('issues')?.checked || false;
-      const releases = document.getElementById('releases')?.checked || false;
-      const pullRequestsNotifications = document.getElementById('pullRequestsNotifications')?.checked || false;
-      const issuesNotifications = document.getElementById('issuesNotifications')?.checked || false;
-      const releasesNotifications = document.getElementById('releasesNotifications')?.checked || false;
+      const stepData = {};
+      const filters = {};
+      const notifications = {};
 
-      await onboardingManager.saveStepData('categories', {
-        pullRequests,
-        issues,
-        releases,
-        pullRequestsNotifications,
-        issuesNotifications,
-        releasesNotifications
+      CATEGORY_SETTINGS.forEach(({ key, onboardingTrackId, onboardingNotifyId }) => {
+        const trackingEnabled = document.getElementById(onboardingTrackId)?.checked || false;
+        const notificationsEnabled = document.getElementById(onboardingNotifyId)?.checked || false;
+
+        stepData[onboardingTrackId] = trackingEnabled;
+        stepData[onboardingNotifyId] = notificationsEnabled;
+        filters[key] = trackingEnabled;
+        notifications[key] = notificationsEnabled;
       });
 
-      // Save to settings
-      await chrome.storage.sync.set({
-        showPullRequests: pullRequests,
-        showIssues: issues,
-        showReleases: releases,
-        pullRequestsNotifications,
-        issuesNotifications,
-        releasesNotifications
-      });
+      await onboardingManager.saveStepData('categories', stepData);
+      await chrome.storage.sync.set(createCategorySettings(filters, notifications));
       break;
     }
   }

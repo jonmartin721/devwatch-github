@@ -1,9 +1,23 @@
 import { applyTheme, applyColorTheme, formatDateVerbose } from '../shared/utils.js';
-import { clearAuthSession, getAuthSession, getAccessToken, getLocalItems, getWatchedRepos, setLocalItem, setWatchedRepos } from '../shared/storage-helpers.js';
-import { createHeaders } from '../shared/github-api.js';
-import { STORAGE_CONFIG, VALIDATION_PATTERNS } from '../shared/config.js';
-import { validateRepository } from '../shared/repository-validator.js';
-import { fetchGitHubRepoFromNpm } from '../shared/api/npm-api.js';
+import {
+  clearAuthSession,
+  getAuthSession,
+  getAccessToken,
+  getSettings,
+  getWatchedRepos,
+  setLocalItem,
+  setWatchedRepos,
+  updateSettings
+} from '../shared/storage-helpers.js';
+import { STORAGE_CONFIG } from '../shared/config.js';
+import {
+  resolveWatchedRepoInput,
+  validateWatchedRepo
+} from '../shared/repo-service.js';
+import {
+  CATEGORY_SETTINGS,
+  normalizeSettings
+} from '../shared/settings-schema.js';
 import { NotificationManager } from '../shared/ui/notification-manager.js';
 
 // Controllers
@@ -169,29 +183,99 @@ function handleUrlParameters() {
 }
 
 function syncTokenUiWithStoredCredential(hasStoredToken) {
-  const clearTokenBtn = document.getElementById('clearTokenBtn');
-  const connectGitHubBtn = document.getElementById('connectGitHubBtn');
-  const repoInput = document.getElementById('repoInput');
-  const addRepoBtn = document.getElementById('addRepoBtn');
-  const repoHelpText = document.getElementById('repoHelpText');
-  const importSection = document.getElementById('importReposSection');
-
-  connectGitHubBtn.textContent = hasStoredToken ? 'Reconnect GitHub' : 'Connect GitHub';
-  clearTokenBtn.style.display = hasStoredToken ? 'block' : 'none';
-  repoInput.disabled = !hasStoredToken;
-  repoInput.placeholder = hasStoredToken
-    ? 'e.g., react, facebook/react, or GitHub URL'
-    : 'Connect GitHub to add repositories';
-  addRepoBtn.disabled = !hasStoredToken;
-  repoHelpText.textContent = hasStoredToken
-    ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
-    : 'Connect GitHub above to start adding repositories';
-  importSection.classList.toggle('hidden', !hasStoredToken);
-  importSection.style.display = hasStoredToken ? 'block' : 'none';
+  applyStoredConnection(hasStoredToken ? { accessToken: 'stored-session' } : null);
 }
 
 function shouldClearStoredToken(validationResult) {
   return !validationResult.isValid && validationResult.reason === 'invalid';
+}
+
+function getThemeDisplayName(theme) {
+  const themeNames = {
+    light: 'Light Mode',
+    dark: 'Dark Mode',
+    system: 'System Theme'
+  };
+
+  return themeNames[theme] || theme;
+}
+
+function getColorThemeDisplayName(colorTheme) {
+  const themeNames = {
+    polar: 'Polar',
+    graphite: 'Graphite',
+    nightfall: 'Nightfall',
+    obsidian: 'Obsidian',
+    sand: 'Sand',
+    'terminal-ledger': 'Terminal Ledger'
+  };
+
+  return themeNames[colorTheme] || colorTheme;
+}
+
+function getOptionCategorySettingsFromDom() {
+  const filters = {};
+  const notifications = {};
+
+  CATEGORY_SETTINGS.forEach(({ key, optionsTrackId, optionsNotifyId }) => {
+    filters[key] = document.getElementById(optionsTrackId)?.checked !== false;
+    notifications[key] = document.getElementById(optionsNotifyId)?.checked === true;
+  });
+
+  return { filters, notifications };
+}
+
+function applyCategorySettingsToOptions(settings) {
+  CATEGORY_SETTINGS.forEach(({ key, optionsTrackId, optionsNotifyId }) => {
+    const trackToggle = document.getElementById(optionsTrackId);
+    const notifyToggle = document.getElementById(optionsNotifyId);
+
+    if (trackToggle) {
+      trackToggle.checked = settings.filters[key] !== false;
+    }
+
+    if (notifyToggle) {
+      notifyToggle.checked = settings.notifications[key] !== false;
+    }
+  });
+}
+
+function applySettingsToUi(settings) {
+  applyTheme(settings.theme);
+  applyColorTheme(settings.colorTheme);
+
+  const themeRadio = document.getElementById(`theme-${settings.theme}`);
+  if (themeRadio) {
+    themeRadio.checked = true;
+  }
+
+  const colorThemeRadio = document.getElementById(`color-${settings.colorTheme}`);
+  if (colorThemeRadio) {
+    colorThemeRadio.checked = true;
+  }
+
+  const intervalRadio = document.getElementById(`interval-${settings.checkInterval}`);
+  if (intervalRadio) {
+    intervalRadio.checked = true;
+  }
+
+  const snoozeRadio = document.getElementById(`snooze-${settings.snoozeHours}`);
+  if (snoozeRadio) {
+    snoozeRadio.checked = true;
+  }
+
+  applyCategorySettingsToOptions(settings);
+
+  const itemExpiryEnabled = settings.itemExpiryHours !== null && settings.itemExpiryHours !== undefined;
+  document.getElementById('itemExpiryEnabled').checked = itemExpiryEnabled;
+  document.getElementById('itemExpiryInputRow').style.display = itemExpiryEnabled ? 'block' : 'none';
+  if (itemExpiryEnabled) {
+    document.getElementById('itemExpiryHours').value = settings.itemExpiryHours;
+  }
+
+  document.getElementById('markReadOnSnooze').checked = settings.markReadOnSnooze === true;
+  document.getElementById('allowUnlimitedRepos').checked = settings.allowUnlimitedRepos === true;
+  updateNotificationToggleStates();
 }
 
 function setupEventListeners() {
@@ -278,69 +362,54 @@ function setupEventListeners() {
     }
   });
 
-  // Auto-save theme changes
-  document.querySelectorAll('input[name="theme"]').forEach(radio => {
-    radio.addEventListener('change', async (e) => {
-      const theme = e.target.value;
-      await chrome.storage.sync.set({ theme });
-      applyTheme(theme);
+  function bindRadioSetting(groupName, key, { formatToast, onChange } = {}) {
+    document.querySelectorAll(`input[name="${groupName}"]`).forEach(radio => {
+      radio.addEventListener('change', async (e) => {
+        const rawValue = e.target.value;
+        const value = groupName === 'theme' || groupName === 'colorTheme'
+          ? rawValue
+          : parseInt(rawValue, 10);
 
-      // Show toast notification
-      const themeNames = {
-        'light': 'Light Mode',
-        'dark': 'Dark Mode',
-        'system': 'System Theme'
-      };
-      toastManager.info(`Theme changed to ${themeNames[theme] || theme}`);
+        await updateSettings({ [key]: value });
+        await onChange?.(value);
+
+        if (formatToast) {
+          toastManager.info(formatToast(value));
+        }
+      });
     });
+  }
+
+  function bindCheckboxSetting(id, key, { onChange } = {}) {
+    document.getElementById(id).addEventListener('change', async (e) => {
+      const value = e.target.checked;
+      await updateSettings({ [key]: value });
+      await onChange?.(value);
+    });
+  }
+
+  bindRadioSetting('theme', 'theme', {
+    onChange: async (theme) => applyTheme(theme),
+    formatToast: (theme) => `Theme changed to ${getThemeDisplayName(theme)}`
   });
 
-  // Auto-save color theme changes
-  document.querySelectorAll('input[name="colorTheme"]').forEach(radio => {
-    radio.addEventListener('change', async (e) => {
-      const colorTheme = e.target.value;
-      await chrome.storage.sync.set({ colorTheme });
-      applyColorTheme(colorTheme);
-
-      const themeNames = {
-        'polar': 'Polar',
-        'graphite': 'Graphite',
-        'nightfall': 'Nightfall',
-        'obsidian': 'Obsidian',
-        'sand': 'Sand',
-        'terminal-ledger': 'Terminal Ledger'
-      };
-      toastManager.info(`Color theme changed to ${themeNames[colorTheme] || colorTheme}`);
-    });
+  bindRadioSetting('colorTheme', 'colorTheme', {
+    onChange: async (colorTheme) => applyColorTheme(colorTheme),
+    formatToast: (colorTheme) => `Color theme changed to ${getColorThemeDisplayName(colorTheme)}`
   });
 
-
-  // Auto-save check interval changes
-  document.querySelectorAll('input[name="checkInterval"]').forEach(radio => {
-    radio.addEventListener('change', async (e) => {
-      const interval = parseInt(e.target.value);
-      await chrome.storage.sync.set({ checkInterval: interval });
-
-      // Update alarm with new interval
+  bindRadioSetting('checkInterval', 'checkInterval', {
+    onChange: async (interval) => {
       chrome.runtime.sendMessage({
         action: 'updateInterval',
-        interval: interval
+        interval
       });
-
-      // Show toast notification
-      toastManager.info(`Check interval changed to ${interval} minutes`);
-    });
+    },
+    formatToast: (interval) => `Check interval changed to ${interval} minutes`
   });
 
-  // Auto-save snooze duration changes
-  document.querySelectorAll('input[name="snoozeHours"]').forEach(radio => {
-    radio.addEventListener('change', async (e) => {
-      const snoozeHours = parseInt(e.target.value);
-      await chrome.storage.sync.set({ snoozeHours });
-
-      // Show toast notification
-      toastManager.info(`Default snooze duration changed to ${snoozeHours} hour${snoozeHours > 1 ? 's' : ''}`);
-    });
+  bindRadioSetting('snoozeHours', 'snoozeHours', {
+    formatToast: (snoozeHours) => `Default snooze duration changed to ${snoozeHours} hour${snoozeHours > 1 ? 's' : ''}`
   });
 
   // Auto-save itemExpiryHours changes
@@ -354,11 +423,11 @@ function setupEventListeners() {
       itemExpiryInputRow.style.display = 'block';
       const hours = parseInt(itemExpiryHoursInput.value) || 24;
       itemExpiryHoursInput.value = hours;
-      await chrome.storage.sync.set({ itemExpiryHours: hours });
+      await updateSettings({ itemExpiryHours: hours });
       toastManager.info(`Auto-removal enabled: items older than ${hours} hours will be removed`);
     } else {
       itemExpiryInputRow.style.display = 'none';
-      await chrome.storage.sync.set({ itemExpiryHours: null });
+      await updateSettings({ itemExpiryHours: null });
       toastManager.info('Auto-removal disabled');
     }
   });
@@ -372,69 +441,49 @@ function setupEventListeners() {
       hours = 168;
       e.target.value = 168;
     }
-    await chrome.storage.sync.set({ itemExpiryHours: hours });
+    await updateSettings({ itemExpiryHours: hours });
     toastManager.info(`Auto-removal time changed to ${hours} hours`);
   });
 
-  // Auto-save markReadOnSnooze changes
-  document.getElementById('markReadOnSnooze').addEventListener('change', async (e) => {
-    const markReadOnSnooze = e.target.checked;
-    await chrome.storage.sync.set({ markReadOnSnooze });
-    toastManager.info(`Mark as read on snooze ${markReadOnSnooze ? 'enabled' : 'disabled'}`);
-  });
-
-  // Auto-save allowUnlimitedRepos changes
-  document.getElementById('allowUnlimitedRepos').addEventListener('change', async (e) => {
-    const allowUnlimitedRepos = e.target.checked;
-    await chrome.storage.sync.set({ allowUnlimitedRepos });
-    if (allowUnlimitedRepos) {
-      toastManager.warning('Unlimited repositories enabled - watch for rate limits');
-    } else {
-      toastManager.info('Repository limit set to 50');
+  bindCheckboxSetting('markReadOnSnooze', 'markReadOnSnooze', {
+    onChange: async (markReadOnSnooze) => {
+      toastManager.info(`Mark as read on snooze ${markReadOnSnooze ? 'enabled' : 'disabled'}`);
     }
   });
 
-  // Auto-save filter and notification changes
-  ['filterPrs', 'filterIssues', 'filterReleases', 'notifyPrs', 'notifyIssues', 'notifyReleases'].forEach(id => {
-    document.getElementById(id).addEventListener('change', async (e) => {
-      const target = e.target;
+  bindCheckboxSetting('allowUnlimitedRepos', 'allowUnlimitedRepos', {
+    onChange: async (allowUnlimitedRepos) => {
+      if (allowUnlimitedRepos) {
+        toastManager.warning('Unlimited repositories enabled - watch for rate limits');
+      } else {
+        toastManager.info('Repository limit set to 50');
+      }
+    }
+  });
 
-      // Handle notification toggle logic
-      if (target.id.startsWith('notify')) {
-        const category = target.id.replace('notify', '').toLowerCase();
-        const filterId = `filter${category.charAt(0).toUpperCase() + category.slice(1)}`;
-        const filterToggle = document.getElementById(filterId);
+  CATEGORY_SETTINGS.forEach(({ key, optionsTrackId, optionsNotifyId }) => {
+    const trackToggle = document.getElementById(optionsTrackId);
+    const notifyToggle = document.getElementById(optionsNotifyId);
 
-        // If trying to enable notifications but category is disabled, disable the notification
-        if (target.checked && !filterToggle.checked) {
-          target.checked = false;
-          return;
-        }
+    trackToggle?.addEventListener('change', async () => {
+      if (!trackToggle.checked && notifyToggle?.checked) {
+        notifyToggle.checked = false;
       }
 
-      // Handle filter toggle logic - disable notifications if filter is disabled
-      if (target.id.startsWith('filter')) {
-        const category = target.id.replace('filter', '').toLowerCase();
-        const notifyId = `notify${category.charAt(0).toUpperCase() + category.slice(1)}`;
-        const notifyToggle = document.getElementById(notifyId);
+      const categorySettings = getOptionCategorySettingsFromDom();
+      await updateSettings(categorySettings);
+      updateNotificationToggleStates();
+      toastManager.info(`${key === 'prs' ? 'Pull request' : key.slice(0, -1)} tracking ${trackToggle.checked ? 'enabled' : 'disabled'}`);
+    });
 
-        // If disabling filter, also disable notifications
-        if (!target.checked && notifyToggle.checked) {
-          notifyToggle.checked = false;
-        }
+    notifyToggle?.addEventListener('change', async () => {
+      if (notifyToggle.checked && !trackToggle?.checked) {
+        notifyToggle.checked = false;
+        return;
       }
 
-      const filters = {
-        prs: document.getElementById('filterPrs').checked,
-        issues: document.getElementById('filterIssues').checked,
-        releases: document.getElementById('filterReleases').checked
-      };
-      const notifications = {
-        prs: document.getElementById('notifyPrs').checked,
-        issues: document.getElementById('notifyIssues').checked,
-        releases: document.getElementById('notifyReleases').checked
-      };
-      await chrome.storage.sync.set({ filters, notifications });
+      const categorySettings = getOptionCategorySettingsFromDom();
+      await updateSettings(categorySettings);
       updateNotificationToggleStates();
     });
   });
@@ -516,13 +565,9 @@ function toggleHidePinned() {
 
 function updateNotificationToggleStates() {
   // Update notification toggle states based on filter states
-  const categories = ['prs', 'issues', 'releases'];
-
-  categories.forEach(category => {
-    const filterId = `filter${category.charAt(0).toUpperCase() + category.slice(1)}`;
-    const notifyId = `notify${category.charAt(0).toUpperCase() + category.slice(1)}`;
-    const filterToggle = document.getElementById(filterId);
-    const notifyToggle = document.getElementById(notifyId);
+  CATEGORY_SETTINGS.forEach(({ optionsTrackId, optionsNotifyId }) => {
+    const filterToggle = document.getElementById(optionsTrackId);
+    const notifyToggle = document.getElementById(optionsNotifyId);
     const notifyToggleLabel = notifyToggle.closest('.notification-toggle');
 
     if (filterToggle && notifyToggle && notifyToggleLabel) {
@@ -559,40 +604,7 @@ async function loadSettings() {
     }
 
     const authSession = await getAuthSession();
-
-    const settings = await chrome.storage.sync.get([
-      'mutedRepos',
-      'pinnedRepos',
-      'checkInterval',
-      'snoozeHours',
-      'filters',
-      'notifications',
-      'theme',
-      'itemExpiryHours',
-      'markReadOnSnooze',
-      'allowUnlimitedRepos'
-    ]);
-
-    const snoozeSettings = await chrome.storage.sync.get(['snoozedRepos']);
-    const watchedRepos = await getWatchedRepos();
-
-    // Safety check: if settings is undefined or null, use defaults
-    if (!settings || !snoozeSettings) {
-      console.warn('Storage returned undefined/null. Using default settings.');
-      state.watchedRepos = [];
-      state.mutedRepos = [];
-      state.pinnedRepos = [];
-      renderRepoListWrapper();
-      return;
-    }
-
-    // Load and apply theme
-    const theme = settings.theme || 'system';
-    applyTheme(theme);
-
-    // Load and apply color theme
-    const colorTheme = settings.colorTheme || 'polar';
-    applyColorTheme(colorTheme);
+    const settings = await getSettings();
 
     if (authSession?.accessToken) {
       applyStoredConnection(authSession);
@@ -600,71 +612,15 @@ async function loadSettings() {
       syncTokenUiWithStoredCredential(false);
     }
 
-    state.watchedRepos = watchedRepos;
-    state.mutedRepos = settings.mutedRepos || [];
-    state.pinnedRepos = settings.pinnedRepos || [];
+    state.watchedRepos = settings.watchedRepos;
+    state.mutedRepos = settings.mutedRepos;
+    state.pinnedRepos = settings.pinnedRepos;
 
     renderRepoListWrapper();
-
-    if (settings.checkInterval) {
-      const intervalRadio = document.getElementById(`interval-${settings.checkInterval}`);
-      if (intervalRadio) {
-        intervalRadio.checked = true;
-      }
-    }
-
-    if (settings.snoozeHours) {
-      const snoozeRadio = document.getElementById(`snooze-${settings.snoozeHours}`);
-      if (snoozeRadio) {
-        snoozeRadio.checked = true;
-      }
-    }
-
-    if (settings.filters) {
-      document.getElementById('filterPrs').checked = settings.filters.prs !== false;
-      document.getElementById('filterIssues').checked = settings.filters.issues !== false;
-      document.getElementById('filterReleases').checked = settings.filters.releases !== false;
-    }
-
-    if (settings.notifications) {
-      document.getElementById('notifyPrs').checked = settings.notifications.prs !== false;
-      document.getElementById('notifyIssues').checked = settings.notifications.issues !== false;
-      document.getElementById('notifyReleases').checked = settings.notifications.releases !== false;
-    }
-
-    // Set theme radio button
-    const themeRadio = document.getElementById(`theme-${theme}`);
-    if (themeRadio) {
-      themeRadio.checked = true;
-    }
-
-    // Set color theme radio button
-    const colorThemeRadio = document.getElementById(`color-${colorTheme}`);
-    if (colorThemeRadio) {
-      colorThemeRadio.checked = true;
-    }
-
-    // Load itemExpiryHours setting
-    const itemExpiryEnabled = settings.itemExpiryHours !== null && settings.itemExpiryHours !== undefined;
-    document.getElementById('itemExpiryEnabled').checked = itemExpiryEnabled;
-    if (itemExpiryEnabled) {
-      document.getElementById('itemExpiryHours').value = settings.itemExpiryHours;
-      document.getElementById('itemExpiryInputRow').style.display = 'block';
-    }
-
-    // Load markReadOnSnooze setting (default to false - pause not dismiss)
-    const markReadOnSnooze = settings.markReadOnSnooze === true;
-    document.getElementById('markReadOnSnooze').checked = markReadOnSnooze;
-
-    // Load allowUnlimitedRepos setting (default to false)
-    const allowUnlimitedRepos = settings.allowUnlimitedRepos === true;
-    document.getElementById('allowUnlimitedRepos').checked = allowUnlimitedRepos;
-
-    // Update notification toggle states after loading settings
-    updateNotificationToggleStates();
+    applySettingsToUi(settings);
 
     // Load and display current snoozes
-    renderSnoozedRepos(snoozeSettings.snoozedRepos || []);
+    renderSnoozedRepos(settings.snoozedRepos || []);
   } catch (error) {
     console.error('Error loading settings:', error);
     // Set defaults even if error occurs
@@ -679,19 +635,19 @@ async function addRepo() {
   const input = document.getElementById('repoInput');
   const statusEl = document.getElementById('repoValidationStatus');
   const errorEl = document.getElementById('repoError');
-  let repo = input.value.trim();
+  const repoInput = input.value.trim();
 
   // Clear previous error state
   input.classList.remove('error');
   errorEl.textContent = '';
 
-  if (!repo) {
+  if (!repoInput) {
     return;
   }
 
   // Check if we've hit the maximum repo limit (unless unlimited repos is enabled)
-  const { allowUnlimitedRepos } = await chrome.storage.sync.get(['allowUnlimitedRepos']);
-  if (!allowUnlimitedRepos && state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
+  const currentSettings = normalizeSettings(await getSettings());
+  if (!currentSettings.allowUnlimitedRepos && state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
     showRepoError(`Maximum of ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repositories allowed. Enable "Unlimited Repositories" in Advanced settings to watch more.`);
     statusEl.className = 'repo-validation-status error';
     return;
@@ -700,78 +656,23 @@ async function addRepo() {
   // Show checking indicator
   statusEl.className = 'repo-validation-status checking';
 
-  // Parse GitHub URL if provided
-  const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
-  if (urlMatch) {
-    repo = urlMatch[1].replace(/\.git$/, '');
-    input.value = repo; // Update input to show parsed format
-  }
-  // Check if it might be an NPM package (no slash or scoped package)
-  else if (!repo.includes('/') || repo.startsWith('@')) {
-    const npmResult = await fetchGitHubRepoFromNpm(repo);
-    if (npmResult.success) {
-      repo = npmResult.repo;
-      input.value = repo; // Update input to show GitHub repo
-    } else {
-      showRepoError(npmResult.error);
+  try {
+    const githubToken = await getAccessToken();
+    const resolution = await resolveWatchedRepoInput(repoInput, {
+      githubToken,
+      existingRepos: state.watchedRepos
+    });
+
+    if (!resolution.valid) {
+      showRepoError(resolution.error || 'Repository validation failed');
       statusEl.className = 'repo-validation-status error';
       return;
     }
-  }
 
-  // Validate owner/repo format using the same pattern as the validator
-  if (!VALIDATION_PATTERNS.REPOSITORY_NAME.test(repo)) {
-    showRepoError('Invalid format. Use: owner/repo, GitHub URL, or npm package');
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
+    input.value = resolution.normalizedRepo;
+    statusEl.className = 'repo-validation-status success';
 
-  if (state.watchedRepos.includes(repo)) {
-    showRepoError('Repository already added');
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
-
-  // Validate repo exists on GitHub and fetch metadata
-  let validationResult;
-  try {
-    validationResult = await validateRepo(repo);
-  } catch (error) {
-    console.error('Validation error:', error);
-    showRepoError(`Validation error: ${error.message}`);
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
-
-  if (!validationResult) {
-    showRepoError('Validation returned no result');
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
-
-  if (!validationResult.valid) {
-      showRepoError(validationResult.error || 'Repository validation failed');
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
-
-  // Check if already added (by fullName)
-  const alreadyExists = state.watchedRepos.some(r => (typeof r === 'string' ? r : r.fullName) === validationResult.fullName);
-
-  if (alreadyExists) {
-    showRepoError('Repository already added');
-    statusEl.className = 'repo-validation-status error';
-    return;
-  }
-  // Show success indicator
-  statusEl.className = 'repo-validation-status success';
-
-  try {
-    // Add timestamp to track when repo was added (for filtering old activities)
-    state.watchedRepos.push({
-      ...validationResult,
-      addedAt: new Date().toISOString()
-    });
+    state.watchedRepos.push(resolution.record);
 
     // Reset to last page to show the newly added repo
     const totalPages = Math.ceil(state.watchedRepos.length / state.reposPerPage);
@@ -783,7 +684,7 @@ async function addRepo() {
     await setWatchedRepos(state.watchedRepos);
 
     // Show success toast
-    toastManager.success(`Successfully added ${validationResult.fullName} to watched repositories`);
+    toastManager.success(`Successfully added ${resolution.record.fullName} to watched repositories`);
   } catch (error) {
     console.error('Error adding repository:', error);
     showRepoError('Failed to add repository. Please try again.');
@@ -842,51 +743,7 @@ function showRepoError(message) {
  */
 async function validateRepo(repo) {
   const githubToken = await getAccessToken();
-
-  if (!githubToken) {
-    return { valid: false, error: 'No GitHub connection found. Connect GitHub first.' };
-  }
-
-  // First do basic validation
-  const basicResult = await validateRepository(repo, githubToken);
-
-  if (!basicResult.valid) {
-    return basicResult;
-  }
-
-  try {
-    // Try to fetch latest release for additional metadata
-    const headers = createHeaders(githubToken);
-    const releasesResponse = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers });
-
-    let latestRelease = null;
-    if (releasesResponse.ok) {
-      const releaseData = await releasesResponse.json();
-      latestRelease = {
-        version: releaseData.tag_name,
-        publishedAt: releaseData.published_at
-      };
-    }
-    // If no releases, that's ok - latestRelease stays null
-
-    // Return the enhanced result
-    return {
-      valid: true,
-      metadata: {
-        ...basicResult.metadata,
-        latestRelease
-      }
-    };
-  } catch (_error) {
-    // If release fetch fails, return basic validation result
-    return {
-      valid: true,
-      metadata: {
-        ...basicResult.metadata,
-        latestRelease: null
-      }
-    };
-  }
+  return validateWatchedRepo(repo, githubToken);
 }
 
 async function removeRepo(repoFullName) {
@@ -912,24 +769,8 @@ async function removeRepo(repoFullName) {
 
 async function cleanupRepoNotifications(repoFullName) {
   try {
-    // Get current activities and read items from local storage
-    const { activities = [], readItems = [] } = await getLocalItems(['activities', 'readItems']);
-
-    // Filter out activities for the removed repository
-    const updatedActivities = activities.filter(activity => activity.repo !== repoFullName);
-
-    // Filter out read items for activities from the removed repository
-    const removedActivityIds = activities
-      .filter(activity => activity.repo === repoFullName)
-      .map(activity => activity.id);
-
-    const updatedReadItems = readItems.filter(id => !removedActivityIds.includes(id));
-
-    // Save the filtered data back to local storage
-    await setLocalItem('activities', updatedActivities);
-    await setLocalItem('readItems', updatedReadItems);
-
-    } catch (error) {
+    await chrome.runtime.sendMessage({ action: 'removeRepoData', repo: repoFullName });
+  } catch (error) {
     console.error(`[DevWatch] Error cleaning up notifications for ${repoFullName}:`, error);
     // Don't show an error message to the user since this is cleanup logic
     // The repo removal was successful even if cleanup failed

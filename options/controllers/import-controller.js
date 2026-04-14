@@ -1,6 +1,7 @@
 import { STORAGE_CONFIG } from '../../shared/config.js';
 import { getAccessToken, getSyncItem, setWatchedRepos } from '../../shared/storage-helpers.js';
 import { createHeaders } from '../../shared/github-api.js';
+import { getRepoFullName, normalizeWatchedRepoRecord } from '../../shared/repo-service.js';
 import { escapeHtml, unescapeHtml } from '../../shared/sanitize.js';
 import { formatDateVerbose } from '../../shared/utils.js';
 import { STAR_ICON, createSvg } from '../../shared/icons.js';
@@ -60,25 +61,6 @@ function formatNumber(num) {
     return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   }
   return num.toString();
-}
-
-function getRepoFullName(repo) {
-  if (typeof repo === 'string') {
-    return repo;
-  }
-
-  return repo?.fullName || '';
-}
-
-function normalizeImportedRepo(repo) {
-  return {
-    fullName: repo.fullName,
-    description: repo.description || 'No description provided',
-    language: repo.language || 'Unknown',
-    stars: repo.stars || 0,
-    updatedAt: repo.updatedAt || new Date().toISOString(),
-    addedAt: new Date().toISOString()
-  };
 }
 
 export async function openImportModal(type, watchedRepos) {
@@ -364,7 +346,7 @@ export async function importSelectedRepos(watchedRepos, onReposAdded) {
 
   const nextWatchedRepos = [
     ...watchedRepos,
-    ...uniqueReposToImport.map(normalizeImportedRepo)
+    ...uniqueReposToImport.map(repo => normalizeWatchedRepoRecord(repo))
   ];
 
   await setWatchedRepos(nextWatchedRepos);

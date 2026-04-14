@@ -2,6 +2,14 @@
  * Chrome storage helper functions with promisified APIs
  */
 
+import {
+  SETTINGS_SYNC_KEYS,
+  getDefaultSettings,
+  normalizeSettings,
+  pickSyncSettings
+} from './settings-schema.js';
+import { normalizeWatchedRepos } from './repo-service.js';
+
 const AUTH_SESSION_CACHE_KEY = 'githubAuthSession';
 const LEGACY_AUTH_STORAGE_KEYS = ['encryptedGithubAuthSession', 'encryptionKey'];
 const WATCHED_REPOS_STORAGE_KEY = 'watchedRepos';
@@ -190,15 +198,16 @@ function clearLegacySyncWatchedRepos() {
 export async function getWatchedRepos() {
   const localRepos = await getLocalItem(WATCHED_REPOS_STORAGE_KEY, null);
   if (Array.isArray(localRepos)) {
-    return localRepos;
+    return normalizeWatchedRepos(localRepos);
   }
 
   const legacyRepos = await getSyncItem(WATCHED_REPOS_STORAGE_KEY, STORAGE_DEFAULTS.watchedRepos);
 
   if (Array.isArray(legacyRepos) && legacyRepos.length > 0) {
-    await setLocalItem(WATCHED_REPOS_STORAGE_KEY, legacyRepos);
+    const normalizedLegacyRepos = normalizeWatchedRepos(legacyRepos);
+    await setLocalItem(WATCHED_REPOS_STORAGE_KEY, normalizedLegacyRepos);
     await clearLegacySyncWatchedRepos();
-    return legacyRepos;
+    return normalizedLegacyRepos;
   }
 
   return STORAGE_DEFAULTS.watchedRepos;
@@ -210,7 +219,7 @@ export async function getWatchedRepos() {
  * @returns {Promise<void>}
  */
 export async function setWatchedRepos(watchedRepos = []) {
-  const normalizedRepos = Array.isArray(watchedRepos) ? watchedRepos : [];
+  const normalizedRepos = normalizeWatchedRepos(watchedRepos);
   await setLocalItem(WATCHED_REPOS_STORAGE_KEY, normalizedRepos);
   await clearLegacySyncWatchedRepos();
 }
@@ -309,18 +318,13 @@ export const STORAGE_KEYS = {
   SETTINGS: [
     'watchedRepos',
     'lastCheck',
-    'filters',
-    'notifications',
-    'mutedRepos',
-    'snoozedRepos',
-    'checkInterval',
-    'theme',
-    'itemExpiryHours'
+    ...SETTINGS_SYNC_KEYS
   ],
   ACTIVITY: [
     'activities',
     'lastCheck',
-    'readItems'
+    'readItems',
+    'collapsedRepos'
   ],
   FILTERING: [
     'mutedRepos',
@@ -331,7 +335,8 @@ export const STORAGE_KEYS = {
     'filters',
     'notifications',
     'checkInterval',
-    'theme'
+    'theme',
+    'colorTheme'
   ]
 };
 
@@ -339,23 +344,10 @@ export const STORAGE_KEYS = {
 export const STORAGE_DEFAULTS = {
   watchedRepos: [],
   lastCheck: 0,
-  filters: {
-    pullRequests: true,
-    issues: true,
-    releases: true,
-    pushes: false
-  },
-  notifications: {
-    enabled: true,
-    sound: false
-  },
-  mutedRepos: [],
-  snoozedRepos: [],
-  checkInterval: 15,
-  theme: 'system',
+  ...getDefaultSettings(),
   activities: [],
   readItems: [],
-  pinnedRepos: [],
+  collapsedRepos: [],
   itemExpiryHours: null // null means disabled, otherwise number of hours
 };
 
@@ -366,18 +358,12 @@ export const STORAGE_DEFAULTS = {
 export async function getSettings() {
   const result = await getSyncItems(STORAGE_KEYS.SETTINGS);
   const watchedRepos = await getWatchedRepos();
+  const normalizedSettings = normalizeSettings(result);
 
-  // Apply defaults for missing properties
   return {
     watchedRepos,
     lastCheck: result.lastCheck || STORAGE_DEFAULTS.lastCheck,
-    filters: { ...STORAGE_DEFAULTS.filters, ...result.filters },
-    notifications: { ...STORAGE_DEFAULTS.notifications, ...result.notifications },
-    mutedRepos: result.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
-    snoozedRepos: result.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
-    checkInterval: result.checkInterval || STORAGE_DEFAULTS.checkInterval,
-    theme: result.theme || STORAGE_DEFAULTS.theme,
-    itemExpiryHours: result.itemExpiryHours !== undefined ? result.itemExpiryHours : STORAGE_DEFAULTS.itemExpiryHours
+    ...normalizedSettings
   };
 }
 
@@ -387,11 +373,12 @@ export async function getSettings() {
  */
 export async function getFilteringSettings() {
   const result = await getSyncItems(STORAGE_KEYS.FILTERING);
+  const normalized = normalizeSettings(result);
 
   return {
-    mutedRepos: result.mutedRepos || STORAGE_DEFAULTS.mutedRepos,
-    snoozedRepos: result.snoozedRepos || STORAGE_DEFAULTS.snoozedRepos,
-    pinnedRepos: result.pinnedRepos || STORAGE_DEFAULTS.pinnedRepos
+    mutedRepos: normalized.mutedRepos,
+    snoozedRepos: normalized.snoozedRepos,
+    pinnedRepos: normalized.pinnedRepos
   };
 }
 
@@ -401,12 +388,14 @@ export async function getFilteringSettings() {
  */
 export async function getUserPreferences() {
   const result = await getSyncItems(STORAGE_KEYS.USER_PREFERENCES);
+  const normalized = normalizeSettings(result);
 
   return {
-    filters: { ...STORAGE_DEFAULTS.filters, ...result.filters },
-    notifications: { ...STORAGE_DEFAULTS.notifications, ...result.notifications },
-    checkInterval: result.checkInterval || STORAGE_DEFAULTS.checkInterval,
-    theme: result.theme || STORAGE_DEFAULTS.theme
+    filters: normalized.filters,
+    notifications: normalized.notifications,
+    checkInterval: normalized.checkInterval,
+    theme: normalized.theme,
+    colorTheme: normalized.colorTheme
   };
 }
 
@@ -420,7 +409,8 @@ export async function getActivityData() {
   return {
     activities: result.activities || STORAGE_DEFAULTS.activities,
     lastCheck: result.lastCheck || STORAGE_DEFAULTS.lastCheck,
-    readItems: result.readItems || STORAGE_DEFAULTS.readItems
+    readItems: result.readItems || STORAGE_DEFAULTS.readItems,
+    collapsedRepos: result.collapsedRepos || STORAGE_DEFAULTS.collapsedRepos
   };
 }
 
@@ -430,12 +420,18 @@ export async function getActivityData() {
  * @returns {Promise<void>}
  */
 export async function updateSettings(updates) {
-  await setWatchedRepos(updates.watchedRepos);
-  await setSyncItem('lastCheck', updates.lastCheck);
-  await setSyncItem('filters', updates.filters);
-  await setSyncItem('notifications', updates.notifications);
-  await setSyncItem('mutedRepos', updates.mutedRepos);
-  await setSyncItem('snoozedRepos', updates.snoozedRepos);
-  await setSyncItem('checkInterval', updates.checkInterval);
-  await setSyncItem('theme', updates.theme);
+  if ('watchedRepos' in updates) {
+    await setWatchedRepos(updates.watchedRepos);
+  }
+
+  if ('lastCheck' in updates) {
+    await setSyncItem('lastCheck', updates.lastCheck);
+  }
+
+  const syncSettings = pickSyncSettings(updates);
+  const syncKeys = Object.keys(syncSettings);
+
+  for (const key of syncKeys) {
+    await setSyncItem(key, syncSettings[key]);
+  }
 }
