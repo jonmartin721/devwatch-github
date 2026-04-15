@@ -47,6 +47,9 @@ describe('Options Main Functions', () => {
       <input id="theme-light" name="theme" type="radio" value="light" />
       <input id="theme-dark" name="theme" type="radio" value="dark" />
       <input id="theme-system" name="theme" type="radio" value="system" />
+      <input id="color-polar" name="colorTheme" type="radio" value="polar" />
+      <input id="color-graphite" name="colorTheme" type="radio" value="graphite" />
+      <input id="color-nightfall" name="colorTheme" type="radio" value="nightfall" />
       <input id="interval-15" name="checkInterval" type="radio" value="15" />
       <input id="snooze-1" name="snoozeHours" type="radio" value="1" />
       <input id="itemExpiryEnabled" type="checkbox" />
@@ -392,6 +395,35 @@ describe('Options Main Functions', () => {
       expect(document.getElementById('repoInput').disabled).toBe(false);
     });
 
+    test('loadSettings restores the saved color theme selection', async () => {
+      chrome.storage.sync.get.mockImplementation((keys, callback) => {
+        const requestedKeys = Array.isArray(keys) ? keys : [keys];
+        const result = {};
+
+        if (requestedKeys.includes('colorTheme')) {
+          result.colorTheme = 'graphite';
+          result.theme = 'dark';
+        }
+
+        if (requestedKeys.includes('snoozedRepos')) {
+          result.snoozedRepos = [];
+        }
+
+        if (callback) {
+          callback(result);
+          return;
+        }
+
+        return Promise.resolve(result);
+      });
+
+      await loadSettings();
+
+      expect(document.body.getAttribute('data-color-theme')).toBe('graphite');
+      expect(document.getElementById('color-graphite').checked).toBe(true);
+      expect(document.getElementById('color-polar').checked).toBe(false);
+    });
+
     test('setupEventListeners clears persisted auth after the disconnect action succeeds', async () => {
       setupEventListeners();
 
@@ -458,97 +490,44 @@ describe('Options Main Functions', () => {
 
   describe('cleanupRepoNotifications', () => {
     test('removes activities for deleted repository', async () => {
-      const activities = [
-        { id: '1', repo: 'facebook/react', type: 'pr' },
-        { id: '2', repo: 'microsoft/vscode', type: 'issue' },
-        { id: '3', repo: 'facebook/react', type: 'release' }
-      ];
-      const readItems = ['1', '2'];
-
-      global.chrome.storage.local.get = jest.fn((keys, callback) => {
-        callback({ activities, readItems });
-      });
-
       await cleanupRepoNotifications('facebook/react');
 
-      // Verify activities were filtered - should only have vscode activity
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activities: expect.arrayContaining([
-            expect.objectContaining({ id: '2', repo: 'microsoft/vscode' })
-          ])
-        }),
-        expect.any(Function)
-      );
-
-      // Verify read items for deleted repo activities were removed
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          readItems: ['2']
-        }),
-        expect.any(Function)
-      );
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        action: 'removeRepoData',
+        repo: 'facebook/react'
+      });
     });
 
     test('handles empty activities array', async () => {
-      global.chrome.storage.local.get = jest.fn((keys, callback) => {
-        callback({ activities: [], readItems: [] });
-      });
-
       await cleanupRepoNotifications('facebook/react');
 
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ activities: [] }),
-        expect.any(Function)
-      );
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ readItems: [] }),
-        expect.any(Function)
-      );
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        action: 'removeRepoData',
+        repo: 'facebook/react'
+      });
     });
 
     test('handles missing storage data gracefully', async () => {
-      global.chrome.storage.local.get = jest.fn((keys, callback) => {
-        callback({});
-      });
-
       await cleanupRepoNotifications('facebook/react');
 
-      expect(chrome.storage.local.set).toHaveBeenCalled();
+      expect(chrome.runtime.sendMessage).toHaveBeenCalled();
     });
 
     test('does not throw error when cleanup fails', async () => {
       allowUnexpectedConsole('error');
-      // Mock a Chrome storage error by not calling the callback properly
-      global.chrome.storage.local.get = jest.fn(() => {
-        throw new Error('Storage error');
-      });
+      chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Storage error'));
 
       // Should not throw - errors are caught internally
       await expect(cleanupRepoNotifications('facebook/react')).resolves.toBeUndefined();
     });
 
     test('removes all read items for deleted repo activities', async () => {
-      const activities = [
-        { id: '1', repo: 'facebook/react', type: 'pr' },
-        { id: '2', repo: 'facebook/react', type: 'issue' },
-        { id: '3', repo: 'microsoft/vscode', type: 'pr' }
-      ];
-      const readItems = ['1', '2', '3'];
-
-      global.chrome.storage.local.get = jest.fn((keys, callback) => {
-        callback({ activities, readItems });
-      });
-
       await cleanupRepoNotifications('facebook/react');
 
-      // Should only keep readItem '3' since that's for vscode
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          readItems: ['3']
-        }),
-        expect.any(Function)
-      );
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        action: 'removeRepoData',
+        repo: 'facebook/react'
+      });
     });
   });
 });

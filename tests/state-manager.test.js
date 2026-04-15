@@ -1,5 +1,38 @@
 import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 
+const mockGetSyncItems = jest.fn(async () => ({}));
+const mockGetLocalItems = jest.fn(async () => ({}));
+const mockGetSettings = jest.fn(async () => ({
+  watchedRepos: [],
+  mutedRepos: [],
+  snoozedRepos: [],
+  pinnedRepos: [],
+  filters: { prs: true, issues: true, releases: true },
+  notifications: { prs: true, issues: true, releases: true },
+  checkInterval: 15,
+  snoozeHours: 1,
+  theme: 'system',
+  colorTheme: 'polar',
+  itemExpiryHours: null,
+  markReadOnSnooze: false,
+  allowUnlimitedRepos: false,
+  lastCheck: 0
+}));
+const mockGetActivityData = jest.fn(async () => ({
+  activities: [],
+  readItems: [],
+  collapsedRepos: []
+}));
+const mockGetWatchedRepos = jest.fn(async () => []);
+const mockSetWatchedRepos = jest.fn(async () => {});
+const mockGetExcludedRepos = jest.fn((mutedRepos = [], snoozedRepos = []) => {
+  const now = Date.now();
+  return new Set([
+    ...mutedRepos,
+    ...snoozedRepos.filter(repo => repo.expiresAt > now).map(repo => repo.repo)
+  ]);
+});
+
 // Mock Chrome APIs before importing
 global.chrome = {
   storage: {
@@ -19,23 +52,32 @@ global.chrome = {
 
 // Mock storage helpers
 jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
-  getSyncItems: jest.fn(async () => ({})),
-  getLocalItems: jest.fn(async () => ({})),
-  getWatchedRepos: jest.fn(async () => []),
-  setWatchedRepos: jest.fn(async () => {}),
+  getSyncItems: mockGetSyncItems,
+  getLocalItems: mockGetLocalItems,
+  getSettings: mockGetSettings,
+  getActivityData: mockGetActivityData,
+  getWatchedRepos: mockGetWatchedRepos,
+  setWatchedRepos: mockSetWatchedRepos,
+  getExcludedRepos: mockGetExcludedRepos,
   STORAGE_KEYS: {
-    SETTINGS: ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'],
-    ACTIVITY: ['activities', 'readItems']
+    SETTINGS: ['watchedRepos', 'mutedRepos', 'snoozedRepos', 'pinnedRepos', 'filters', 'notifications', 'checkInterval', 'theme', 'itemExpiryHours'],
+    ACTIVITY: ['activities', 'readItems', 'collapsedRepos']
   },
   STORAGE_DEFAULTS: {
     watchedRepos: [],
     mutedRepos: [],
     snoozedRepos: [],
+    pinnedRepos: [],
+    collapsedRepos: [],
     filters: { prs: true, issues: true, releases: true },
     notifications: { prs: true, issues: true, releases: true },
     checkInterval: 15,
+    snoozeHours: 1,
     theme: 'system',
+    colorTheme: 'polar',
     itemExpiryHours: null,
+    markReadOnSnooze: false,
+    allowUnlimitedRepos: false,
     activities: [],
     readItems: []
   }
@@ -46,6 +88,30 @@ const { stateManager, getFilteredActivities, getStats, addActivities, markAsRead
 describe('state-manager', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
+    chrome.storage.sync.set.mockImplementation((items, callback) => callback());
+    chrome.storage.local.set.mockImplementation((items, callback) => callback());
+    chrome.runtime.lastError = null;
+    mockGetSettings.mockResolvedValue({
+      watchedRepos: [],
+      mutedRepos: [],
+      snoozedRepos: [],
+      pinnedRepos: [],
+      filters: { prs: true, issues: true, releases: true },
+      notifications: { prs: true, issues: true, releases: true },
+      checkInterval: 15,
+      snoozeHours: 1,
+      theme: 'system',
+      colorTheme: 'polar',
+      itemExpiryHours: null,
+      markReadOnSnooze: false,
+      allowUnlimitedRepos: false,
+      lastCheck: 0
+    });
+    mockGetActivityData.mockResolvedValue({
+      activities: [],
+      readItems: [],
+      collapsedRepos: []
+    });
 
     // Reset state manager
     stateManager.initialized = false;
@@ -59,11 +125,17 @@ describe('state-manager', () => {
       watchedRepos: [],
       mutedRepos: [],
       snoozedRepos: [],
+      pinnedRepos: [],
+      collapsedRepos: new Set(),
       filters: { prs: true, issues: true, releases: true },
       notifications: { prs: true, issues: true, releases: true },
       checkInterval: 15,
+      snoozeHours: 1,
       theme: 'system',
+      colorTheme: 'polar',
       itemExpiryHours: null,
+      markReadOnSnooze: false,
+      allowUnlimitedRepos: false,
       isLoading: false,
       error: null
     };
@@ -136,6 +208,15 @@ describe('state-manager', () => {
 
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('1');
+    });
+
+    test('filters excluded repositories from the feed', () => {
+      stateManager.state.mutedRepos = ['facebook/react'];
+
+      const filtered = getFilteredActivities();
+
+      expect(filtered).toHaveLength(2);
+      expect(filtered.every(activity => activity.repo === 'vuejs/vue')).toBe(true);
     });
 
     test('combines multiple filters', () => {
@@ -221,6 +302,17 @@ describe('state-manager', () => {
 
       expect(stateManager.state.allActivities).toHaveLength(2000);
       expect(stateManager.state.allActivities[0].id).toBe('new-1');
+    });
+
+    test('filters excluded repositories before storing activities', async () => {
+      stateManager.state.mutedRepos = ['muted/repo'];
+
+      await addActivities([
+        { id: 'muted', repo: 'muted/repo' },
+        { id: 'visible', repo: 'visible/repo' }
+      ]);
+
+      expect(stateManager.state.allActivities.map(activity => activity.id)).toEqual(['visible']);
     });
   });
 
@@ -340,6 +432,105 @@ describe('state-manager', () => {
       await stateManager.setState({ searchQuery: 'test' });
 
       expect(goodCallback).toHaveBeenCalled();
+    });
+  });
+
+  describe('initialize', () => {
+    test('coalesces concurrent initialize calls behind a single lock', async () => {
+      let resolveSettings;
+      const settingsPromise = new Promise((resolve) => {
+        resolveSettings = resolve;
+      });
+      mockGetSettings.mockReturnValue(settingsPromise);
+
+      const firstInitialize = stateManager.initialize();
+      const secondInitialize = stateManager.initialize();
+
+      expect(mockGetSettings).toHaveBeenCalledTimes(1);
+      expect(stateManager.initializationLock).toBeTruthy();
+
+      resolveSettings({
+        watchedRepos: ['facebook/react'],
+        mutedRepos: [],
+        snoozedRepos: [],
+        pinnedRepos: [],
+        filters: { prs: true, issues: true, releases: true },
+        notifications: { prs: true, issues: true, releases: true },
+        checkInterval: 15,
+        snoozeHours: 1,
+        theme: 'dark',
+        colorTheme: 'graphite',
+        itemExpiryHours: null,
+        markReadOnSnooze: false,
+        allowUnlimitedRepos: false,
+        lastCheck: 0
+      });
+
+      await Promise.all([firstInitialize, secondInitialize]);
+
+      expect(mockGetSettings).toHaveBeenCalledTimes(1);
+      expect(mockGetActivityData).toHaveBeenCalledTimes(1);
+      expect(stateManager.getState('watchedRepos')).toEqual(['facebook/react']);
+      expect(stateManager.initializationLock).toBeNull();
+    });
+
+    test('returns immediately when already initialized', async () => {
+      stateManager.initialized = true;
+
+      await stateManager.initialize();
+
+      expect(mockGetSettings).not.toHaveBeenCalled();
+      expect(mockGetActivityData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setState and reset', () => {
+    beforeEach(() => {
+      stateManager.initialized = true;
+    });
+
+    test('supports functional updater callbacks', async () => {
+      await stateManager.setState((currentState) => ({
+        ...currentState,
+        searchQuery: `${currentState.searchQuery}react`
+      }), { persist: false });
+
+      expect(stateManager.getState('searchQuery')).toBe('react');
+    });
+
+    test('skips persistence when persist is false', async () => {
+      await stateManager.setState({ searchQuery: 'offline' }, { persist: false });
+
+      expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+      expect(chrome.storage.local.set).not.toHaveBeenCalled();
+      expect(mockSetWatchedRepos).not.toHaveBeenCalled();
+    });
+
+    test('skips subscriber notifications when notify is false', async () => {
+      const callback = jest.fn();
+      stateManager.subscribe(callback);
+
+      await stateManager.setState({ searchQuery: 'silent' }, { persist: false, notify: false });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    test('resets only the requested keys', async () => {
+      stateManager.state.theme = 'dark';
+      stateManager.state.collapsedRepos = new Set(['facebook/react']);
+      stateManager.state.searchQuery = 'keep-me';
+
+      await stateManager.reset(['theme', 'collapsedRepos']);
+
+      expect(stateManager.getState('theme')).toBe('system');
+      expect(stateManager.getState('collapsedRepos')).toEqual(new Set());
+      expect(stateManager.getState('searchQuery')).toBe('keep-me');
+    });
+
+    test('rejects when persistence hits a storage error', async () => {
+      chrome.runtime.lastError = { message: 'sync failed' };
+
+      await expect(stateManager.setState({ theme: 'dark' })).rejects.toThrow('sync failed');
     });
   });
 });

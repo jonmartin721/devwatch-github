@@ -1,6 +1,6 @@
 {
   "name": "github-devwatch-chrome",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Chrome extension for monitoring GitHub repository activity",
   "type": "module",
   "scripts": {

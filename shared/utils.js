@@ -17,6 +17,13 @@ export function applyTheme(theme) {
   }
 }
 
+/**
+ * Apply color theme by setting data attribute on body
+ * @param {string} colorTheme - Theme name: 'polar', 'graphite', 'nightfall', 'obsidian', 'sand', 'terminal-ledger'
+ */
+export function applyColorTheme(colorTheme) {
+  document.body.setAttribute('data-color-theme', colorTheme || 'polar');
+}
 
 /**
  * Format a date string into a human-readable relative time

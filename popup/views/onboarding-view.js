@@ -1,4 +1,3 @@
-import { fetchGitHubRepoFromNpm } from '../../shared/api/npm-api.js';
 import {
   createGitHubAuthSession,
   fetchGitHubUser,
@@ -8,7 +7,8 @@ import {
 } from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
 import { getAccessToken, getWatchedRepos, setAuthSession, setWatchedRepos } from '../../shared/storage-helpers.js';
-import { createHeaders } from '../../shared/github-api.js';
+import { resolveWatchedRepoInput } from '../../shared/repo-service.js';
+import { CATEGORY_SETTINGS, createCategorySettings } from '../../shared/settings-schema.js';
 import { escapeHtml } from '../../shared/sanitize.js';
 
 // Create onboarding manager instance
@@ -16,6 +16,26 @@ const onboardingManager = new OnboardingManager();
 
 function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+async function addWatchedRepoFromInput(rawInput) {
+  const githubToken = await getAccessToken();
+  const existingRepos = await getWatchedRepos();
+  const resolution = await resolveWatchedRepoInput(rawInput, {
+    githubToken,
+    existingRepos
+  });
+
+  if (!resolution.valid) {
+    return resolution;
+  }
+
+  await setWatchedRepos([...existingRepos, resolution.record]);
+
+  return {
+    ...resolution,
+    alreadyExists: false
+  };
 }
 
 async function copyTextToClipboard(text) {
@@ -98,7 +118,7 @@ async function completePendingDeviceAuth(tokenData, elements, options = {}) {
 
   const { tokenStatus, validateBtn, nextBtn } = elements;
   if (options.showCheckingStatus) {
-    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub sign-in...');
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Checking GitHub connection...');
   }
   validateBtn.disabled = true;
 
@@ -141,7 +161,7 @@ function renderRepoSuggestion(repo) {
   const rawName = repo?.name || 'unknown';
   const owner = escapeHtml(rawOwner);
   const name = escapeHtml(rawName);
-  const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project`);
+  const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project worth watching`);
   const language = escapeHtml(repo?.language || '');
   const repoFullName = `${rawOwner}/${rawName}`;
   const stars = Number.isFinite(repo?.stargazers_count)
@@ -157,7 +177,7 @@ function renderRepoSuggestion(repo) {
         <div class="repo-desc">${description}</div>
         <div class="repo-meta">
           ${language ? `<span class="repo-language">${language}</span>` : ''}
-          ${stars ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>${stars}</span>` : ''}
+          ${stars ? `<span class="repo-stars"><svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>${stars}</span>` : ''}
         </div>
       </div>
       <button class="add-repo-btn" data-repo="${escapeHtml(repoFullName)}">+</button>
@@ -243,14 +263,14 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   // Navigation buttons
   const isFinalStep = progress.current === progress.total;
   const isTokenStep = currentStep === 'token';
-  const nextButtonText = isTokenStep ? 'Next' : (isFinalStep ? 'Get Started' : 'Next');
+  const nextButtonText = isTokenStep ? 'Continue' : (isFinalStep ? 'Open Feed' : 'Next');
   const nextButtonDisabled = isTokenStep ? 'disabled' : '';
 
   stepContent += `
     <div class="onboarding-nav">
       ${progress.current >= 1 ? '<button id="prevBtn" class="onboarding-btn secondary">Previous</button>' : '<div></div>'}
       <div class="nav-center"></div>
-      ${!isFinalStep ? `<button id="nextBtn" class="onboarding-btn primary" ${nextButtonDisabled}>${nextButtonText}</button>` : '<button id="finishBtn" class="onboarding-btn primary">Get Started</button>'}
+      ${!isFinalStep ? `<button id="nextBtn" class="onboarding-btn primary" ${nextButtonDisabled}>${nextButtonText}</button>` : '<button id="finishBtn" class="onboarding-btn primary">Open Feed</button>'}
     </div>
   `;
 
@@ -288,35 +308,35 @@ function renderWelcomeStep() {
       <div class="step-icon">
         <img src="../icons/icon128.png" alt="GitHub DevWatch Icon" width="64" height="64">
       </div>
-      <h2>Welcome to GitHub DevWatch!</h2>
-      <p>Monitor your favorite repositories and never miss important activity.</p>
+      <h2>Stay on top of the repos that matter.</h2>
+      <p>DevWatch keeps pull requests, issues, and releases in one compact review queue.</p>
       <div class="feature-list">
         <div class="feature-item">
           <span class="feature-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
             </svg>
           </span>
           <span>Browser notifications for new activity</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.293a1 1 0 00-1.414-1.414L10 9.172 8.707 7.879a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
           </span>
           <span>Regular activity updates from watched repositories</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
             </svg>
           </span>
           <span>Customizable filters and preferences</span>
         </div>
       </div>
-      <p class="step-description">Let's get you set up with GitHub repository monitoring.</p>
+      <p class="step-description">A quick setup and your watchlist is ready.</p>
     </div>
   `;
 }
@@ -343,11 +363,11 @@ async function renderTokenStep() {
 
   return `
     <div class="onboarding-step token-step">
-      <h2>Connect GitHub</h2>
-      <p>We'll open GitHub in a new tab and show you the verification code here.</p>
+      <h2>Connect your GitHub account</h2>
+      <p>We'll open GitHub in a new tab and keep the device code ready here for you.</p>
 
       <div class="token-instructions">
-        <h3>Quick setup:</h3>
+        <h3>Quick setup</h3>
         <ol>
           <li>Click <strong>Connect GitHub</strong></li>
           <li>Approve access on the GitHub page that opens</li>
@@ -376,10 +396,10 @@ async function renderTokenStep() {
     </div>
 
     <p class="security-note">
-      <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+      <svg class="info-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
-      Your GitHub sign-in stays in Chrome session storage for the current browser session only. It's used only for GitHub API access and is cleared when the browser session ends.
+      Your GitHub session stays in Chrome session storage for the current browser session only. It's used for GitHub API access and is cleared when the browser session ends.
     </p>
   `;
 }
@@ -397,10 +417,10 @@ export async function renderReposStep() {
 
   return `
     <div class="onboarding-step repos-step">
-      <h2>Add Repositories to Watch</h2>
+      <h2>Build your watchlist</h2>
 
       <div class="popular-repos">
-        <h3>Popular repositories:</h3>
+        <h3>Popular repositories</h3>
         <div class="repo-suggestions" id="repoSuggestions">
           ${popularRepos && popularRepos.length > 0 ?
             popularRepos.map(renderRepoSuggestion).join('') :
@@ -410,7 +430,7 @@ export async function renderReposStep() {
       </div>
 
       <div class="manual-repo">
-        <h3>Or add a specific repository:</h3>
+        <h3>Or add one directly</h3>
         <div class="manual-input-group">
           <input
             type="text"
@@ -430,14 +450,14 @@ export async function renderReposStep() {
 function renderCategoriesStep() {
   return `
     <div class="onboarding-step categories-step">
-      <h2>Choose What to Track</h2>
-      <p class="step-subtitle">Select categories and notification preferences</p>
+      <h2>Choose what shows up</h2>
+      <p class="step-subtitle">Pick activity types and notification behavior</p>
 
       <div class="categories-list">
         <div class="category-item" data-category="pullRequests">
           <div class="category-icon pr-icon">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/>
             </svg>
           </div>
           <div class="category-info">
@@ -460,9 +480,8 @@ function renderCategoriesStep() {
 
         <div class="category-item" data-category="issues">
           <div class="category-icon issues-icon">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
-              <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>
             </svg>
           </div>
           <div class="category-info">
@@ -485,8 +504,8 @@ function renderCategoriesStep() {
 
         <div class="category-item" data-category="releases">
           <div class="category-icon releases-icon">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M1 3.5c0-.626.292-1.165.7-1.59.406-.422.956-.767 1.579-1.041C4.525.32 6.195 0 8 0c1.805 0 3.475.32 4.722.869.622.274 1.172.62 1.578 1.04.408.426.7.965.7 1.591v9c0 .626-.292 1.165-.7 1.59-.406.422-.956.767-1.579 1.041C11.476 15.68 9.806 16 8 16c-1.805 0-3.475-.32-4.721-.869-.623-.274-1.173-.62-1.579-1.04-.408-.426-.7-.965-.7-1.591Zm1.5 0c0 .133.058.318.282.551.227.237.591.483 1.101.707C4.898 5.205 6.353 5.5 8 5.5c1.646 0 3.101-.295 4.118-.742.508-.224.873-.471 1.1-.708.224-.232.282-.417.282-.55 0-.133-.058-.318-.282-.551-.227-.237-.591-.483-1.101-.707C11.102 1.795 9.647 1.5 8 1.5c-1.646 0-3.101.295-4.118.742-.508.224-.873.471-1.1.708-.224.232-.282.417-.282.55Zm0 4.5c0 .133.058.318.282.551.227.237.591.483 1.101.707C4.898 9.705 6.353 10 8 10c1.646 0 3.101-.295 4.118-.742.508-.224.873-.471 1.1-.708.224-.232.282-.417.282-.55V5.724c-.241.15-.503.286-.779.407C11.395 6.711 9.77 7 8 7c-1.771 0-3.395-.29-4.721-.869A6.31 6.31 0 0 1 2.5 5.724ZM2.282 12.551C2.058 12.318 2 12.133 2 12v-2.276c.241.15.503.286.779.407C4.105 10.711 5.73 11 7.5 11h1c1.771 0 3.395-.29 4.721-.869.276-.12.538-.257.779-.407V12c0 .133-.058.318-.282.551-.227.237-.591.483-1.101.707C11.602 13.705 10.147 14 8.5 14h-1c-1.646 0-3.101-.295-4.118-.742-.508-.224-.873-.471-1.1-.708Z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
             </svg>
           </div>
           <div class="category-info">
@@ -508,7 +527,7 @@ function renderCategoriesStep() {
         </div>
       </div>
 
-      <p class="step-note">You can change these in settings anytime.</p>
+      <p class="step-note">You can fine-tune everything later in settings.</p>
     </div>
   `;
 }
@@ -517,10 +536,8 @@ function renderCompleteStep() {
   return `
     <div class="onboarding-step complete-step">
       <div class="step-icon">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="currentColor">
-          <circle cx="32" cy="32" r="24" fill="#0366d6"/>
-          <path d="M32 8C18.7 8 8 18.7 8 32s10.7 24 24 24 24-10.7 24-24S45.3 8 32 8zm0 4c11 0 20 9 20 20s-9 20-20 20-20-9-20-20 9-20 20-20z"/>
-          <path d="M24 32l8 8 16-16" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
         </svg>
       </div>
       <h2>You're All Set!</h2>
@@ -531,8 +548,8 @@ function renderCompleteStep() {
         <div class="tips-grid">
           <div class="tip-item">
             <div class="tip-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
               </svg>
             </div>
             <div class="tip-content">
@@ -543,10 +560,8 @@ function renderCompleteStep() {
 
           <div class="tip-item">
             <div class="tip-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 18L18 6M6 6l12 12"/>
-                <circle cx="9" cy="9" r="2"/>
-                <circle cx="15" cy="15" r="2"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><line x1="2" x2="22" y1="2" y2="22"/>
               </svg>
             </div>
             <div class="tip-content">
@@ -557,10 +572,8 @@ function renderCompleteStep() {
 
           <div class="tip-item">
             <div class="tip-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5"/>
-                <path d="M2 12l10 5 10-5"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22.54 12.43-10 4.58a2 2 0 0 1-1.66 0l-9.4-4.3"/><path d="m22.54 16.43-10 4.58a2 2 0 0 1-1.66 0l-9.4-4.3"/>
               </svg>
             </div>
             <div class="tip-content">
@@ -571,9 +584,8 @@ function renderCompleteStep() {
 
           <div class="tip-item">
             <div class="tip-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
               </svg>
             </div>
             <div class="tip-content">
@@ -584,8 +596,8 @@ function renderCompleteStep() {
 
           <div class="tip-item">
             <div class="tip-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 4v16h22V4H1zm8 2H3v2h6V6zm0 4H3v2h6v-2zm0 4H3v2h6v-2zm8 8H9v2h8v-2zm0-4H9v2h8v-2zm0-4H9v2h8v-2zm0-4H9v2h8V6z"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>
               </svg>
             </div>
             <div class="tip-content">
@@ -695,10 +707,10 @@ function setupTokenStepListeners() {
           error?.code === 'client_id_missing'
             ? 'GitHub OAuth client ID is not configured for this build.'
             : error?.code === 'access_denied'
-              ? 'GitHub sign-in was cancelled'
+              ? 'GitHub connection was cancelled'
               : error?.code === 'expired_token'
-                ? 'GitHub sign-in expired. Start again.'
-                : 'GitHub sign-in failed'
+                ? 'GitHub connection expired. Start again.'
+                : 'GitHub connection failed'
         );
         validateBtn.disabled = false;
         validateBtn.textContent = 'Connect GitHub';
@@ -708,7 +720,7 @@ function setupTokenStepListeners() {
 
   validateBtn?.addEventListener('click', async () => {
     validateBtn.disabled = true;
-    tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub sign-in...');
+    tokenStatus.innerHTML = getStatusMarkup('loading', 'Starting GitHub connection...');
 
     try {
       const deviceCodeData = await requestGitHubDeviceCode();
@@ -718,7 +730,14 @@ function setupTokenStepListeners() {
       if (copyTokenCodeBtn) {
         copyTokenCodeBtn.disabled = !tokenInput.value;
       }
-      tokenStatus.innerHTML = getStatusMarkup('loading', `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`);
+
+      const copied = await copyTextToClipboard(deviceCodeData.userCode).catch(() => false);
+      tokenStatus.innerHTML = getStatusMarkup('loading',
+        copied
+          ? `Code ${deviceCodeData.userCode} copied to clipboard — paste it on the GitHub page that opens.`
+          : `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`
+      );
+
       await onboardingManager.saveStepData('token', {
         userCode: deviceCodeData.userCode,
         validated: false,
@@ -751,10 +770,10 @@ function setupTokenStepListeners() {
         error?.code === 'client_id_missing'
           ? 'GitHub OAuth client ID is not configured for this build.'
           : error?.code === 'access_denied'
-            ? 'GitHub sign-in was cancelled'
+            ? 'GitHub connection was cancelled'
             : error?.code === 'expired_token'
-              ? 'GitHub sign-in expired. Start again.'
-            : 'GitHub sign-in failed'
+              ? 'GitHub connection expired. Start again.'
+            : 'GitHub connection failed'
       );
       validateBtn.disabled = false;
       validateBtn.textContent = 'Connect GitHub';
@@ -800,43 +819,14 @@ function attachRepoButtonListeners() {
       btn.textContent = '...';
 
       try {
-        // Fetch full repo metadata from GitHub API
-        const token = await getAccessToken();
-        const headers = token
-          ? createHeaders(token)
-          : { 'Accept': 'application/vnd.github.v3+json' };
-        const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
+        const result = await addWatchedRepoFromInput(repo);
 
-        if (response.ok) {
-          const data = await response.json();
-
-          // Save repo to storage with full metadata
-          const repos = await getWatchedRepos();
-
-          // Check if repo already exists
-          const repoExists = repos.some(r => r.fullName === repo);
-
-          if (!repoExists) {
-            repos.push({
-              fullName: data.full_name,
-              name: data.name,
-              description: data.description || 'No description provided',
-              language: data.language || 'Unknown',
-              stars: data.stargazers_count || 0,
-              forks: data.forks_count || 0,
-              updatedAt: data.updated_at,
-              addedAt: new Date().toISOString()
-            });
-            await setWatchedRepos(repos);
-          }
-
-          // Show success state
+        if (result.valid || result.reason === 'duplicate') {
           btn.classList.remove('loading');
           btn.classList.add('added');
           btn.disabled = true;
-          btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>';
+          btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
         } else {
-          // Handle error
           btn.classList.remove('loading');
           btn.textContent = '✗';
           setTimeout(() => {
@@ -873,74 +863,19 @@ function setupReposStepListeners() {
 
   // Add manual repo
   const addManualRepo = async () => {
-    let repo = manualInput.value.trim();
+    const repo = manualInput.value.trim();
     if (!repo) return;
 
     repoStatus.innerHTML = getStatusMarkup('loading', 'Validating repository...');
 
     try {
-      // Get token for API calls
-      const githubToken = await getAccessToken();
+      const result = await addWatchedRepoFromInput(repo);
 
-      // Parse GitHub URL if provided
-      const urlMatch = repo.match(/github\.com\/([^/]+\/[^/]+)/);
-      if (urlMatch) {
-        repo = urlMatch[1].replace(/\.git$/, '');
-        manualInput.value = repo; // Update input to show parsed format
-      }
-      // Check if it might be an NPM package (no slash or scoped package)
-      else if (!repo.includes('/') || repo.startsWith('@')) {
-        const npmResult = await fetchGitHubRepoFromNpm(repo);
-        if (npmResult.success) {
-          repo = npmResult.repo;
-          manualInput.value = repo; // Update input to show GitHub repo
-        } else {
-          repoStatus.innerHTML = getStatusMarkup('error', npmResult.error);
-          return;
-        }
-      }
-
-      // Validate owner/repo format
-      if (!repo.includes('/') || repo.split('/').length !== 2 || !repo.split('/')[0] || !repo.split('/')[1]) {
-        repoStatus.innerHTML = getStatusMarkup('error', 'Invalid format. Use: owner/repo, GitHub URL, or npm package');
-        return;
-      }
-
-      // Validate repo exists on GitHub
-      const headers = githubToken
-        ? createHeaders(githubToken)
-        : { 'Accept': 'application/vnd.github.v3+json' };
-
-      const response = await fetch(`https://api.github.com/repos/${repo}`, { headers });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        const repos = await getWatchedRepos();
-        const repoExists = repos.some(r => r.fullName === repo);
-        if (!repoExists) {
-          repos.push({
-            fullName: data.full_name,
-            name: data.name,
-            description: data.description || 'No description provided',
-            language: data.language || 'Unknown',
-            stars: data.stargazers_count || 0,
-            forks: data.forks_count || 0,
-            updatedAt: data.updated_at,
-            addedAt: new Date().toISOString()
-          });
-          await setWatchedRepos(repos);
-        }
+      if (result.valid || result.reason === 'duplicate') {
         manualInput.value = '';
         repoStatus.innerHTML = getStatusMarkup('success', '✓ Repository added');
       } else {
-        if (response.status === 404) {
-          repoStatus.innerHTML = getStatusMarkup('error', 'Repository not found on GitHub');
-        } else if (response.status === 403) {
-          repoStatus.innerHTML = getStatusMarkup('error', 'GitHub API rate limit exceeded. Try again later.');
-        } else {
-          repoStatus.innerHTML = getStatusMarkup('error', `Error validating repository (${response.status})`);
-        }
+        repoStatus.innerHTML = getStatusMarkup('error', result.error || 'Repository validation failed');
       }
     } catch (error) {
       console.error('Error adding repository:', error);
@@ -964,15 +899,15 @@ function setupCategoriesStepListeners() {
     const saved = await onboardingManager.getStepData('categories') || {};
 
     // Populate saved values and set up dependency logic
-    ['pullRequests', 'issues', 'releases'].forEach(k => {
-      const trackCheckbox = document.getElementById(k);
-      const notifyCheckbox = document.getElementById(`${k}Notifications`);
+    CATEGORY_SETTINGS.forEach(({ onboardingTrackId, onboardingNotifyId }) => {
+      const trackCheckbox = document.getElementById(onboardingTrackId);
+      const notifyCheckbox = document.getElementById(onboardingNotifyId);
       const notifyLabel = notifyCheckbox?.closest('.toggle-label');
 
       if (trackCheckbox && notifyCheckbox) {
         // Set saved values (default: track=true, notify=false)
-        trackCheckbox.checked = saved[k] !== undefined ? saved[k] : true;
-        notifyCheckbox.checked = saved[`${k}Notifications`] !== undefined ? saved[`${k}Notifications`] : false;
+        trackCheckbox.checked = saved[onboardingTrackId] !== undefined ? saved[onboardingTrackId] : true;
+        notifyCheckbox.checked = saved[onboardingNotifyId] !== undefined ? saved[onboardingNotifyId] : false;
 
         // Initial state: disable notify if track is unchecked
         if (!trackCheckbox.checked) {
@@ -1009,7 +944,7 @@ export async function handleNextStep() {
       if (!existing.validated) {
         const tokenStatus = document.getElementById('tokenStatus');
         if (tokenStatus) {
-          tokenStatus.textContent = 'Connect GitHub to continue.';
+          tokenStatus.textContent = 'Connect GitHub before continuing.';
           tokenStatus.className = 'token-status error';
         }
         document.getElementById('validateTokenBtn')?.focus();
@@ -1018,31 +953,22 @@ export async function handleNextStep() {
       break;
     }
     case 'categories': {
-      const pullRequests = document.getElementById('pullRequests')?.checked || false;
-      const issues = document.getElementById('issues')?.checked || false;
-      const releases = document.getElementById('releases')?.checked || false;
-      const pullRequestsNotifications = document.getElementById('pullRequestsNotifications')?.checked || false;
-      const issuesNotifications = document.getElementById('issuesNotifications')?.checked || false;
-      const releasesNotifications = document.getElementById('releasesNotifications')?.checked || false;
+      const stepData = {};
+      const filters = {};
+      const notifications = {};
 
-      await onboardingManager.saveStepData('categories', {
-        pullRequests,
-        issues,
-        releases,
-        pullRequestsNotifications,
-        issuesNotifications,
-        releasesNotifications
+      CATEGORY_SETTINGS.forEach(({ key, onboardingTrackId, onboardingNotifyId }) => {
+        const trackingEnabled = document.getElementById(onboardingTrackId)?.checked || false;
+        const notificationsEnabled = document.getElementById(onboardingNotifyId)?.checked || false;
+
+        stepData[onboardingTrackId] = trackingEnabled;
+        stepData[onboardingNotifyId] = notificationsEnabled;
+        filters[key] = trackingEnabled;
+        notifications[key] = notificationsEnabled;
       });
 
-      // Save to settings
-      await chrome.storage.sync.set({
-        showPullRequests: pullRequests,
-        showIssues: issues,
-        showReleases: releases,
-        pullRequestsNotifications,
-        issuesNotifications,
-        releasesNotifications
-      });
+      await onboardingManager.saveStepData('categories', stepData);
+      await chrome.storage.sync.set(createCategorySettings(filters, notifications));
       break;
     }
   }

@@ -1,6 +1,15 @@
 import { showError } from '../../shared/error-handler.js';
-import { useState, setState } from '../../shared/state-manager.js';
-import { groupByRepo } from '../views/activity-item-view.js';
+import { stateManager, useState, setState } from '../../shared/state-manager.js';
+import { groupByRepo } from '../../shared/feed-presentation.js';
+import {
+  clearArchivedFeedData,
+  getAllActivityIds,
+  getRepoUnreadActivityIds,
+  markActivitiesAsRead,
+  markActivityAsUnread,
+  toggleCollapsedRepo,
+  togglePinnedRepoList
+} from '../../shared/feed-mutations.js';
 
 /**
  * Toggles the collapsed state of a repository group
@@ -9,17 +18,10 @@ import { groupByRepo } from '../views/activity-item-view.js';
  * @param {Function} renderActivitiesCallback - Callback to re-render activities
  */
 export async function toggleRepoCollapse(repo, collapsedRepos, renderActivitiesCallback) {
-  if (collapsedRepos.has(repo)) {
-    collapsedRepos.delete(repo);
-  } else {
-    collapsedRepos.add(repo);
-  }
+  const updatedCollapsedRepos = toggleCollapsedRepo(collapsedRepos, repo);
+  await setState({ collapsedRepos: updatedCollapsedRepos });
 
-  // Save collapsed state
-  await chrome.storage.local.set({ collapsedRepos: Array.from(collapsedRepos) });
-
-  // Re-render
-  renderActivitiesCallback();
+  renderActivitiesCallback?.();
 }
 
 /**
@@ -31,25 +33,10 @@ export async function toggleRepoCollapse(repo, collapsedRepos, renderActivitiesC
  */
 export async function togglePinRepo(repo, pinnedRepos, setPinnedReposCallback, renderActivitiesCallback) {
   try {
-    const isCurrentlyPinned = pinnedRepos.includes(repo);
-    let updatedPinnedRepos;
-
-    if (isCurrentlyPinned) {
-      // Unpin the repo
-      updatedPinnedRepos = pinnedRepos.filter(r => r !== repo);
-    } else {
-      // Pin the repo
-      updatedPinnedRepos = [...pinnedRepos, repo];
-    }
-
-    // Save to storage
-    await chrome.storage.sync.set({ pinnedRepos: updatedPinnedRepos });
-
-    // Update through callback
-    setPinnedReposCallback(updatedPinnedRepos);
-
-    // Re-render activities to show updated pin state
-    renderActivitiesCallback();
+    const updatedPinnedRepos = togglePinnedRepoList(pinnedRepos, repo);
+    await setState({ pinnedRepos: updatedPinnedRepos });
+    setPinnedReposCallback?.(updatedPinnedRepos);
+    renderActivitiesCallback?.();
   } catch (error) {
     showError('errorMessage', error, null, { action: 'toggle pin repository', repo }, 3000);
   }
@@ -62,40 +49,7 @@ export async function togglePinRepo(repo, pinnedRepos, setPinnedReposCallback, r
  */
 export async function snoozeRepo(repo, loadActivitiesCallback) {
   try {
-    // Get snooze duration and mark-as-read setting
-    const settings = await chrome.storage.sync.get(['snoozeHours', 'snoozedRepos', 'markReadOnSnooze']);
-    const snoozeHours = settings.snoozeHours || 1;
-    const snoozedRepos = settings.snoozedRepos || [];
-    const markReadOnSnooze = settings.markReadOnSnooze === true;
-
-    // Calculate expiration time
-    const expiresAt = Date.now() + (snoozeHours * 60 * 60 * 1000);
-
-    // Check if repo is already snoozed and update, otherwise add new
-    const existingIndex = snoozedRepos.findIndex(s => s.repo === repo);
-    if (existingIndex >= 0) {
-      snoozedRepos[existingIndex].expiresAt = expiresAt;
-    } else {
-      snoozedRepos.push({ repo, expiresAt });
-    }
-
-    // Mark all unread items for this repo as read if setting is enabled
-    if (markReadOnSnooze) {
-      const { activities = [], readItems = [] } = await chrome.storage.local.get(['activities', 'readItems']);
-      const unreadRepoActivityIds = activities
-        .filter(activity => activity.repo === repo && !readItems.includes(activity.id))
-        .map(activity => activity.id);
-
-      if (unreadRepoActivityIds.length > 0) {
-        const updatedReadItems = [...readItems, ...unreadRepoActivityIds];
-        await chrome.storage.local.set({ readItems: updatedReadItems });
-      }
-    }
-
-    // Save to storage
-    await chrome.storage.sync.set({ snoozedRepos });
-
-    // Reload activities to reflect the snooze
+    await chrome.runtime.sendMessage({ action: 'snoozeRepo', repo });
     await loadActivitiesCallback();
   } catch (error) {
     showError('errorMessage', error, null, { action: 'snooze repository', repo }, 3000);
@@ -139,11 +93,9 @@ export async function toggleReadState(id, renderActivitiesCallback) {
   try {
     await chrome.runtime.sendMessage({ action, id });
     if (isRead) {
-      const newReadItems = state.readItems.filter(item => item !== id);
-      setState({ readItems: newReadItems });
+      await setState({ readItems: markActivityAsUnread(state.readItems, id) });
     } else {
-      const newReadItems = [...state.readItems, id];
-      setState({ readItems: newReadItems });
+      await setState({ readItems: markActivitiesAsRead(state.readItems, [id]) });
     }
     renderActivitiesCallback();
   } catch (error) {
@@ -161,8 +113,7 @@ export async function markAsRead(id) {
 
   try {
     await chrome.runtime.sendMessage({ action: 'markAsRead', id });
-    const newReadItems = [...state.readItems, id];
-    setState({ readItems: newReadItems });
+    await setState({ readItems: markActivitiesAsRead(state.readItems, [id]) });
   } catch (error) {
     showError('errorMessage', error, null, { action: 'mark as read' }, 3000);
   }
@@ -197,10 +148,10 @@ export function markAsReadWithAnimation(id, itemElement, renderActivitiesCallbac
  */
 export async function handleMarkAllRead(renderActivitiesCallback) {
   try {
-    await chrome.runtime.sendMessage({ action: 'markAllAsRead' });
     const state = useState();
-    const newReadItems = state.allActivities.map(a => a.id);
-    setState({ readItems: newReadItems });
+    const visibleActivityIds = getAllActivityIds(stateManager.getFilteredActivities());
+    await chrome.runtime.sendMessage({ action: 'markActivitiesAsRead', ids: visibleActivityIds });
+    await setState({ readItems: markActivitiesAsRead(state.readItems, visibleActivityIds) });
     renderActivitiesCallback();
   } catch (error) {
     showError('errorMessage', error, null, { action: 'mark all as read' }, 3000);
@@ -214,21 +165,21 @@ export async function handleMarkAllRead(renderActivitiesCallback) {
  */
 export async function handleCollapseAll(collapsedRepos, renderActivitiesCallback) {
   const state = useState();
-  const grouped = groupByRepo(state.allActivities);
+  const grouped = groupByRepo(state.allActivities, state.pinnedRepos);
   const allRepos = Object.keys(grouped);
-  const allCollapsed = collapsedRepos.size === allRepos.length;
+  const updatedCollapsedRepos = new Set(collapsedRepos);
+  const allCollapsed = updatedCollapsedRepos.size === allRepos.length;
 
   if (allCollapsed) {
     // Expand all
-    collapsedRepos.clear();
+    updatedCollapsedRepos.clear();
   } else {
     // Collapse all
-    allRepos.forEach(repo => collapsedRepos.add(repo));
+    allRepos.forEach(repo => updatedCollapsedRepos.add(repo));
   }
 
-  // Save and re-render
-  await chrome.storage.local.set({ collapsedRepos: Array.from(collapsedRepos) });
-  renderActivitiesCallback();
+  await setState({ collapsedRepos: updatedCollapsedRepos });
+  renderActivitiesCallback?.();
 }
 
 /**
@@ -239,24 +190,39 @@ export async function handleCollapseAll(collapsedRepos, renderActivitiesCallback
 export async function markRepoAsRead(repo, renderActivitiesCallback) {
   try {
     const state = useState();
-
-    // Find all unread items in this repo
-    const repoActivities = state.allActivities.filter(activity => activity.repo === repo);
-    const unreadItems = repoActivities.filter(activity => !state.readItems.includes(activity.id));
+    const unreadItems = getRepoUnreadActivityIds(state.allActivities, state.readItems, repo);
 
     if (unreadItems.length === 0) {
       return; // Nothing to mark as read
     }
 
-    // Mark all unread items in this repo as read
-    for (const activity of unreadItems) {
-      await markAsRead(activity.id);
-    }
-
-    // Re-render to update UI
+    await chrome.runtime.sendMessage({ action: 'markRepoAsRead', repo });
+    await setState({ readItems: markActivitiesAsRead(state.readItems, unreadItems) });
     renderActivitiesCallback();
   } catch (error) {
     console.error('[markRepoAsRead] Error:', error);
     showError('errorMessage', error, null, { action: 'mark repo as read' }, 3000);
+  }
+}
+
+/**
+ * Clears archived items from storage and local UI state.
+ * @param {Function} renderActivitiesCallback - Callback to re-render activities
+ */
+export async function clearArchive(renderActivitiesCallback) {
+  try {
+    await chrome.runtime.sendMessage({ action: 'clearArchive' });
+    const state = useState();
+    const clearedState = clearArchivedFeedData({
+      activities: state.allActivities,
+      readItems: state.readItems
+    });
+    await setState({
+      allActivities: clearedState.activities,
+      readItems: clearedState.readItems
+    });
+    renderActivitiesCallback?.();
+  } catch (error) {
+    showError('errorMessage', error, null, { action: 'clear archive' }, 3000);
   }
 }

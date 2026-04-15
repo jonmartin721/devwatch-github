@@ -37,20 +37,22 @@ global.chrome = {
 let mockState = {
   showArchive: false,
   searchQuery: '',
-  readItems: []
+  readItems: [],
+  allActivities: []
 };
 
 let mockFilteredActivities = [];
+const mockSetState = jest.fn((updates) => {
+  mockState = { ...mockState, ...updates };
+  return Promise.resolve();
+});
 
 jest.unstable_mockModule('../shared/state-manager.js', () => ({
   stateManager: {
     getFilteredActivities: jest.fn(() => mockFilteredActivities)
   },
   useState: jest.fn(() => mockState),
-  setState: jest.fn((updates) => {
-    mockState = { ...mockState, ...updates };
-    return Promise.resolve();
-  })
+  setState: mockSetState
 }));
 
 // Mock error handler
@@ -76,9 +78,11 @@ describe('Activity List View', () => {
     mockState = {
       showArchive: false,
       searchQuery: '',
-      readItems: []
+      readItems: [],
+      allActivities: []
     };
     mockFilteredActivities = [];
+    mockSetState.mockClear();
 
     // Reset the global getElementById mock
     mockGetElementById.mockImplementation((id) => {
@@ -705,6 +709,66 @@ describe('Activity List View', () => {
           jest.fn()
         );
       }).not.toThrow();
+    });
+
+    test('clear archive removes archived items instead of making them unread again', async () => {
+      const mockRenderer = {
+        render: jest.fn(),
+        lastRenderedData: null
+      };
+
+      let buttonCallCount = 0;
+      const originalButton = {
+        addEventListener: jest.fn(),
+        cloneNode: jest.fn()
+      };
+      const newButton = {
+        addEventListener: jest.fn(),
+        cloneNode: jest.fn()
+      };
+      originalButton.cloneNode.mockReturnValue(newButton);
+      originalButton.replaceWith = jest.fn();
+
+      document.getElementById = jest.fn((id) => {
+        if (id === 'activityList') return mockList;
+        if (id === 'clearArchiveBtn') {
+          buttonCallCount++;
+          return buttonCallCount === 1 ? originalButton : newButton;
+        }
+        return null;
+      });
+
+      mockState.showArchive = true;
+      mockState.readItems = ['archived-1'];
+      mockState.allActivities = [
+        { id: 'archived-1', repo: 'facebook/react', type: 'pr' },
+        { id: 'unread-1', repo: 'vuejs/vue', type: 'issue' }
+      ];
+      mockFilteredActivities = [
+        { id: 'archived-1', repo: 'facebook/react', type: 'pr' }
+      ];
+      const mockClearArchive = jest.fn();
+
+      renderActivities(
+        mockRenderer,
+        new Set(),
+        [],
+        jest.fn(),
+        jest.fn(),
+        jest.fn(),
+        jest.fn(),
+        mockClearArchive,
+        jest.fn(),
+        jest.fn(),
+        jest.fn()
+      );
+
+      const clearHandler = newButton.addEventListener.mock.calls.find(([eventName]) => eventName === 'click')?.[1];
+      expect(clearHandler).toBeDefined();
+
+      await clearHandler();
+
+      expect(mockClearArchive).toHaveBeenCalled();
     });
   });
 });

@@ -20,8 +20,8 @@ global.chrome = {
   }
 };
 
-// Import function from shared utilities
-import { formatDate } from '../shared/utils.js';
+// Import functions from shared utilities
+import { formatDate, applyColorTheme } from '../shared/utils.js';
 
 describe('Date Formatting', () => {
 
@@ -77,5 +77,34 @@ describe('Activity Filtering', () => {
   test('returns all activities when no filter', () => {
     const all = mockActivities;
     expect(all).toHaveLength(3);
+  });
+});
+
+describe('Color Theme Application', () => {
+  beforeEach(() => {
+    document.body.removeAttribute('data-color-theme');
+  });
+
+  test('applies color theme via data attribute', () => {
+    applyColorTheme('graphite');
+    expect(document.body.getAttribute('data-color-theme')).toBe('graphite');
+  });
+
+  test('defaults to polar when called with null', () => {
+    applyColorTheme(null);
+    expect(document.body.getAttribute('data-color-theme')).toBe('polar');
+  });
+
+  test('defaults to polar when called with undefined', () => {
+    applyColorTheme(undefined);
+    expect(document.body.getAttribute('data-color-theme')).toBe('polar');
+  });
+
+  test('switches between themes', () => {
+    applyColorTheme('nightfall');
+    expect(document.body.getAttribute('data-color-theme')).toBe('nightfall');
+
+    applyColorTheme('obsidian');
+    expect(document.body.getAttribute('data-color-theme')).toBe('obsidian');
   });
 });

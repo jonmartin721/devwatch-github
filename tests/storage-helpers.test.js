@@ -14,9 +14,12 @@ const {
   setLocalItem,
   getExcludedRepos,
   getAuthSession,
+  getWatchedRepos,
+  getSettings,
   setAuthSession,
   clearAuthSession,
-  getAccessToken
+  getAccessToken,
+  updateSettings
 } = await import('../shared/storage-helpers.js');
 
 describe('Storage Helpers', () => {
@@ -146,6 +149,16 @@ describe('Storage Helpers', () => {
 
       expect(result).toBe('');
     });
+
+    it('returns the default when chrome extension APIs are unavailable', async () => {
+      const originalChrome = global.chrome;
+      delete global.chrome;
+
+      const result = await getSyncItem('missingKey', 'fallback');
+
+      expect(result).toBe('fallback');
+      global.chrome = originalChrome;
+    });
   });
 
   describe('getLocalItem', () => {
@@ -176,6 +189,16 @@ describe('Storage Helpers', () => {
       const result = await getLocalItem('arrayKey');
 
       expect(result).toEqual([1, 2, 3]);
+    });
+
+    it('rejects when chrome reports a runtime error', async () => {
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
+        chrome.runtime = { lastError: { message: 'local failure' } };
+        callback({});
+        chrome.runtime.lastError = null;
+      });
+
+      await expect(getLocalItem('broken')).rejects.toThrow('local failure');
     });
   });
 
@@ -256,6 +279,16 @@ describe('Storage Helpers', () => {
 
       expect(mockSyncStorage.objectKey).toEqual(obj);
     });
+
+    it('translates quota failures into a clearer sync-storage error', async () => {
+      chrome.storage.sync.set.mockImplementation((items, callback) => {
+        chrome.runtime = { lastError: { message: 'QUOTA_EXCEEDED per item' } };
+        callback();
+        chrome.runtime.lastError = null;
+      });
+
+      await expect(setSyncItem('oversized', 'value')).rejects.toThrow('Sync storage quota exceeded');
+    });
   });
 
   describe('setLocalItem', () => {
@@ -275,6 +308,48 @@ describe('Storage Helpers', () => {
       await setLocalItem('arrayKey', arr);
 
       expect(mockLocalStorage.arrayKey).toEqual(arr);
+    });
+
+    it('translates quota failures into a clearer local-storage error', async () => {
+      chrome.storage.local.set.mockImplementation((items, callback) => {
+        chrome.runtime = { lastError: { message: 'QUOTA_EXCEEDED bytes' } };
+        callback();
+        chrome.runtime.lastError = null;
+      });
+
+      await expect(setLocalItem('oversized', ['value'])).rejects.toThrow('Storage quota exceeded');
+    });
+  });
+
+  describe('watched repository helpers', () => {
+    it('migrates watched repositories from sync storage into local storage', async () => {
+      mockSyncStorage.watchedRepos = ['facebook/react'];
+
+      const repos = await getWatchedRepos();
+
+      expect(repos).toEqual([
+        expect.objectContaining({
+          fullName: 'facebook/react'
+        })
+      ]);
+      expect(mockLocalStorage.watchedRepos).toEqual([
+        expect.objectContaining({
+          fullName: 'facebook/react'
+        })
+      ]);
+      expect(chrome.storage.sync.remove).toHaveBeenCalledWith(['watchedRepos'], expect.any(Function));
+    });
+
+    it('merges watched repositories into getSettings results', async () => {
+      mockLocalStorage.watchedRepos = [{ fullName: 'vuejs/core' }];
+      mockSyncStorage.filters = { prs: false, issues: true, releases: true };
+
+      const settings = await getSettings();
+
+      expect(settings.watchedRepos).toEqual([
+        expect.objectContaining({ fullName: 'vuejs/core' })
+      ]);
+      expect(settings.filters).toEqual({ prs: false, issues: true, releases: true });
     });
   });
 
@@ -418,6 +493,14 @@ describe('Storage Helpers', () => {
       );
     });
 
+    it('clears the session when the payload is invalid', async () => {
+      mockSessionStorage.githubAuthSession = { accessToken: 'old-token' };
+
+      await setAuthSession({ username: 'octocat' });
+
+      expect(mockSessionStorage.githubAuthSession).toBeUndefined();
+    });
+
     it('clears auth session from session storage and removes legacy persisted data', async () => {
       mockSessionStorage.githubAuthSession = { accessToken: 'oauth-token' };
       mockLocalStorage.encryptedGithubAuthSession = { iv: [], data: [] };
@@ -447,6 +530,41 @@ describe('Storage Helpers', () => {
       const result = await getAccessToken();
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('fans out watched repos, lastCheck, and sync settings to the correct storage backends', async () => {
+      await updateSettings({
+        watchedRepos: ['facebook/react'],
+        lastCheck: '2026-04-13T00:00:00.000Z',
+        theme: 'dark',
+        colorTheme: 'graphite'
+      });
+
+      expect(mockLocalStorage.watchedRepos).toEqual([
+        expect.objectContaining({ fullName: 'facebook/react' })
+      ]);
+      expect(mockSyncStorage.lastCheck).toBe('2026-04-13T00:00:00.000Z');
+      expect(mockSyncStorage.theme).toBe('dark');
+      expect(mockSyncStorage.colorTheme).toBe('graphite');
+    });
+
+    it('preserves unrelated stored settings when applying a partial update', async () => {
+      Object.assign(mockSyncStorage, {
+        filters: { prs: false, issues: true, releases: false },
+        notifications: { prs: false, issues: false, releases: true },
+        snoozeHours: 4,
+        colorTheme: 'sand'
+      });
+
+      await updateSettings({ theme: 'dark' });
+
+      expect(mockSyncStorage.theme).toBe('dark');
+      expect(mockSyncStorage.filters).toEqual({ prs: false, issues: true, releases: false });
+      expect(mockSyncStorage.notifications).toEqual({ prs: false, issues: false, releases: true });
+      expect(mockSyncStorage.snoozeHours).toBe(4);
+      expect(mockSyncStorage.colorTheme).toBe('sand');
     });
   });
 });

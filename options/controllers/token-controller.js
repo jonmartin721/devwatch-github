@@ -37,7 +37,29 @@ function setDeviceCode(userCode = '') {
 
   deviceCodeInput.value = userCode;
   deviceCodeSection.classList.toggle('hidden', !userCode);
-  deviceCodeSection.style.display = userCode ? 'block' : 'none';
+  deviceCodeSection.style.display = userCode ? 'flex' : 'none';
+}
+
+function setHelpText(message = '') {
+  const helpEl = document.getElementById('token-help');
+
+  if (!helpEl) {
+    return;
+  }
+
+  helpEl.textContent = message;
+}
+
+function getHelpText({ isConnected = false, isWaiting = false } = {}) {
+  if (isWaiting) {
+    return 'Approve access in the GitHub tab, then return here. If GitHub asks for a code, use the one shown below.';
+  }
+
+  if (isConnected) {
+    return 'Reconnect any time if your session expires or if you want to switch accounts.';
+  }
+
+  return 'We\'ll open GitHub in a new tab. Approve access there, then come back here and DevWatch will finish connecting.';
 }
 
 function setStatus(message = '', statusClass = '') {
@@ -59,6 +81,10 @@ export function applyStoredConnection(authSession, options = {}) {
 
   setRepoAccessState(isConnected);
   setDeviceCode(options.userCode || '');
+  setHelpText(options.helpText || getHelpText({
+    isConnected,
+    isWaiting: options.statusClass === 'checking'
+  }));
 
   if (connectBtn) {
     connectBtn.disabled = false;
@@ -123,12 +149,22 @@ export async function connectGitHub(_toastManager) {
 
   setRepoAccessState(Boolean(previousSession?.accessToken));
   setStatus('Starting GitHub sign-in...', 'checking');
+  setHelpText('We\'re opening GitHub so you can approve access. Come back here as soon as GitHub says the connection is ready.');
 
   try {
     const result = await completeGitHubDeviceAuth({
-      onCode: ({ userCode }) => {
+      onCode: async ({ userCode }) => {
         setDeviceCode(userCode || '');
-        setStatus(`Enter ${userCode} on GitHub to finish connecting.`, 'checking');
+        const copied = navigator.clipboard?.writeText
+          ? await navigator.clipboard.writeText(userCode).then(() => true).catch(() => false)
+          : false;
+        setStatus(
+          copied
+            ? `Code ${userCode} copied to clipboard — paste it on the GitHub page that opens.`
+            : `Enter ${userCode} on GitHub to finish connecting.`,
+          'checking'
+        );
+        setHelpText(getHelpText({ isWaiting: true }));
       }
     });
 

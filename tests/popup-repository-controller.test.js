@@ -3,24 +3,31 @@ import { jest, describe, test, beforeEach, expect } from '@jest/globals';
 // Mock state manager
 let mockState = {
   readItems: [],
-  allActivities: []
+  allActivities: [],
+  pinnedRepos: [],
+  collapsedRepos: new Set()
 };
+const mockSetState = jest.fn((updates) => {
+  mockState = { ...mockState, ...updates };
+  return Promise.resolve();
+});
 
 jest.unstable_mockModule('../shared/state-manager.js', () => ({
+  stateManager: {
+    getFilteredActivities: jest.fn(() => mockState.allActivities)
+  },
   useState: jest.fn(() => mockState),
-  setState: jest.fn((updates) => {
-    mockState = { ...mockState, ...updates };
-    return Promise.resolve();
-  })
+  setState: mockSetState
 }));
 
 // Mock error handler
+const mockShowError = jest.fn();
 jest.unstable_mockModule('../shared/error-handler.js', () => ({
-  showError: jest.fn()
+  showError: mockShowError
 }));
 
-// Mock activity-item-view
-jest.unstable_mockModule('../popup/views/activity-item-view.js', () => ({
+// Mock feed presentation helpers
+jest.unstable_mockModule('../shared/feed-presentation.js', () => ({
   groupByRepo: jest.fn((activities) => {
     const grouped = {};
     activities.forEach(a => {
@@ -49,8 +56,12 @@ describe('Repository Controller', () => {
     jest.clearAllMocks();
     mockState = {
       readItems: [],
-      allActivities: []
+      allActivities: [],
+      pinnedRepos: [],
+      collapsedRepos: new Set()
     };
+    mockSetState.mockClear();
+    mockShowError.mockClear();
 
     global.chrome = {
       storage: {
@@ -81,7 +92,7 @@ describe('Repository Controller', () => {
 
     await toggleRepoCollapse('owner/repo', collapsedRepos, mockRender);
 
-    expect(chrome.storage.local.set).toHaveBeenCalled();
+    expect(mockState.collapsedRepos).toEqual(new Set(['owner/repo']));
     expect(mockRender).toHaveBeenCalled();
   });
 
@@ -92,7 +103,7 @@ describe('Repository Controller', () => {
 
     await togglePinRepo('owner/repo', pinnedRepos, mockSetPinned, mockRender);
 
-    expect(chrome.storage.sync.set).toHaveBeenCalled();
+    expect(mockState.pinnedRepos).toEqual(['owner/repo']);
     expect(mockSetPinned).toHaveBeenCalled();
   });
 
@@ -101,87 +112,22 @@ describe('Repository Controller', () => {
 
     await snoozeRepo('owner/repo', mockLoad);
 
-    expect(chrome.storage.sync.set).toHaveBeenCalled();
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+      action: 'snoozeRepo',
+      repo: 'owner/repo'
+    });
     expect(mockLoad).toHaveBeenCalled();
   });
 
   test('handleMarkAllRead sends message to background', async () => {
+    mockState.allActivities = [{ id: '1', repo: 'owner/repo' }];
     const mockRender = jest.fn();
 
     await handleMarkAllRead(mockRender);
 
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      action: 'markAllAsRead'
-    });
-  });
-
-  describe('snoozeRepo - advanced', () => {
-    beforeEach(() => {
-      mockState = { readItems: [], allActivities: [] };
-      chrome.storage.local.get = jest.fn(() => Promise.resolve({ activities: [], readItems: [] }));
-    });
-
-    test('updates existing snooze time if repo already snoozed', async () => {
-      const existingSnoozedRepos = [
-        { repo: 'owner/repo', expiresAt: Date.now() + 1000 }
-      ];
-
-      chrome.storage.sync.get = jest.fn(() => Promise.resolve({
-        snoozeHours: 2,
-        snoozedRepos: existingSnoozedRepos,
-        markReadOnSnooze: false
-      }));
-
-      const mockLoad = jest.fn();
-      await snoozeRepo('owner/repo', mockLoad);
-
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          snoozedRepos: expect.arrayContaining([
-            expect.objectContaining({ repo: 'owner/repo' })
-          ])
-        })
-      );
-    });
-
-    test('marks repo items as read when markReadOnSnooze is enabled', async () => {
-      chrome.storage.sync.get = jest.fn(() => Promise.resolve({
-        snoozeHours: 1,
-        snoozedRepos: [],
-        markReadOnSnooze: true
-      }));
-
-      const activities = [
-        { id: 'id-1', repo: 'owner/repo' },
-        { id: 'id-2', repo: 'owner/repo' },
-        { id: 'id-3', repo: 'other/repo' }
-      ];
-
-      chrome.storage.local.get = jest.fn(() => Promise.resolve({ activities, readItems: [] }));
-
-      const mockLoad = jest.fn();
-      await snoozeRepo('owner/repo', mockLoad);
-
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          readItems: expect.arrayContaining(['id-1', 'id-2'])
-        })
-      );
-    });
-
-    test('does not mark items as read when markReadOnSnooze is disabled', async () => {
-      chrome.storage.sync.get = jest.fn(() => Promise.resolve({
-        snoozeHours: 1,
-        snoozedRepos: [],
-        markReadOnSnooze: false
-      }));
-
-      const mockLoad = jest.fn();
-      await snoozeRepo('owner/repo', mockLoad);
-
-      // Should not call local.set for readItems
-      const localSetCalls = chrome.storage.local.set.mock.calls;
-      expect(localSetCalls.length).toBe(0);
+      action: 'markActivitiesAsRead',
+      ids: ['1']
     });
   });
 
@@ -257,9 +203,7 @@ describe('Repository Controller', () => {
       expect(mockElement.classList.add).toHaveBeenCalledWith('removing');
 
       // Fast-forward time and flush all promises
-      jest.runAllTimers();
-      await Promise.resolve();
-      await Promise.resolve();
+      await jest.runAllTimersAsync();
 
       expect(mockRender).toHaveBeenCalled();
     });
@@ -299,9 +243,7 @@ describe('Repository Controller', () => {
       expect(mockActivities.classList.add).toHaveBeenCalledWith('removing');
 
       // Fast-forward time and flush all promises
-      jest.runAllTimers();
-      await Promise.resolve();
-      await Promise.resolve();
+      await jest.runAllTimersAsync();
 
       expect(mockLoad).toHaveBeenCalled();
     });
@@ -320,10 +262,10 @@ describe('Repository Controller', () => {
 
       await handleCollapseAll(collapsedRepos, mockRender);
 
-      expect(collapsedRepos.size).toBe(3);
-      expect(collapsedRepos.has('repo1')).toBe(true);
-      expect(collapsedRepos.has('repo2')).toBe(true);
-      expect(collapsedRepos.has('repo3')).toBe(true);
+      expect(mockState.collapsedRepos.size).toBe(3);
+      expect(mockState.collapsedRepos.has('repo1')).toBe(true);
+      expect(mockState.collapsedRepos.has('repo2')).toBe(true);
+      expect(mockState.collapsedRepos.has('repo3')).toBe(true);
       expect(mockRender).toHaveBeenCalled();
     });
 
@@ -338,7 +280,7 @@ describe('Repository Controller', () => {
 
       await handleCollapseAll(collapsedRepos, mockRender);
 
-      expect(collapsedRepos.size).toBe(0);
+      expect(mockState.collapsedRepos.size).toBe(0);
       expect(mockRender).toHaveBeenCalled();
     });
   });
@@ -356,8 +298,10 @@ describe('Repository Controller', () => {
 
       await markRepoAsRead('owner/repo', mockRender);
 
-      // Should have sent two markAsRead messages
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        action: 'markRepoAsRead',
+        repo: 'owner/repo'
+      });
       expect(mockRender).toHaveBeenCalled();
     });
 
@@ -387,14 +331,16 @@ describe('Repository Controller', () => {
 
       await markRepoAsRead('owner/repo', mockRender);
 
-      // Should only mark items 1 and 3 as read (not 2, which is already read)
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        action: 'markRepoAsRead',
+        repo: 'owner/repo'
+      });
     });
   });
 
   describe('togglePinRepo - error handling', () => {
     test('handles errors when pinning', async () => {
-      chrome.storage.sync.set = jest.fn(() => Promise.reject(new Error('Storage error')));
+      mockSetState.mockRejectedValueOnce(new Error('Storage error'));
 
       const pinnedRepos = [];
       const mockSetPinned = jest.fn();
@@ -402,7 +348,7 @@ describe('Repository Controller', () => {
 
       await togglePinRepo('owner/repo', pinnedRepos, mockSetPinned, mockRender);
 
-      // Should not throw, error should be handled
+      expect(mockShowError).toHaveBeenCalled();
       expect(mockSetPinned).not.toHaveBeenCalled();
     });
 
@@ -413,9 +359,7 @@ describe('Repository Controller', () => {
 
       await togglePinRepo('owner/repo', pinnedRepos, mockSetPinned, mockRender);
 
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        pinnedRepos: []
-      });
+      expect(mockState.pinnedRepos).toEqual([]);
       expect(mockSetPinned).toHaveBeenCalledWith([]);
     });
   });
@@ -427,7 +371,7 @@ describe('Repository Controller', () => {
 
       await toggleRepoCollapse('owner/repo', collapsedRepos, mockRender);
 
-      expect(collapsedRepos.has('owner/repo')).toBe(false);
+      expect(mockState.collapsedRepos.has('owner/repo')).toBe(false);
     });
 
     test('adds repo to set when not collapsed', async () => {
@@ -436,7 +380,7 @@ describe('Repository Controller', () => {
 
       await toggleRepoCollapse('owner/repo', collapsedRepos, mockRender);
 
-      expect(collapsedRepos.has('owner/repo')).toBe(true);
+      expect(mockState.collapsedRepos.has('owner/repo')).toBe(true);
     });
   });
 });

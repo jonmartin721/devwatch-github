@@ -9,19 +9,16 @@ import {
   showCachedActivities
 } from '../../shared/offline-manager.js';
 import { setState } from '../../shared/state-manager.js';
+import { filterVisibleActivities } from '../../shared/feed-policy.js';
 
 /**
  * Loads activities from storage or cache, handles offline mode
  * @param {Function} renderActivitiesCallback - Callback to render activities after loading
- * @param {Function} setPinnedReposCallback - Callback to update pinned repos
- * @param {Function} setCollapsedReposCallback - Callback to update collapsed repos
  * @param {Object} options - Loading options
  * @param {boolean} options.skipLoadingIndicator - Don't show loading state if true (for refresh)
  */
 export async function loadActivities(
   renderActivitiesCallback,
-  setPinnedReposCallback,
-  setCollapsedReposCallback,
   options = {}
 ) {
   const { skipLoadingIndicator = false } = options;
@@ -37,17 +34,18 @@ export async function loadActivities(
     try {
       const cachedActivities = await getCachedData('activities_cache');
       const cachedReadItems = await getCachedData('readItems_cache');
-      const { mutedRepos, snoozedRepos } = await getFilteringSettings();
+      const { mutedRepos, snoozedRepos, pinnedRepos } = await getFilteringSettings();
 
       if (cachedActivities) {
-        // Filter out muted and snoozed repos using shared utilities
         const excludedRepos = getExcludedRepos(mutedRepos, snoozedRepos);
-        const filteredActivities = cachedActivities.filter(a => !excludedRepos.has(a.repo));
+        const filteredActivities = filterVisibleActivities(cachedActivities, { excludedRepos });
 
         // Update state with cached data
         await setState({
           allActivities: filteredActivities,
-          readItems: cachedReadItems || []
+          readItems: cachedReadItems || [],
+          pinnedRepos,
+          collapsedRepos: new Set()
         }, { persist: false }); // Don't persist cached data to storage
 
         // Show cached indicator
@@ -89,20 +87,15 @@ export async function loadActivities(
     const settings = await getFilteringSettings();
     const pinnedRepos = await getSyncItem('pinnedRepos', []);
 
-    // Update pinned repos through callback
-    setPinnedReposCallback(pinnedRepos);
-
-    // Load collapsed state through callback
-    setCollapsedReposCallback(new Set(data.collapsedRepos || []));
-
-    // Filter out muted and snoozed repos using shared utilities
     const excludedRepos = getExcludedRepos(settings.mutedRepos, settings.snoozedRepos);
-    const filteredActivities = (data.activities || []).filter(a => !excludedRepos.has(a.repo));
+    const filteredActivities = filterVisibleActivities(data.activities || [], { excludedRepos });
 
     // Update state manager with loaded data
     await setState({
       allActivities: filteredActivities,
-      readItems: data.readItems || []
+      readItems: data.readItems || [],
+      pinnedRepos,
+      collapsedRepos: new Set(data.collapsedRepos || [])
     });
 
     // Cache the loaded data for offline use
@@ -183,8 +176,8 @@ export function updateRateLimit(rateLimit) {
 
   // Show in yellow warning when low
   rateLimitInfo.innerHTML = `
-    <svg class="svg-inline" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0114.082 15H1.918a1.75 1.75 0 01-1.543-2.575zm1.763.707a.25.25 0 00-.44 0L1.698 13.132a.25.25 0 00.22.368h12.164a.25.25 0 00.22-.368zm.53 3.996v2.5a.75.75 0 11-1.5 0v-2.5a.75.75 0 111.5 0zM9 11a1 1 0 11-2 0 1 1 0 012 0z"/>
+    <svg class="svg-inline" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
     </svg>
     ${rateLimit.remaining}/${rateLimit.limit} API calls remaining
   `;

@@ -1,7 +1,27 @@
 import { createHeaders, handleApiResponse, mapActivity, filterActivitiesByDate } from './shared/github-api.js';
-import { getSyncItems, getLocalItems, setLocalItem, getExcludedRepos, getAccessToken, getFilteringSettings, getWatchedRepos } from './shared/storage-helpers.js';
+import {
+  getSyncItems,
+  getLocalItems,
+  getSettings,
+  setLocalItem,
+  setSyncItem,
+  getExcludedRepos,
+  getAccessToken,
+  getFilteringSettings,
+  getWatchedRepos
+} from './shared/storage-helpers.js';
 import { extractRepoName } from './shared/repository-utils.js';
 import { safelyOpenUrl } from './shared/security.js';
+import { prepareActivitiesForStorage, countUnreadActivities } from './shared/feed-policy.js';
+import {
+  clearArchivedFeedData,
+  getAllActivityIds,
+  getRepoUnreadActivityIds,
+  markActivitiesAsRead,
+  markActivityAsUnread,
+  removeRepoFeedData,
+  upsertSnoozedRepo
+} from './shared/feed-mutations.js';
 
 const ALARM_NAME = 'checkGitHub';
 const DEFAULT_INTERVAL = 15;
@@ -44,6 +64,10 @@ function setupAlarm(intervalMinutes) {
       alarmSetupInProgress = false;
     });
   });
+}
+
+function isValidInterval(interval) {
+  return Number.isFinite(interval) && interval > 0;
 }
 
 if (typeof chrome !== 'undefined' && chrome.alarms) {
@@ -358,16 +382,7 @@ async function storeActivities(newActivities) {
     // Get list of repos to exclude
     const excludedRepos = getExcludedRepos(mutedRepos, activeSnoozedRepos);
 
-    // Merge new activities, avoiding duplicates
-    const existingIds = new Set(activities.map(a => a.id));
-    const uniqueNew = newActivities.filter(a => !existingIds.has(a.id));
-
-    // Filter out activities from excluded repos
-    const allActivities = [...uniqueNew, ...activities];
-    const filtered = allActivities.filter(a => !excludedRepos.has(a.repo));
-
-    // Keep up to 2000 items (same limit as state manager)
-    const updated = filtered.slice(0, 2000);
+    const updated = prepareActivitiesForStorage(activities, newActivities, { excludedRepos });
 
     // Try to store, with error handling for quota exceeded
     try {
@@ -377,12 +392,12 @@ async function storeActivities(newActivities) {
 
       if (storageError.message.includes('quota')) {
         // Try to free up space by reducing to 50 items
-        const reduced = filtered.slice(0, 50);
+        const reduced = updated.slice(0, 50);
         try {
           await setLocalItem('activities', reduced);
         } catch (_retryError) {
           // If still failing, try with just 25 items
-          const minimal = filtered.slice(0, 25);
+          const minimal = updated.slice(0, 25);
           await setLocalItem('activities', minimal);
         }
       } else {
@@ -399,20 +414,14 @@ async function storeActivities(newActivities) {
 async function updateBadge() {
   const { readItems = [], activities = [] } = await getLocalItems(['readItems', 'activities']);
   const { itemExpiryHours } = await getSyncItems(['itemExpiryHours']);
-
-  let filteredActivities = activities;
-
-  // Apply time-based expiry filter (same logic as getFilteredActivities in state-manager)
-  if (itemExpiryHours !== null && itemExpiryHours > 0) {
-    const expiryThreshold = Date.now() - (itemExpiryHours * 60 * 60 * 1000);
-    filteredActivities = filteredActivities.filter(activity => {
-      const activityTime = new Date(activity.createdAt).getTime();
-      return activityTime >= expiryThreshold;
-    });
-  }
-
-  // Count only unread items (not in readItems)
-  const unreadCount = filteredActivities.filter(a => !readItems.includes(a.id)).length;
+  const { mutedRepos, snoozedRepos } = await getFilteringSettings();
+  const activeSnoozedRepos = await cleanExpiredSnoozes(snoozedRepos);
+  const excludedRepos = getExcludedRepos(mutedRepos, activeSnoozedRepos);
+  const unreadCount = countUnreadActivities(activities, {
+    excludedRepos,
+    itemExpiryHours,
+    readItems
+  });
 
   chrome.action.setBadgeText({ text: unreadCount > 0 ? unreadCount.toString() : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#0366d6' });
@@ -467,145 +476,233 @@ function showNotifications(activities, notificationSettings = {}) {
   });
 }
 
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  // Allow manual check from popup
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // Validate request object
-    if (!request || typeof request.action !== 'string') {
-      sendResponse({ success: false, error: 'Invalid request' });
+async function getFeedStorageState() {
+  const { activities = [], readItems = [] } = await getLocalItems(['activities', 'readItems']);
+  return { activities, readItems };
+}
+
+async function persistFeedStorageState({ activities, readItems }) {
+  const writes = [];
+
+  if (activities !== undefined) {
+    writes.push(setLocalItem('activities', activities));
+  }
+
+  if (readItems !== undefined) {
+    writes.push(setLocalItem('readItems', readItems));
+  }
+
+  await Promise.all(writes);
+  await updateBadge();
+}
+
+async function handleMarkAsRead(id) {
+  if (!id) {
+    throw new Error('Missing id parameter');
+  }
+
+  const { readItems } = await getFeedStorageState();
+  const updatedReadItems = markActivitiesAsRead(readItems, [id]);
+
+  if (updatedReadItems.length !== readItems.length) {
+    await persistFeedStorageState({ readItems: updatedReadItems });
+  } else {
+    await updateBadge();
+  }
+}
+
+async function handleMarkAsUnread(id) {
+  if (!id) {
+    throw new Error('Missing id parameter');
+  }
+
+  const { readItems } = await getFeedStorageState();
+  const updatedReadItems = markActivityAsUnread(readItems, id);
+  await persistFeedStorageState({ readItems: updatedReadItems });
+}
+
+async function handleMarkActivitiesAsRead(ids = []) {
+  const { readItems } = await getFeedStorageState();
+  const updatedReadItems = markActivitiesAsRead(readItems, ids);
+  await persistFeedStorageState({ readItems: updatedReadItems });
+}
+
+async function handleMarkAllAsRead() {
+  const { activities, readItems } = await getFeedStorageState();
+  const updatedReadItems = markActivitiesAsRead(readItems, getAllActivityIds(activities));
+  await persistFeedStorageState({ readItems: updatedReadItems });
+}
+
+async function handleMarkRepoAsRead(repo) {
+  if (!repo) {
+    throw new Error('Missing repo parameter');
+  }
+
+  const { activities, readItems } = await getFeedStorageState();
+  const unreadIds = getRepoUnreadActivityIds(activities, readItems, repo);
+  const updatedReadItems = markActivitiesAsRead(readItems, unreadIds);
+  await persistFeedStorageState({ readItems: updatedReadItems });
+}
+
+async function handleClearArchive() {
+  const feedState = await getFeedStorageState();
+  await persistFeedStorageState(clearArchivedFeedData(feedState));
+}
+
+async function handleSnoozeRepo(repo) {
+  if (!repo) {
+    throw new Error('Missing repo parameter');
+  }
+
+  const settings = await getSettings();
+  const snoozeHours = Number.isFinite(Number(settings.snoozeHours)) ? Number(settings.snoozeHours) : 1;
+  const expiresAt = Date.now() + (snoozeHours * 60 * 60 * 1000);
+  const updatedSnoozedRepos = upsertSnoozedRepo(settings.snoozedRepos, repo, expiresAt);
+
+  await setSyncItem('snoozedRepos', updatedSnoozedRepos);
+
+  if (settings.markReadOnSnooze) {
+    const { activities, readItems } = await getFeedStorageState();
+    const unreadIds = getRepoUnreadActivityIds(activities, readItems, repo);
+    const updatedReadItems = markActivitiesAsRead(readItems, unreadIds);
+    await persistFeedStorageState({ readItems: updatedReadItems });
+    return;
+  }
+
+  await updateBadge();
+}
+
+async function handleRemoveRepoData(repo) {
+  if (!repo) {
+    throw new Error('Missing repo parameter');
+  }
+
+  const feedState = await getFeedStorageState();
+  await persistFeedStorageState(removeRepoFeedData(feedState, repo));
+}
+
+async function runRuntimeAction(request) {
+  switch (request.action) {
+  case 'checkNow':
+    await checkGitHubActivity();
+    return { success: true };
+  case 'markAsRead':
+    await handleMarkAsRead(request.id);
+    return { success: true };
+  case 'markAsUnread':
+    await handleMarkAsUnread(request.id);
+    return { success: true };
+  case 'markActivitiesAsRead':
+    await handleMarkActivitiesAsRead(request.ids || []);
+    return { success: true };
+  case 'markAllAsRead':
+    await handleMarkAllAsRead();
+    return { success: true };
+  case 'markRepoAsRead':
+    await handleMarkRepoAsRead(request.repo);
+    return { success: true };
+  case 'clearArchive':
+    await handleClearArchive();
+    return { success: true };
+  case 'snoozeRepo':
+    await handleSnoozeRepo(request.repo);
+    return { success: true };
+  case 'removeRepoData':
+    await handleRemoveRepoData(request.repo);
+    return { success: true };
+  default:
+    return null;
+  }
+}
+
+function handleRuntimeMessage(request, sender, sendResponse) {
+  // Validate request object
+  if (!request || typeof request.action !== 'string') {
+    sendResponse({ success: false, error: 'Invalid request' });
+    return false;
+  }
+
+  if (request.action === 'clearBadge') {
+    try {
+      chrome.action.setBadgeText({ text: '' });
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('[DevWatch] Error in clearBadge handler:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Keep consistent async pattern
+  }
+
+  if (request.action === 'updateInterval') {
+    const interval = Number(request.interval);
+    if (!isValidInterval(interval)) {
+      sendResponse({ success: false, error: 'Invalid interval parameter' });
       return false;
     }
 
-    // Handle different message types with consistent async/error handling
-    if (request.action === 'checkNow') {
-      checkGitHubActivity()
-        .then(() => sendResponse({ success: true }))
-        .catch((error) => {
-          console.error('[DevWatch] Error in checkNow handler:', error);
-          sendResponse({ success: false, error: error.message });
-        });
-      return true; // Required for async response
+    try {
+      setupAlarm(interval);
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('[DevWatch] Error in updateInterval handler:', error);
+      sendResponse({ success: false, error: error.message });
     }
+    return true;
+  }
 
-    if (request.action === 'clearBadge') {
-      try {
-        chrome.action.setBadgeText({ text: '' });
-        sendResponse({ success: true });
-      } catch (error) {
-        console.error('[DevWatch] Error in clearBadge handler:', error);
-        sendResponse({ success: false, error: error.message });
+  runRuntimeAction(request)
+    .then((result) => {
+      if (result) {
+        sendResponse(result);
+      } else {
+        sendResponse({ success: false, error: 'Unknown action' });
       }
-      return true; // Keep consistent async pattern
-    }
+    })
+    .catch((error) => {
+      console.error(`[DevWatch] Error in ${request.action} handler:`, error);
+      sendResponse({ success: false, error: error.message });
+    });
+  return true;
 
-    if (request.action === 'markAsRead') {
-      if (!request.id) {
-        sendResponse({ success: false, error: 'Missing id parameter' });
-        return false;
-      }
+}
 
-      chrome.storage.local.get(['readItems'], (result) => {
-        try {
-          const readItems = result.readItems || [];
-          if (!readItems.includes(request.id)) {
-            readItems.push(request.id);
-            chrome.storage.local.set({ readItems }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[DevWatch] Storage error in markAsRead:', chrome.runtime.lastError);
-                sendResponse({ success: false, error: chrome.runtime.lastError.message });
-              } else {
-                updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
-                sendResponse({ success: true });
-              }
-            });
-          } else {
-            sendResponse({ success: true });
-          }
-        } catch (error) {
-          console.error('[DevWatch] Error in markAsRead handler:', error);
-          sendResponse({ success: false, error: error.message });
-        }
-      });
-      return true;
-    }
-
-    if (request.action === 'markAsUnread') {
-      if (!request.id) {
-        sendResponse({ success: false, error: 'Missing id parameter' });
-        return false;
-      }
-
-      chrome.storage.local.get(['readItems'], (result) => {
-        try {
-          const readItems = result.readItems || [];
-          const updated = readItems.filter(id => id !== request.id);
-          chrome.storage.local.set({ readItems: updated }, () => {
-            if (chrome.runtime.lastError) {
-              console.error('[DevWatch] Storage error in markAsUnread:', chrome.runtime.lastError);
-              sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-              updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
-              sendResponse({ success: true });
-            }
-          });
-        } catch (error) {
-          console.error('[DevWatch] Error in markAsUnread handler:', error);
-          sendResponse({ success: false, error: error.message });
-        }
-      });
-      return true;
-    }
-
-    if (request.action === 'markAllAsRead') {
-      chrome.storage.local.get(['activities'], (result) => {
-        try {
-          const activities = result.activities || [];
-          const allIds = activities.map(a => a.id);
-          chrome.storage.local.set({ readItems: allIds }, () => {
-            if (chrome.runtime.lastError) {
-              console.error('[DevWatch] Storage error in markAllAsRead:', chrome.runtime.lastError);
-              sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-              updateBadge().catch(err => console.error('[DevWatch] Badge update error:', err));
-              sendResponse({ success: true });
-            }
-          });
-        } catch (error) {
-          console.error('[DevWatch] Error in markAllAsRead handler:', error);
-          sendResponse({ success: false, error: error.message });
-        }
-      });
-      return true;
-    }
-
-    // Unknown action
-    sendResponse({ success: false, error: 'Unknown action' });
-    return false;
-  });
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  // Allow manual check from popup
+  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 }
 
 // Export functions for testing
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     setupAlarm,
+    isValidInterval,
+    handleRuntimeMessage,
     checkGitHubActivity,
     fetchRepoActivity,
     storeActivities,
     updateBadge,
     showNotifications,
     cleanExpiredSnoozes,
-    cleanupOldUnmutedEntries
+    cleanupOldUnmutedEntries,
+    getFeedStorageState,
+    persistFeedStorageState,
+    runRuntimeAction
   };
 }
 
 // ES6 exports for tests
 export {
   setupAlarm,
+  isValidInterval,
+  handleRuntimeMessage,
   checkGitHubActivity,
   fetchRepoActivity,
   storeActivities,
   updateBadge,
   showNotifications,
   cleanExpiredSnoozes,
-  cleanupOldUnmutedEntries
+  cleanupOldUnmutedEntries,
+  getFeedStorageState,
+  persistFeedStorageState,
+  runRuntimeAction
 };

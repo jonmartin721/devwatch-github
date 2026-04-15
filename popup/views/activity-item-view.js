@@ -2,6 +2,12 @@ import { formatDate } from '../../shared/utils.js';
 import { escapeHtml, sanitizeImageUrl } from '../../shared/sanitize.js';
 import { CHECK_ICON, createSvg } from '../../shared/icons.js';
 import { useState } from '../../shared/state-manager.js';
+import {
+  formatRelativeTime,
+  getActivityTypeLabel,
+  groupByRepo,
+  groupByTime
+} from '../../shared/feed-presentation.js';
 
 /**
  * Renders a single activity item HTML
@@ -17,19 +23,20 @@ export function renderActivityItem(activity) {
   const sanitizedAuthor = escapeHtml(activity.author);
   const sanitizedRepo = escapeHtml(activity.repo);
   const sanitizedType = escapeHtml(activity.type);
+  const sanitizedTypeLabel = escapeHtml(getActivityTypeLabel(activity.type));
   const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar);
 
   return `
-    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${escapeHtml(activity.id)}" data-url="${escapeHtml(activity.url)}" role="button" tabindex="0" aria-label="Open ${sanitizedType}: ${sanitizedTitle} by ${sanitizedAuthor}">
+    <div class="activity-item ${isRead ? 'read' : 'unread'}" data-id="${escapeHtml(activity.id)}" data-url="${escapeHtml(activity.url)}" role="button" tabindex="0" aria-label="Open ${sanitizedTypeLabel}: ${sanitizedTitle} by ${sanitizedAuthor}">
       <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
       <div class="activity-content">
         <div class="activity-header">
-          <span class="activity-type ${sanitizedType}">${sanitizedType}</span>
+          <span class="activity-type ${sanitizedType}">${sanitizedTypeLabel}</span>
           <span class="activity-repo">${sanitizedRepo}</span>
         </div>
         <div class="activity-title">${sanitizedTitle}</div>
         <div class="activity-meta">
-          by ${sanitizedAuthor} • ${formatDate(activity.createdAt)}
+          by ${sanitizedAuthor} • ${formatRelativeTime(activity.createdAt) || formatDate(activity.createdAt)}
         </div>
       </div>
       <div class="activity-actions">
@@ -41,77 +48,5 @@ export function renderActivityItem(activity) {
   `;
 }
 
-/**
- * Groups activities by time periods (today, yesterday, this week, older)
- * @param {Array} activities - Array of activity objects
- * @returns {Object} Object with activities grouped by time period
- */
-export function groupByTime(activities) {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterdayStart = new Date(todayStart - 24 * 60 * 60 * 1000);
-  const weekStart = new Date(todayStart - 7 * 24 * 60 * 60 * 1000);
+export { groupByRepo, groupByTime };
 
-  const groups = {
-    today: [],
-    yesterday: [],
-    thisWeek: [],
-    older: []
-  };
-
-  activities.forEach(activity => {
-    const date = new Date(activity.createdAt);
-    if (date >= todayStart) {
-      groups.today.push(activity);
-    } else if (date >= yesterdayStart) {
-      groups.yesterday.push(activity);
-    } else if (date >= weekStart) {
-      groups.thisWeek.push(activity);
-    } else {
-      groups.older.push(activity);
-    }
-  });
-
-  return groups;
-}
-
-/**
- * Groups activities by repository, with pinned repos first
- * @param {Array} activities - Array of activity objects
- * @param {Array} pinnedRepos - Array of pinned repository names
- * @returns {Object} Object with activities grouped by repository
- */
-export function groupByRepo(activities, pinnedRepos = []) {
-  const groups = {};
-
-  activities.forEach(activity => {
-    if (!groups[activity.repo]) {
-      groups[activity.repo] = [];
-    }
-    groups[activity.repo].push(activity);
-  });
-
-  // Sort repos: pinned first, then by most recent activity
-  const sortedGroups = {};
-  Object.keys(groups)
-    .sort((a, b) => {
-      const aIsPinned = pinnedRepos.includes(a);
-      const bIsPinned = pinnedRepos.includes(b);
-
-      // Pinned repos come first
-      if (aIsPinned && !bIsPinned) return -1;
-      if (!aIsPinned && bIsPinned) return 1;
-
-      // If both pinned or both not pinned, sort by most recent activity
-      const latestA = new Date(groups[a][0].createdAt);
-      const latestB = new Date(groups[b][0].createdAt);
-      return latestB - latestA;
-    })
-    .forEach(repo => {
-      // Sort activities within each repo by newest first
-      groups[repo].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      sortedGroups[repo] = groups[repo];
-    });
-
-  return sortedGroups;
-}

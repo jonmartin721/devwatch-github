@@ -40,3 +40,12 @@ WINDSURF.md
 .gemini/
 .windsurf/
 .continue/
+
+# Legacy local design / planning artifacts
+.superpowers/
+docs/superpowers/
+icon-concepts.html
+*-450.png
+v2-*.png
+onboarding-*.png
+current-page.png

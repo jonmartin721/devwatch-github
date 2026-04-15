@@ -12,6 +12,7 @@ import { safelyOpenUrl } from '../../shared/security.js';
  * @param {Function} markAsReadWithAnimation - Callback for marking item as read with animation
  * @param {Function} handleMarkAllRead - Callback for marking all as read
  * @param {Function} handleCollapseAll - Callback for collapsing/expanding all repos
+ * @param {Function} clearArchive - Callback for clearing archived items
  * @param {Function} toggleRepoCollapse - Callback for toggling repo collapse state
  * @param {Function} togglePinRepo - Callback for toggling repo pin state
  * @param {Function} snoozeRepo - Callback for snoozing a repo
@@ -25,6 +26,7 @@ export function renderActivities(
   markAsReadWithAnimation,
   handleMarkAllRead,
   handleCollapseAll,
+  clearArchive,
   toggleRepoCollapse,
   togglePinRepo,
   snoozeRepo,
@@ -140,6 +142,7 @@ export function renderActivities(
       markAsReadWithAnimation,
       handleMarkAllRead,
       handleCollapseAll,
+      clearArchive,
       toggleRepoCollapse,
       togglePinRepo,
       snoozeRepo,
@@ -158,6 +161,7 @@ export function renderActivities(
  * @param {Function} markAsReadWithAnimation - Callback for marking item as read with animation
  * @param {Function} handleMarkAllRead - Callback for marking all as read
  * @param {Function} handleCollapseAll - Callback for collapsing/expanding all repos
+ * @param {Function} clearArchive - Callback for clearing archived items
  * @param {Function} toggleRepoCollapse - Callback for toggling repo collapse state
  * @param {Function} togglePinRepo - Callback for toggling repo pin state
  * @param {Function} snoozeRepo - Callback for snoozing a repo
@@ -169,6 +173,7 @@ function attachEventListeners(
   markAsReadWithAnimation,
   handleMarkAllRead,
   handleCollapseAll,
+  clearArchive,
   toggleRepoCollapse,
   togglePinRepo,
   snoozeRepo,
@@ -187,11 +192,7 @@ function attachEventListeners(
   // Re-add listeners to fresh elements
   document.getElementById('markAllReadBtn')?.addEventListener('click', handleMarkAllRead);
   document.getElementById('collapseAllBtn')?.addEventListener('click', handleCollapseAll);
-  document.getElementById('clearArchiveBtn')?.addEventListener('click', async () => {
-    // Clear all archived items by removing them from readItems
-    const { setState } = await import('../../shared/state-manager.js');
-    await setState({ readItems: [] });
-  });
+  document.getElementById('clearArchiveBtn')?.addEventListener('click', clearArchive);
 
   // Remove existing event delegation listener if present
   const existingListener = list._delegationListener;
