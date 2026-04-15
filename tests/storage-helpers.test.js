@@ -549,5 +549,22 @@ describe('Storage Helpers', () => {
       expect(mockSyncStorage.theme).toBe('dark');
       expect(mockSyncStorage.colorTheme).toBe('graphite');
     });
+
+    it('preserves unrelated stored settings when applying a partial update', async () => {
+      Object.assign(mockSyncStorage, {
+        filters: { prs: false, issues: true, releases: false },
+        notifications: { prs: false, issues: false, releases: true },
+        snoozeHours: 4,
+        colorTheme: 'sand'
+      });
+
+      await updateSettings({ theme: 'dark' });
+
+      expect(mockSyncStorage.theme).toBe('dark');
+      expect(mockSyncStorage.filters).toEqual({ prs: false, issues: true, releases: false });
+      expect(mockSyncStorage.notifications).toEqual({ prs: false, issues: false, releases: true });
+      expect(mockSyncStorage.snoozeHours).toBe(4);
+      expect(mockSyncStorage.colorTheme).toBe('sand');
+    });
   });
 });

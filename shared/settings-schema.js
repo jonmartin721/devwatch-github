@@ -129,7 +129,9 @@ export function pickSyncSettings(rawSettings = {}) {
   const syncSettings = {};
 
   SETTINGS_SYNC_KEYS.forEach(key => {
-    syncSettings[key] = normalized[key];
+    if (key in rawSettings) {
+      syncSettings[key] = normalized[key];
+    }
   });
 
   return syncSettings;
