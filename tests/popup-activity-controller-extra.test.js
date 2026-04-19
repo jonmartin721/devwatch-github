@@ -215,7 +215,9 @@ describe('popup activity controller coverage', () => {
     const error = new Error('refresh failed');
     chrome.runtime.sendMessage.mockRejectedValue(error);
 
-    await handleRefresh(loadCallback);
+    const refreshPromise = handleRefresh(loadCallback);
+    await jest.advanceTimersByTimeAsync(500);
+    await refreshPromise;
 
     expect(mockClearError).toHaveBeenCalledWith('errorMessage');
     expect(mockShowError).toHaveBeenCalledWith(
@@ -228,19 +230,41 @@ describe('popup activity controller coverage', () => {
     expect(loadCallback).not.toHaveBeenCalled();
     expect(document.getElementById('refreshBtn').disabled).toBe(false);
     expect(document.getElementById('refreshBtn').classList.contains('spinning')).toBe(false);
-    expect(document.getElementById('refreshBtn').classList.contains('refresh-complete')).toBe(true);
-
-    await jest.advanceTimersByTimeAsync(400);
     expect(document.getElementById('refreshBtn').classList.contains('refresh-complete')).toBe(false);
   });
 
   test('passes skipLoadingIndicator when refresh succeeds', async () => {
     const loadCallback = jest.fn().mockResolvedValue();
 
-    await handleRefresh(loadCallback);
+    const refreshPromise = handleRefresh(loadCallback);
+    await jest.advanceTimersByTimeAsync(500);
+    await refreshPromise;
 
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ action: 'checkNow' });
     expect(loadCallback).toHaveBeenCalledWith({ skipLoadingIndicator: true });
+  });
+
+  test('keeps the refresh button spinning briefly even when refresh returns immediately', async () => {
+    const loadCallback = jest.fn().mockResolvedValue();
+    const refreshPromise = handleRefresh(loadCallback);
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    expect(refreshBtn.classList.contains('spinning')).toBe(true);
+
+    await Promise.resolve();
+    expect(refreshBtn.classList.contains('spinning')).toBe(true);
+
+    await jest.advanceTimersByTimeAsync(499);
+    expect(refreshBtn.classList.contains('spinning')).toBe(true);
+
+    await jest.advanceTimersByTimeAsync(1);
+    await refreshPromise;
+
+    expect(refreshBtn.classList.contains('spinning')).toBe(false);
+    expect(refreshBtn.classList.contains('refresh-complete')).toBe(true);
+
+    await jest.advanceTimersByTimeAsync(400);
+    expect(refreshBtn.classList.contains('refresh-complete')).toBe(false);
   });
 
   test('shows Never updated when no lastCheck exists', async () => {
