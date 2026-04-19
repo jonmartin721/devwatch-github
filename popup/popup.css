@@ -720,7 +720,7 @@ h1 {
 .activity-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 4px;
   min-width: 0;
 }
@@ -729,24 +729,26 @@ h1 {
 .activity-type {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 2px 7px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
+  letter-spacing: 0.06em;
+  line-height: 1;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   color: var(--foreground);
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .activity-type::before {
   content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
 }
