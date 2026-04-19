@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 const mockApplyTheme = jest.fn();
@@ -110,6 +111,8 @@ const {
   state
 } = await import('../options/options.js');
 
+const optionsStyles = readFileSync(new URL('../options/options.css', import.meta.url), 'utf8');
+
 function renderOptionsDom() {
   document.body.innerHTML = `
     <button id="connectGitHubBtn">Connect GitHub</button>
@@ -123,12 +126,12 @@ function renderOptionsDom() {
     <div id="repoError"></div>
     <div id="repoList"></div>
     <div id="repoCountBadge"></div>
-    <div id="paginationControls"></div>
+    <div id="paginationControls" class="pagination-controls hidden"></div>
     <button id="prevPage"></button>
     <button id="nextPage"></button>
     <div id="pageInfo"></div>
     <input id="repoSearch" />
-    <button id="repoSearchClear"></button>
+    <button id="repoSearchClear" class="search-clear-btn hidden"></button>
     <button id="hidePinnedToggleBtn2"></button>
 
     <button class="tab-button" data-tab="setup">Setup</button>
@@ -156,7 +159,7 @@ function renderOptionsDom() {
     <input id="snooze-4" name="snoozeHours" type="radio" value="4" />
     <input id="itemExpiryEnabled" type="checkbox" />
     <input id="itemExpiryHours" value="24" />
-    <div id="itemExpiryInputRow" class="d-none"></div>
+    <div id="itemExpiryInputRow" class="expiry-settings d-none"></div>
     <input id="markReadOnSnooze" type="checkbox" />
     <input id="allowUnlimitedRepos" type="checkbox" />
 
@@ -173,7 +176,7 @@ function renderOptionsDom() {
     <button id="confirmImportBtn"></button>
     <input id="selectAllImport" type="checkbox" />
     <input id="importRepoSearch" />
-    <button id="importSearchClear"></button>
+    <button id="importSearchClear" class="search-clear-btn hidden"></button>
     <div id="importModal"></div>
 
     <button id="clearCacheBtn"></button>
@@ -197,6 +200,16 @@ beforeEach(() => {
   localStorage.clear();
   history.replaceState(null, '', '/options/options.html');
   renderOptionsDom();
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .hidden { display: none !important; }
+    .d-none { display: none !important; }
+    .search-clear-btn { display: flex; }
+    .pagination-controls { display: flex; }
+    .expiry-settings { display: block; }
+  `;
+  document.head.appendChild(style);
 
   Object.assign(state, {
     watchedRepos: [],
@@ -307,6 +320,7 @@ describe('options interactions', () => {
 
     repoSearchClear.click();
     expect(state.searchQuery).toBe('');
+    expect(repoSearchClear.classList.contains('hidden')).toBe(true);
     expect(repoSearch.focus).toHaveBeenCalled();
 
     document.getElementById('hidePinnedToggleBtn2').click();
@@ -368,6 +382,26 @@ describe('options interactions', () => {
     expect(document.getElementById('itemExpiryEnabled').checked).toBe(true);
     expect(document.getElementById('itemExpiryInputRow').classList.contains('d-none')).toBe(false);
     expect(mockRenderSnoozedRepos).toHaveBeenCalledWith([]);
+  });
+
+  test('import search clear button actually hides when the query is cleared', () => {
+    const importSearch = document.getElementById('importRepoSearch');
+    const importSearchClear = document.getElementById('importSearchClear');
+
+    setupEventListeners();
+
+    importSearch.value = 'react';
+    importSearch.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(importSearchClear.classList.contains('hidden')).toBe(false);
+
+    importSearchClear.click();
+    expect(importSearch.value).toBe('');
+    expect(importSearchClear.classList.contains('hidden')).toBe(true);
+  });
+
+  test('options hide utilities override later component display rules', () => {
+    expect(optionsStyles).toMatch(/\.hidden\s*\{[\s\S]*display:\s*none\s*!important;/);
+    expect(optionsStyles).toMatch(/\.d-none\s*\{[\s\S]*display:\s*none\s*!important;/);
   });
 
   test('clears cache data and handles destructive actions', async () => {

@@ -21,7 +21,7 @@ body {
 
 /* Utility classes */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 /* Margin utilities */
@@ -75,7 +75,7 @@ body {
 
 /* Display utilities */
 .d-none {
-  display: none;
+  display: none !important;
 }
 
 .d-block {

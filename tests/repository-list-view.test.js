@@ -22,7 +22,7 @@ describe('repository-list-view', () => {
     // Set up DOM elements
     document.body.innerHTML = `
       <div id="repoList"></div>
-      <div id="paginationControls" class="hidden">
+      <div id="paginationControls" class="pagination-controls hidden">
         <button id="prevPage">Previous</button>
         <span id="pageInfo"></span>
         <button id="nextPage">Next</button>
@@ -30,6 +30,13 @@ describe('repository-list-view', () => {
       <button id="hidePinnedToggleBtn2" hidden></button>
       <span id="repoCountBadge">0</span>
     `;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .hidden { display: none !important; }
+      .pagination-controls { display: flex; }
+    `;
+    document.head.appendChild(style);
 
     repoList = document.getElementById('repoList');
     paginationControls = document.getElementById('paginationControls');

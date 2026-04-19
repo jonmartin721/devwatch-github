@@ -45,6 +45,15 @@ describe('import-controller', () => {
     // Setup DOM
     document.body.innerHTML = '';
 
+    const style = document.createElement('style');
+    style.textContent = `
+      .hidden { display: none !important; }
+      .import-loading { display: flex; }
+      .import-repos-list { display: block; }
+      .import-error { display: block; }
+    `;
+    document.head.appendChild(style);
+
     // Create modal structure
     modal = document.createElement('div');
     modal.id = 'importModal';
@@ -56,17 +65,17 @@ describe('import-controller', () => {
 
     loadingState = document.createElement('div');
     loadingState.id = 'importLoadingState';
-    loadingState.className = 'hidden';
+    loadingState.className = 'import-loading hidden';
     modal.appendChild(loadingState);
 
     reposList = document.createElement('div');
     reposList.id = 'importReposList';
-    reposList.className = 'hidden';
+    reposList.className = 'import-repos-list hidden';
     modal.appendChild(reposList);
 
     errorState = document.createElement('div');
     errorState.id = 'importErrorState';
-    errorState.className = 'hidden';
+    errorState.className = 'import-error hidden';
     modal.appendChild(errorState);
 
     errorMessage = document.createElement('p');
