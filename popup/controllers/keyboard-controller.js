@@ -41,7 +41,7 @@ export function setupKeyboardNavigation(
         }
         break;
       case 'Escape':
-        if (searchBox && searchBox.style.display !== 'none') {
+        if (searchBox && !searchBox.classList.contains('hidden')) {
           toggleSearchCallback();
         }
         break;

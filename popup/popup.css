@@ -39,6 +39,12 @@ body {
   padding: 20px;
 }
 
+.clipboard-temp-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---- Layout ---- */
 .container {
   display: flex;
@@ -49,7 +55,7 @@ body {
 
 /* ---- Header ---- */
 header {
-  display: none;
+  display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 16px 12px;
@@ -169,7 +175,7 @@ h1 {
 
 /* ---- Toolbar ---- */
 .toolbar {
-  display: none;
+  display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px 14px;
@@ -302,9 +308,10 @@ h1 {
 /* ---- Activity List ---- */
 .activity-list {
   flex: 1;
+  display: block;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   min-height: 200px;
-  display: none;
 }
 
 /* shadcn ScrollArea style scrollbar */
@@ -868,10 +875,16 @@ footer a:hover {
 }
 
 .rate-limit-info {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   color: var(--muted-foreground);
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
   letter-spacing: 0.02em;
+}
+
+.rate-limit-info.warning {
+  color: #f0ad4e;
 }
 
 /* ---- Error & Toast Messages ---- */
@@ -906,7 +919,8 @@ footer a:hover {
 }
 
 .error-toast {
-  background: var(--background);
+  background: var(--card);
+  color: var(--foreground);
   border: 1px solid var(--destructive);
   border-radius: var(--radius);
   overflow: hidden;
@@ -920,6 +934,7 @@ footer a:hover {
   cursor: pointer;
   transition: background 150ms;
   user-select: none;
+  color: var(--foreground);
 }
 
 .error-summary:hover {
@@ -929,6 +944,7 @@ footer a:hover {
 .error-icon {
   font-size: 16px;
   flex-shrink: 0;
+  color: var(--destructive);
 }
 
 .error-brief {
@@ -1207,6 +1223,7 @@ body.dark-mode .search-box input:focus-visible {
   flex: 1;
   padding: 18px 18px 14px;
   overflow: hidden;
+  scrollbar-gutter: stable;
   min-height: 0;
   background: transparent;
   display: flex;
@@ -1247,10 +1264,23 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .progress-fill {
+  width: 0;
   height: 100%;
   background: var(--primary);
   border-radius: 9999px;
   transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-fill[data-progress="33"] {
+  width: 33%;
+}
+
+.progress-fill[data-progress="67"] {
+  width: 67%;
+}
+
+.progress-fill[data-progress="100"] {
+  width: 100%;
 }
 
 .progress-text {

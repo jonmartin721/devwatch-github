@@ -14,8 +14,8 @@ import {
 
 // Mock DOM
 document.body.innerHTML = `
-  <div id="errorMessage" style="display: none;"></div>
-  <div id="statusMessage" style="display: none;"></div>
+  <div id="errorMessage" class="hidden"></div>
+  <div id="statusMessage" class="hidden"></div>
 `;
 
 describe('Error Handler', () => {
@@ -148,7 +148,7 @@ describe('Error Handler', () => {
       showError('errorMessage', error);
 
       const element = document.getElementById('errorMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
       expect(element.innerHTML).toContain('Unexpected Error');
       expect(element.innerHTML).toContain('Something went wrong');
       // ARIA attributes are on the inner error-toast div, not the container
@@ -162,10 +162,10 @@ describe('Error Handler', () => {
       showError('errorMessage', error, null, {}, 1000);
 
       const element = document.getElementById('errorMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
 
       jest.advanceTimersByTime(1000);
-      expect(element.style.display).toBe('none');
+      expect(element.classList.contains('hidden')).toBe(true);
     });
 
     it('should not auto-hide if duration is 0', () => {
@@ -174,10 +174,10 @@ describe('Error Handler', () => {
       showError('errorMessage', error, null, {}, 0);
 
       const element = document.getElementById('errorMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
 
       jest.advanceTimersByTime(10000);
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
     });
 
     it('should include dismiss button', () => {
@@ -212,12 +212,12 @@ describe('Error Handler', () => {
       // First show an error
       showError('errorMessage', new Error('test'));
       let element = document.getElementById('errorMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
 
       // Then clear it
       clearError('errorMessage');
       element = document.getElementById('errorMessage');
-      expect(element.style.display).toBe('none');
+      expect(element.classList.contains('hidden')).toBe(true);
       expect(element.innerHTML).toBe('');
       expect(element).not.toHaveAttribute('role');
       expect(element).not.toHaveAttribute('aria-live');
@@ -243,7 +243,7 @@ describe('Error Handler', () => {
       showSuccess('statusMessage', 'Operation completed successfully');
 
       const element = document.getElementById('statusMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
       expect(element.innerHTML).toContain('Success');
       expect(element.innerHTML).toContain('Operation completed successfully');
       expect(element).toHaveAttribute('role', 'status');
@@ -254,10 +254,10 @@ describe('Error Handler', () => {
       showSuccess('statusMessage', 'Success!', 1000);
 
       const element = document.getElementById('statusMessage');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
 
       jest.advanceTimersByTime(1000);
-      expect(element.style.display).toBe('none');
+      expect(element.classList.contains('hidden')).toBe(true);
     });
 
     it('should handle missing element gracefully', () => {

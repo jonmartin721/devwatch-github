@@ -268,7 +268,7 @@ function applySettingsToUi(settings) {
 
   const itemExpiryEnabled = settings.itemExpiryHours !== null && settings.itemExpiryHours !== undefined;
   document.getElementById('itemExpiryEnabled').checked = itemExpiryEnabled;
-  document.getElementById('itemExpiryInputRow').style.display = itemExpiryEnabled ? 'block' : 'none';
+  document.getElementById('itemExpiryInputRow').classList.toggle('d-none', !itemExpiryEnabled);
   if (itemExpiryEnabled) {
     document.getElementById('itemExpiryHours').value = settings.itemExpiryHours;
   }
@@ -326,7 +326,7 @@ function setupEventListeners() {
     renderRepoListWrapper();
 
     // Show/hide clear button
-    repoSearchClear.style.display = e.target.value ? 'flex' : 'none';
+    repoSearchClear.classList.toggle('hidden', !e.target.value);
   });
 
   repoSearchClear.addEventListener('click', () => {
@@ -334,7 +334,7 @@ function setupEventListeners() {
     state.searchQuery = '';
     state.currentPage = 1;
     renderRepoListWrapper();
-    repoSearchClear.style.display = 'none';
+    repoSearchClear.classList.add('hidden');
     repoSearchInput.focus();
   });
 
@@ -420,13 +420,13 @@ function setupEventListeners() {
   itemExpiryEnabledCheckbox.addEventListener('change', async (e) => {
     const isEnabled = e.target.checked;
     if (isEnabled) {
-      itemExpiryInputRow.style.display = 'block';
+      itemExpiryInputRow.classList.remove('d-none');
       const hours = parseInt(itemExpiryHoursInput.value) || 24;
       itemExpiryHoursInput.value = hours;
       await updateSettings({ itemExpiryHours: hours });
       toastManager.info(`Auto-removal enabled: items older than ${hours} hours will be removed`);
     } else {
-      itemExpiryInputRow.style.display = 'none';
+      itemExpiryInputRow.classList.add('d-none');
       await updateSettings({ itemExpiryHours: null });
       toastManager.info('Auto-removal disabled');
     }
@@ -526,13 +526,13 @@ function setupEventListeners() {
   importSearchInput.addEventListener('input', (e) => {
     filterImportRepos();
     // Show/hide clear button
-    importSearchClear.style.display = e.target.value ? 'flex' : 'none';
+    importSearchClear.classList.toggle('hidden', !e.target.value);
   });
 
   importSearchClear.addEventListener('click', () => {
     importSearchInput.value = '';
     filterImportRepos();
-    importSearchClear.style.display = 'none';
+    importSearchClear.classList.add('hidden');
     importSearchInput.focus();
   });
 

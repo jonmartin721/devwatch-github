@@ -40,12 +40,12 @@ export function showOfflineStatus(elementId, offline = isOffline()) {
         </div>
       </div>
     `;
-    element.style.display = 'block';
-    element.className = 'offline-message';
+    element.classList.remove('hidden', 'toast-notification');
+    element.classList.add('offline-message');
   } else {
     element.innerHTML = '';
-    element.style.display = 'none';
-    element.className = '';
+    element.classList.remove('offline-message', 'toast-notification');
+    element.classList.add('hidden');
   }
 }
 

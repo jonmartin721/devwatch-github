@@ -50,10 +50,9 @@ async function copyTextToClipboard(text) {
 
   const activeElement = document.activeElement;
   const tempInput = document.createElement('input');
+  tempInput.className = 'clipboard-temp-input';
   tempInput.value = text;
   tempInput.setAttribute('readonly', '');
-  tempInput.style.position = 'absolute';
-  tempInput.style.opacity = '0';
   document.body.appendChild(tempInput);
   tempInput.select();
 
@@ -199,16 +198,15 @@ export async function showOnboarding(loadActivitiesCallback) {
   // Hide main content and show onboarding
   if (onboardingView) {
     onboardingView.classList.remove('hidden');
-    onboardingView.style.display = 'block';
   }
-  if (activityList) activityList.style.display = 'none';
-  if (toolbar) toolbar.style.display = 'none';
-  if (searchBox) searchBox.style.display = 'none';
+  if (activityList) activityList.classList.add('hidden');
+  if (toolbar) toolbar.classList.add('hidden');
+  if (searchBox) searchBox.classList.add('hidden');
 
   // Hide entire header during onboarding
   const header = document.querySelector('header');
   if (header) {
-    header.style.display = 'none';
+    header.classList.add('hidden');
   }
 
   // Load current step
@@ -280,7 +278,7 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   if (progress.showProgress) {
     const progressFill = onboardingView.querySelector('.progress-fill');
     if (progressFill) {
-      progressFill.style.width = `${progress.percentage}%`;
+      progressFill.dataset.progress = String(progress.percentage);
     }
   }
 
@@ -292,13 +290,7 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   if (footerSkipBtn) {
     // Show skip button for repos and categories steps only (token is required)
     const showSkip = progress.showProgress && currentStep !== 'complete' && currentStep !== 'token';
-    if (showSkip) {
-      footerSkipBtn.classList.remove('hidden');
-      footerSkipBtn.style.display = 'block';
-    } else {
-      footerSkipBtn.classList.add('hidden');
-      footerSkipBtn.style.display = 'none';
-    }
+    footerSkipBtn.classList.toggle('hidden', !showSkip);
   }
 }
 
@@ -358,18 +350,19 @@ async function renderTokenStep() {
     buttonDisabled = 'disabled';
     buttonText = 'Connected';
   } else if (tokenData?.userCode) {
-    statusHtml = getStatusMarkup('loading', `Enter ${tokenData.userCode} on GitHub to finish connecting.`);
+    statusHtml = getStatusMarkup('loading', `If GitHub asks for a code, use ${tokenData.userCode}.`);
   }
 
   return `
     <div class="onboarding-step token-step">
       <h2>Connect your GitHub account</h2>
-      <p>We'll open GitHub in a new tab and keep the device code ready here for you.</p>
+      <p>We'll open GitHub in a new tab and copy your code to the clipboard so it's ready if GitHub asks for it.</p>
 
       <div class="token-instructions">
         <h3>Quick setup</h3>
         <ol>
           <li>Click <strong>Connect GitHub</strong></li>
+          <li>GitHub opens and DevWatch copies the code for you</li>
           <li>Approve access on the GitHub page that opens</li>
           <li>Come back here once GitHub says you're done</li>
         </ol>
@@ -380,13 +373,13 @@ async function renderTokenStep() {
           <input
             type="text"
             id="tokenInput"
-            placeholder="Verification code appears here"
+            placeholder="Code appears here"
             class="token-input"
             autocomplete="off"
             value="${safeUserCode}"
             readonly
           >
-          <p class="token-copy-hint">Click the code to select it, or use Copy.</p>
+          <p class="token-copy-hint">Copied automatically when possible. Click the code to select it, or use Copy.</p>
         </div>
         <button id="copyTokenCodeBtn" class="copy-code-btn" ${safeUserCode ? '' : 'disabled'}>Copy</button>
         <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
@@ -681,7 +674,7 @@ function setupTokenStepListeners() {
     try {
       const copied = await copyTextToClipboard(userCode);
       if (copied) {
-        tokenStatus.innerHTML = getStatusMarkup('success', `Copied ${userCode}. Paste it into GitHub to finish connecting.`);
+        tokenStatus.innerHTML = getStatusMarkup('success', `Copied ${userCode}. Use it on GitHub if prompted.`);
       }
     } catch (_error) {
       tokenStatus.innerHTML = getStatusMarkup('error', 'Could not copy the code automatically. Select it manually.');
@@ -734,8 +727,8 @@ function setupTokenStepListeners() {
       const copied = await copyTextToClipboard(deviceCodeData.userCode).catch(() => false);
       tokenStatus.innerHTML = getStatusMarkup('loading',
         copied
-          ? `Code ${deviceCodeData.userCode} copied to clipboard — paste it on the GitHub page that opens.`
-          : `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`
+          ? `Code ${deviceCodeData.userCode} copied to clipboard in case GitHub asks for it.`
+          : `If GitHub asks for a code, enter ${deviceCodeData.userCode}.`
       );
 
       await onboardingManager.saveStepData('token', {
@@ -986,17 +979,15 @@ export function exitOnboarding(loadActivitiesCallback) {
   // Show main content and hide onboarding
   if (onboardingView) {
     onboardingView.classList.add('hidden');
-    onboardingView.style.display = 'none';
   }
-  if (activityList) activityList.style.display = 'block';
-  if (toolbar) toolbar.style.display = 'flex';
-  if (header) header.style.display = 'flex';
+  if (activityList) activityList.classList.remove('hidden');
+  if (toolbar) toolbar.classList.remove('hidden');
+  if (header) header.classList.remove('hidden');
 
   // Hide footer skip button when exiting onboarding
   const footerSkipBtn = document.getElementById('footerSkipBtn');
   if (footerSkipBtn) {
     footerSkipBtn.classList.add('hidden');
-    footerSkipBtn.style.display = 'none';
   }
 
   // Load normal activities

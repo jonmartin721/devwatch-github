@@ -101,10 +101,6 @@ Settings are split into a few practical jobs:
 - Tune filters, notifications, refresh interval, snooze behavior, and item expiry
 - Change theme/color theme, export or import settings, and enable advanced repo-limit options
 
-<div align="center">
-  <img src="screenshots/settings-page.png" alt="Settings page for configuring repositories" width="600">
-</div>
-
 ## Typical Workflow
 
 Here's what using the extension looks like day-to-day:

@@ -136,7 +136,6 @@ export async function handleRefresh(loadActivitiesCallback) {
     btn.disabled = false;
     btn.classList.remove('spinning');
 
-    // Add completion animation
     btn.classList.add('refresh-complete');
     setTimeout(() => {
       btn.classList.remove('refresh-complete');
@@ -170,7 +169,8 @@ export function updateRateLimit(rateLimit) {
   // Only show rate limit when remaining <= 1000
   if (!rateLimit || rateLimit.remaining > 1000) {
     rateLimitInfo.textContent = '';
-    rateLimitInfo.style.display = 'none';
+    rateLimitInfo.classList.add('hidden');
+    rateLimitInfo.classList.remove('warning');
     return;
   }
 
@@ -181,8 +181,8 @@ export function updateRateLimit(rateLimit) {
     </svg>
     ${rateLimit.remaining}/${rateLimit.limit} API calls remaining
   `;
-  rateLimitInfo.style.color = '#f0ad4e'; // Yellow/orange warning color
-  rateLimitInfo.style.display = 'block';
+  rateLimitInfo.classList.add('warning');
+  rateLimitInfo.classList.remove('hidden');
 
   // Show when rate limit resets
   if (rateLimit.reset) {

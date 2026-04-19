@@ -65,6 +65,6 @@ describe('Activity Controller', () => {
     updateRateLimit(rateLimit);
 
     const info = document.getElementById('rateLimitInfo');
-    expect(info.style.display).toBe('none');
+    expect(info.classList.contains('hidden')).toBe(true);
   });
 });

@@ -24,7 +24,6 @@ function setRepoAccessState(isConnected) {
     ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
     : 'Connect GitHub above to start adding repositories';
   importSection.classList.toggle('hidden', !isConnected);
-  importSection.style.display = isConnected ? 'block' : 'none';
 }
 
 function setDeviceCode(userCode = '') {
@@ -37,7 +36,6 @@ function setDeviceCode(userCode = '') {
 
   deviceCodeInput.value = userCode;
   deviceCodeSection.classList.toggle('hidden', !userCode);
-  deviceCodeSection.style.display = userCode ? 'flex' : 'none';
 }
 
 function setHelpText(message = '') {
@@ -52,14 +50,14 @@ function setHelpText(message = '') {
 
 function getHelpText({ isConnected = false, isWaiting = false } = {}) {
   if (isWaiting) {
-    return 'Approve access in the GitHub tab, then return here. If GitHub asks for a code, use the one shown below.';
+    return 'Approve access in the GitHub tab, then return here. We copied the code to your clipboard in case GitHub asks for it.';
   }
 
   if (isConnected) {
     return 'Reconnect any time if your session expires or if you want to switch accounts.';
   }
 
-  return 'We\'ll open GitHub in a new tab. Approve access there, then come back here and DevWatch will finish connecting.';
+  return 'We\'ll open GitHub in a new tab and copy your code to the clipboard so it\'s ready if GitHub asks for it. Then come back here and DevWatch will finish connecting.';
 }
 
 function setStatus(message = '', statusClass = '') {
@@ -92,7 +90,7 @@ export function applyStoredConnection(authSession, options = {}) {
   }
 
   if (clearBtn) {
-    clearBtn.style.display = isConnected ? 'block' : 'none';
+    clearBtn.classList.toggle('hidden', !isConnected);
   }
 
   if (options.statusMessage) {
@@ -149,7 +147,7 @@ export async function connectGitHub(_toastManager) {
 
   setRepoAccessState(Boolean(previousSession?.accessToken));
   setStatus('Starting GitHub sign-in...', 'checking');
-  setHelpText('We\'re opening GitHub so you can approve access. Come back here as soon as GitHub says the connection is ready.');
+  setHelpText('We\'re opening GitHub and copying your code to the clipboard so it\'s ready if GitHub asks for it. Come back here as soon as GitHub says the connection is ready.');
 
   try {
     const result = await completeGitHubDeviceAuth({
@@ -160,8 +158,8 @@ export async function connectGitHub(_toastManager) {
           : false;
         setStatus(
           copied
-            ? `Code ${userCode} copied to clipboard — paste it on the GitHub page that opens.`
-            : `Enter ${userCode} on GitHub to finish connecting.`,
+            ? `Code ${userCode} copied to clipboard in case GitHub asks for it.`
+            : `If GitHub asks for a code, enter ${userCode}.`,
           'checking'
         );
         setHelpText(getHelpText({ isWaiting: true }));

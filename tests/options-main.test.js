@@ -17,15 +17,15 @@ describe('Options Main Functions', () => {
     // Setup complete DOM structure for options page
     document.body.innerHTML = `
       <button id="connectGitHubBtn">Connect GitHub</button>
-      <div id="deviceCodeSection" class="hidden" style="display: none;">
+      <div id="deviceCodeSection" class="hidden">
         <input id="githubToken" type="text" />
       </div>
       <div id="tokenStatus" class="token-status"></div>
-      <button id="clearTokenBtn">Disconnect</button>
+      <button id="clearTokenBtn" class="hidden">Disconnect</button>
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
-      <div id="importReposSection"></div>
+      <div id="importReposSection" class="hidden"></div>
       <div id="repoValidationStatus" class="repo-validation-status"></div>
       <div id="repoError"></div>
       <div id="repoList"></div>
@@ -35,7 +35,7 @@ describe('Options Main Functions', () => {
       <button id="nextPage"></button>
       <div id="pageInfo"></div>
       <input id="repoSearch" />
-      <div id="repoSearchClear"></div>
+      <div id="repoSearchClear" class="hidden"></div>
       <button id="hidePinnedToggleBtn"></button>
       <button id="hidePinnedToggleBtn2"></button>
       <input id="filterPrs" type="checkbox" />
@@ -54,7 +54,7 @@ describe('Options Main Functions', () => {
       <input id="snooze-1" name="snoozeHours" type="radio" value="1" />
       <input id="itemExpiryEnabled" type="checkbox" />
       <input id="itemExpiryHours" />
-      <div id="itemExpiryInputRow"></div>
+      <div id="itemExpiryInputRow" class="d-none"></div>
       <input id="markReadOnSnooze" type="checkbox" />
       <input id="allowUnlimitedRepos" type="checkbox" />
       <div id="snoozedReposList"></div>
@@ -70,7 +70,7 @@ describe('Options Main Functions', () => {
       <button id="confirmImportBtn"></button>
       <input id="selectAllImport" type="checkbox" />
       <input id="importRepoSearch" />
-      <div id="importSearchClear"></div>
+      <div id="importSearchClear" class="hidden"></div>
       <div id="importModal"></div>
       <button id="clearCacheBtn"></button>
       <button id="clearAllDataBtn"></button>
@@ -330,22 +330,19 @@ describe('Options Main Functions', () => {
       const helpText = document.getElementById('repoHelpText');
       const importSection = document.getElementById('importReposSection');
 
-      clearBtn.style.display = 'none';
       repoInput.disabled = true;
       addBtn.disabled = true;
       helpText.textContent = 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.';
       importSection.classList.add('hidden');
-      importSection.style.display = 'none';
 
       syncTokenUiWithStoredCredential(true);
 
       expect(connectBtn.textContent).toBe('Reconnect GitHub');
-      expect(clearBtn.style.display).toBe('block');
+      expect(clearBtn.classList.contains('hidden')).toBe(false);
       expect(repoInput.disabled).toBe(false);
       expect(addBtn.disabled).toBe(false);
       expect(helpText.textContent).toContain('Add repositories to monitor');
       expect(importSection.classList.contains('hidden')).toBe(false);
-      expect(importSection.style.display).toBe('block');
     });
 
     test('restores unauthenticated UI when no stored token is available', () => {
@@ -359,12 +356,11 @@ describe('Options Main Functions', () => {
       syncTokenUiWithStoredCredential(false);
 
       expect(connectBtn.textContent).toBe('Connect GitHub');
-      expect(clearBtn.style.display).toBe('none');
+      expect(clearBtn.classList.contains('hidden')).toBe(true);
       expect(repoInput.disabled).toBe(true);
       expect(addBtn.disabled).toBe(true);
       expect(helpText.textContent).toContain('Connect GitHub above');
       expect(importSection.classList.contains('hidden')).toBe(true);
-      expect(importSection.style.display).toBe('none');
     });
 
     test('loadSettings restores a stored auth session', async () => {
@@ -391,7 +387,7 @@ describe('Options Main Functions', () => {
 
       expect(document.getElementById('tokenStatus').textContent).toContain('persisted-user');
       expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
-      expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+      expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
       expect(document.getElementById('repoInput').disabled).toBe(false);
     });
 
@@ -470,7 +466,7 @@ describe('Options Main Functions', () => {
       await Promise.resolve();
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+      expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
       expect(document.getElementById('repoInput').disabled).toBe(false);
       expect(document.getElementById('addRepoBtn').disabled).toBe(false);
       expect(chrome.storage.session.set).toHaveBeenCalledWith(

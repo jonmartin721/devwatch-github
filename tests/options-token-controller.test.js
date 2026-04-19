@@ -25,15 +25,15 @@ describe('Token Controller', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <button id="connectGitHubBtn">Connect GitHub</button>
-      <button id="clearTokenBtn" style="display: none;">Disconnect</button>
-      <div id="deviceCodeSection" class="hidden" style="display: none;">
+      <button id="clearTokenBtn" class="hidden">Disconnect</button>
+      <div id="deviceCodeSection" class="hidden">
         <input id="githubToken" type="text" value="" />
       </div>
       <div id="tokenStatus" class="token-status"></div>
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
-      <div id="importReposSection" class="hidden" style="display: none;"></div>
+      <div id="importReposSection" class="hidden"></div>
     `;
 
     jest.clearAllMocks();
@@ -44,7 +44,7 @@ describe('Token Controller', () => {
     applyStoredConnection(null);
 
     expect(document.getElementById('connectGitHubBtn').textContent).toBe('Connect GitHub');
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
+    expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(true);
     expect(document.getElementById('repoInput').disabled).toBe(true);
     expect(document.getElementById('addRepoBtn').disabled).toBe(true);
     expect(document.getElementById('repoHelpText').textContent).toContain('Connect GitHub above');
@@ -57,10 +57,10 @@ describe('Token Controller', () => {
     });
 
     expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+    expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
     expect(document.getElementById('repoInput').disabled).toBe(false);
-    expect(document.getElementById('importReposSection').style.display).toBe('block');
+    expect(document.getElementById('importReposSection').classList.contains('hidden')).toBe(false);
   });
 
   test('clearToken does nothing when cancelled', async () => {
@@ -82,7 +82,7 @@ describe('Token Controller', () => {
 
     expect(result).toBe(true);
     expect(mockClearAuthSession).toHaveBeenCalled();
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('none');
+    expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(true);
     expect(document.getElementById('repoInput').disabled).toBe(true);
   });
 
@@ -129,7 +129,7 @@ describe('Token Controller', () => {
     const result = await connectGitHub({});
 
     expect(result).toEqual({ isValid: false, reason: 'access_denied' });
-    expect(document.getElementById('clearTokenBtn').style.display).toBe('block');
+    expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('repoInput').disabled).toBe(false);
     expect(document.getElementById('tokenStatus').textContent).toContain('cancelled');
   });

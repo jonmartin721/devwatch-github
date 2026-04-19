@@ -264,6 +264,6 @@ describe('popup activity controller coverage', () => {
   test('hides the rate limit footer when the budget is healthy', () => {
     updateRateLimit({ remaining: 2000, limit: 5000 });
 
-    expect(document.getElementById('rateLimitInfo').style.display).toBe('none');
+    expect(document.getElementById('rateLimitInfo').classList.contains('hidden')).toBe(true);
   });
 });

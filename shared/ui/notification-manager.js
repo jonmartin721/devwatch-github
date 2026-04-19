@@ -126,14 +126,6 @@ class NotificationManager {
   }
 
   setupAutoRemove(id, duration) {
-    const progressBar = document.querySelector(`[data-toast-id="${id}"] .toast-progress`);
-    if (progressBar) {
-      progressBar.style.transition = `width ${duration}ms linear`;
-      requestAnimationFrame(() => {
-        progressBar.style.width = '0%';
-      });
-    }
-
     const timeout = setTimeout(() => {
       this.remove(id);
     }, duration);

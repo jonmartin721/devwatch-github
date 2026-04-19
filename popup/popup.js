@@ -75,15 +75,14 @@ async function initializePopup() {
       const header = document.querySelector('header');
       const toolbar = document.querySelector('.toolbar');
       const activityList = document.getElementById('activityList');
-      if (header) header.style.display = 'flex';
-      if (toolbar) toolbar.style.display = 'flex';
-      if (activityList) activityList.style.display = 'block';
+      if (header) header.classList.remove('hidden');
+      if (toolbar) toolbar.classList.remove('hidden');
+      if (activityList) activityList.classList.remove('hidden');
 
       // Ensure skip button is hidden when not in onboarding
       const footerSkipBtn = document.getElementById('footerSkipBtn');
       if (footerSkipBtn) {
         footerSkipBtn.classList.add('hidden');
-        footerSkipBtn.style.display = 'none';
       }
 
       loadActivities();

@@ -84,11 +84,10 @@ export async function openImportModal(type, watchedRepos) {
   importModalState.previousFocusElement = document.activeElement;
 
   modal.classList.add('show');
-  document.getElementById('importLoadingState').style.display = 'flex';
+  document.getElementById('importLoadingState').classList.remove('hidden');
   const reposList = document.getElementById('importReposList');
   reposList.classList.add('hidden');
-  reposList.style.display = 'none';
-  document.getElementById('importErrorState').style.display = 'none';
+  document.getElementById('importErrorState').classList.add('hidden');
 
   setupModalFocusTrap(modal);
 
@@ -113,14 +112,13 @@ export async function openImportModal(type, watchedRepos) {
 
     importModalState.filteredRepos = [...importModalState.repos];
 
-    document.getElementById('importLoadingState').style.display = 'none';
+    document.getElementById('importLoadingState').classList.add('hidden');
     const reposList = document.getElementById('importReposList');
     reposList.classList.remove('hidden');
-    reposList.style.display = 'block';
     renderImportReposList();
   } catch (error) {
-    document.getElementById('importLoadingState').style.display = 'none';
-    document.getElementById('importErrorState').style.display = 'block';
+    document.getElementById('importLoadingState').classList.add('hidden');
+    document.getElementById('importErrorState').classList.remove('hidden');
     document.getElementById('importErrorMessage').textContent = error.message || 'Failed to fetch repositories';
   }
 }

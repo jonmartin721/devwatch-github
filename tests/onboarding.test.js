@@ -533,11 +533,11 @@ describe('Onboarding - token persistence', () => {
     };
 
     document.body.innerHTML = `
-      <header style="display:flex"></header>
-      <div class="toolbar" style="display:flex"></div>
-      <div id="searchBox" style="display:block"></div>
-      <div id="activityList" style="display:block"></div>
-      <div id="onboardingView" class="hidden" style="display:none"></div>
+      <header></header>
+      <div class="toolbar"></div>
+      <div id="searchBox"></div>
+      <div id="activityList"></div>
+      <div id="onboardingView" class="hidden"></div>
       <button id="footerSkipBtn" class="hidden"></button>
     `;
 
@@ -545,17 +545,17 @@ describe('Onboarding - token persistence', () => {
 
     await _showOnboarding(loadActivitiesCallback);
 
-    expect(document.getElementById('onboardingView').style.display).toBe('block');
-    expect(document.getElementById('activityList').style.display).toBe('none');
-    expect(document.querySelector('.toolbar').style.display).toBe('none');
-    expect(document.querySelector('header').style.display).toBe('none');
+    expect(document.getElementById('onboardingView').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('activityList').classList.contains('hidden')).toBe(true);
+    expect(document.querySelector('.toolbar').classList.contains('hidden')).toBe(true);
+    expect(document.querySelector('header').classList.contains('hidden')).toBe(true);
 
     _exitOnboarding(loadActivitiesCallback);
 
-    expect(document.getElementById('onboardingView').style.display).toBe('none');
-    expect(document.getElementById('activityList').style.display).toBe('block');
-    expect(document.querySelector('.toolbar').style.display).toBe('flex');
-    expect(document.querySelector('header').style.display).toBe('flex');
+    expect(document.getElementById('onboardingView').classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('activityList').classList.contains('hidden')).toBe(false);
+    expect(document.querySelector('.toolbar').classList.contains('hidden')).toBe(false);
+    expect(document.querySelector('header').classList.contains('hidden')).toBe(false);
     expect(loadActivitiesCallback).toHaveBeenCalled();
   });
 
@@ -598,7 +598,7 @@ describe('Onboarding - token persistence', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(document.getElementById('footerSkipBtn').style.display).toBe('block');
+    expect(document.getElementById('footerSkipBtn').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('repoSuggestions').innerHTML).toContain('owner/repo');
     expect(document.querySelector('.add-repo-btn').dataset.listenerAttached).toBe('true');
   });
@@ -653,9 +653,9 @@ describe('Onboarding - token persistence', () => {
     };
 
     document.body.innerHTML = `
-      <header style="display:none"></header>
-      <div class="toolbar" style="display:none"></div>
-      <div id="activityList" style="display:none"></div>
+      <header class="hidden"></header>
+      <div class="toolbar hidden"></div>
+      <div id="activityList" class="hidden"></div>
       <div id="onboardingView"></div>
       <button id="footerSkipBtn" class="hidden"></button>
     `;
@@ -673,9 +673,9 @@ describe('Onboarding - token persistence', () => {
 
     _localStorage.onboarding_state.currentStep = 4;
     document.body.innerHTML = `
-      <header style="display:none"></header>
-      <div class="toolbar" style="display:none"></div>
-      <div id="activityList" style="display:none"></div>
+      <header class="hidden"></header>
+      <div class="toolbar hidden"></div>
+      <div id="activityList" class="hidden"></div>
       <div id="onboardingView"></div>
       <button id="footerSkipBtn" class="hidden"></button>
     `;

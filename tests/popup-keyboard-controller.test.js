@@ -7,7 +7,7 @@ import {
 describe('Keyboard Controller', () => {
   beforeEach(() => {
     document.body.innerHTML = `
-      <input id="searchBox" style="display: none" />
+      <input id="searchBox" class="hidden" />
       <button class="filter-btn">All</button>
       <button class="filter-btn active">Unread</button>
       <button class="filter-btn">PRs</button>
@@ -59,7 +59,7 @@ describe('Keyboard Controller', () => {
       const mockToggleSearch = jest.fn();
       const mockToggleArchive = jest.fn();
       const searchBox = document.getElementById('searchBox');
-      searchBox.style.display = 'block';
+      searchBox.classList.remove('hidden');
 
       setupKeyboardNavigation(mockRefresh, mockToggleSearch, mockToggleArchive);
 

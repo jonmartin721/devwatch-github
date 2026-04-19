@@ -23,33 +23,15 @@ export async function updateDarkModeIcon() {
   // Always hide system icon
   if (systemIcon) {
     systemIcon.classList.add('hidden');
-    systemIcon.style.display = 'none';
-    systemIcon.style.visibility = 'hidden';
   }
 
   // Show moon icon for light theme, hide for dark theme
   if (moonIcon) {
-    if (currentTheme === 'dark') {
-      moonIcon.classList.add('hidden');
-      moonIcon.style.display = 'none';
-      moonIcon.style.visibility = 'hidden';
-    } else {
-      moonIcon.classList.remove('hidden');
-      moonIcon.style.display = 'block';
-      moonIcon.style.visibility = 'visible';
-    }
+    moonIcon.classList.toggle('hidden', currentTheme === 'dark');
   }
 
   // Show sun icon for dark theme, hide for light theme
   if (sunIcon) {
-    if (currentTheme === 'dark') {
-      sunIcon.classList.remove('hidden');
-      sunIcon.style.display = 'block';
-      sunIcon.style.visibility = 'visible';
-    } else {
-      sunIcon.classList.add('hidden');
-      sunIcon.style.display = 'none';
-      sunIcon.style.visibility = 'hidden';
-    }
+    sunIcon.classList.toggle('hidden', currentTheme !== 'dark');
   }
 }

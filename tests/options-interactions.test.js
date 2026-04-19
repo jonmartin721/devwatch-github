@@ -156,7 +156,7 @@ function renderOptionsDom() {
     <input id="snooze-4" name="snoozeHours" type="radio" value="4" />
     <input id="itemExpiryEnabled" type="checkbox" />
     <input id="itemExpiryHours" value="24" />
-    <div id="itemExpiryInputRow" style="display:none"></div>
+    <div id="itemExpiryInputRow" class="d-none"></div>
     <input id="markReadOnSnooze" type="checkbox" />
     <input id="allowUnlimitedRepos" type="checkbox" />
 
@@ -303,7 +303,7 @@ describe('options interactions', () => {
     repoSearch.dispatchEvent(new Event('input', { bubbles: true }));
     expect(state.searchQuery).toBe('react');
     expect(state.currentPage).toBe(1);
-    expect(repoSearchClear.style.display).toBe('flex');
+    expect(repoSearchClear.classList.contains('hidden')).toBe(false);
 
     repoSearchClear.click();
     expect(state.searchQuery).toBe('');
@@ -366,7 +366,7 @@ describe('options interactions', () => {
     expect(document.getElementById('theme-dark').checked).toBe(true);
     expect(document.getElementById('color-graphite').checked).toBe(true);
     expect(document.getElementById('itemExpiryEnabled').checked).toBe(true);
-    expect(document.getElementById('itemExpiryInputRow').style.display).toBe('block');
+    expect(document.getElementById('itemExpiryInputRow').classList.contains('d-none')).toBe(false);
     expect(mockRenderSnoozedRepos).toHaveBeenCalledWith([]);
   });
 

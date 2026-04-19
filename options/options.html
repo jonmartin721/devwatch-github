@@ -104,8 +104,8 @@
                 </div>
               </div>
 
-              <div class="github-connect-panel">
-                <div class="github-connect-panel-header">
+              <div class="github-connect-panel settings-surface settings-surface-prominent">
+                <div class="github-connect-panel-header settings-surface-header">
                   <div>
                     <p class="github-panel-label">Connection status</p>
                     <span id="tokenStatus" class="token-status" aria-live="polite"></span>
@@ -113,11 +113,11 @@
                   <button id="clearTokenBtn" class="danger hidden" aria-label="Disconnect GitHub">Disconnect</button>
                 </div>
 
-                <div class="github-connect-panel-body">
+                <div class="github-connect-panel-body settings-surface-body">
                   <button id="connectGitHubBtn" class="primary github-connect-btn" aria-describedby="token-help tokenStatus">Connect GitHub</button>
 
                   <p id="token-help" class="help-text github-connect-help">
-                    We'll open GitHub in a new tab. Approve access there, then come back here and DevWatch will finish connecting.
+                    We'll open GitHub in a new tab and copy your code to the clipboard so it's ready if GitHub asks for it. Then come back here and DevWatch will finish connecting.
                   </p>
 
                   <div class="github-connect-flow" aria-hidden="true">
@@ -135,12 +135,12 @@
                     </div>
                   </div>
 
-                  <div id="deviceCodeSection" class="device-code-card hidden">
+                  <div id="deviceCodeSection" class="device-code-card settings-surface settings-surface-nested settings-surface-dashed hidden">
                     <div class="device-code-header">
-                      <label for="githubToken" class="device-code-label">Verification code</label>
-                      <span class="device-code-note">Ready if GitHub asks for it</span>
+                      <label for="githubToken" class="device-code-label">User verification code</label>
+                      <span class="device-code-note">Also copied to clipboard</span>
                     </div>
-                    <input type="text" id="githubToken" placeholder="Verification code appears here" aria-describedby="token-help tokenStatus" autocomplete="off" readonly>
+                    <input type="text" id="githubToken" aria-describedby="token-help tokenStatus" autocomplete="off" readonly>
                   </div>
                 </div>
               </div>
@@ -188,8 +188,8 @@
     <div class="tab-panel" id="panel-repositories" role="tabpanel" data-tab="repositories" aria-labelledby="tab-repositories" hidden>
     <section class="section" id="repositories">
       <!-- Add New Repository Card -->
-      <div class="repo-section-card add-repo-card">
-        <div class="repo-section-header">
+      <div class="repo-section-card settings-surface add-repo-card">
+        <div class="repo-section-header settings-surface-header">
           <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -213,7 +213,7 @@
         <div id="repoError" class="repo-error"></div>
 
         <!-- Quick Import Section -->
-        <div class="import-repos-section hidden" id="importReposSection">
+        <div class="import-repos-section repo-utility-strip hidden" id="importReposSection">
           <p class="help-text">Quick import repositories from your GitHub account:</p>
           <div class="import-buttons">
             <button id="importWatchedBtn" class="import-btn">
@@ -247,8 +247,8 @@
       </div>
 
       <!-- Your Watched Repositories Card -->
-      <div class="repo-section-card watched-repos-card">
-        <div class="repo-section-header">
+      <div class="repo-section-card settings-surface watched-repos-card">
+        <div class="repo-section-header settings-surface-header">
           <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
@@ -267,7 +267,7 @@
         </div>
 
       <!-- Search Repository Panel -->
-      <div class="repo-panel" id="searchRepoPanel">
+      <div class="repo-panel repo-toolbar" id="searchRepoPanel">
         <div class="repo-search-controls">
           <div class="search-input-wrapper">
             <input type="text" id="repoSearch" placeholder="Search repositories...">
@@ -280,7 +280,7 @@
         </div>
       </div>
 
-      <ul id="repoList" class="repo-list"></ul>
+      <ul id="repoList" class="repo-list settings-row-group"></ul>
 
       <div class="pagination-controls hidden" id="paginationControls">
         <button id="prevPage" disabled>Previous</button>
@@ -288,7 +288,7 @@
         <button id="nextPage" disabled>Next</button>
       </div>
 
-      <div class="repo-features-info info-box">
+      <div class="repo-features-info info-box repo-notes">
         <p class="help-text info-flex-start mb-8">
           <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -312,9 +312,9 @@
       <h2>Activity Filters & Notifications</h2>
       <p class="help-text">Choose which types of activity to show and get notified about</p>
 
-      <div class="activity-cards">
-        <div class="activity-card">
-          <div class="card-header">
+      <div class="activity-cards settings-row-group">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
             </svg>
@@ -323,15 +323,15 @@
               <p>Show new and updated PRs</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterPrs" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyPrs" checked>
@@ -341,8 +341,8 @@
           </div>
         </div>
 
-        <div class="activity-card">
-          <div class="card-header">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -351,15 +351,15 @@
               <p>Show new and updated issues</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterIssues" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyIssues" checked>
@@ -369,8 +369,8 @@
           </div>
         </div>
 
-        <div class="activity-card">
-          <div class="card-header">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
@@ -379,15 +379,15 @@
               <p>Show new version releases</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterReleases" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyReleases" checked>
@@ -421,8 +421,8 @@
       <h2>Feed Management</h2>
       <p class="help-text">Control how long activity items are stored in your feed and archive</p>
 
-      <div class="feed-management-card">
-        <div class="card-header">
+      <div class="feed-management-card settings-surface settings-surface-inline settings-row">
+        <div class="card-header settings-surface-header">
           <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -431,7 +431,7 @@
             <p>Automatically clean up items after a specified time period</p>
           </div>
         </div>
-        <div class="card-controls">
+        <div class="card-controls settings-surface-actions">
           <label class="activity-toggle">
             <input type="checkbox" id="itemExpiryEnabled">
             <span class="toggle-slider"></span>
@@ -505,42 +505,42 @@
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-polar" value="polar" checked>
             <label for="color-polar">
-              <span class="color-swatch" style="background: #0D9488;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-polar" aria-hidden="true"></span>
               Polar
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-graphite" value="graphite">
             <label for="color-graphite">
-              <span class="color-swatch" style="background: #6366F1;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-graphite" aria-hidden="true"></span>
               Graphite
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-nightfall" value="nightfall">
             <label for="color-nightfall">
-              <span class="color-swatch" style="background: #E87B00;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-nightfall" aria-hidden="true"></span>
               Nightfall
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-obsidian" value="obsidian">
             <label for="color-obsidian">
-              <span class="color-swatch" style="background: #10B981;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-obsidian" aria-hidden="true"></span>
               Obsidian
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-sand" value="sand">
             <label for="color-sand">
-              <span class="color-swatch" style="background: #9F1239;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-sand" aria-hidden="true"></span>
               Sand
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-terminal-ledger" value="terminal-ledger">
             <label for="color-terminal-ledger">
-              <span class="color-swatch" style="background: #D3A24B;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-terminal-ledger" aria-hidden="true"></span>
               Terminal Ledger
             </label>
           </div>
@@ -606,8 +606,8 @@
         </div>
       </fieldset>
 
-      <div class="feed-management-card mt-16">
-        <div class="card-header">
+      <div class="feed-management-card settings-surface settings-surface-inline settings-row mt-16">
+        <div class="card-header settings-surface-header">
           <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -616,7 +616,7 @@
             <p>Automatically mark all repository items as read when snoozing</p>
           </div>
         </div>
-        <div class="card-controls">
+        <div class="card-controls settings-surface-actions">
           <label class="activity-toggle">
             <input type="checkbox" id="markReadOnSnooze">
             <span class="toggle-slider"></span>
@@ -626,7 +626,7 @@
 
       <div class="current-snoozes">
         <h3>Currently Snoozed</h3>
-        <div id="snoozedReposList" class="snoozed-repos-list">
+        <div id="snoozedReposList" class="snoozed-repos-list settings-row-group">
           <div class="empty-snoozes" id="emptySnoozes">
             <p>No repositories are currently snoozed</p>
             <small>Snooze repositories from the popup to see them here</small>
@@ -642,7 +642,7 @@
       <h2>Data Management</h2>
       <p class="help-text">Manage your extension data, cache, and settings</p>
 
-      <div class="data-card mt-24">
+      <div class="data-card settings-surface settings-surface-inline settings-row mt-24">
         <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 8c-2.5 0-4.5 1.8-4.5 4s2 4 4.5 4c2 0 3.5-1.5 4.5-3.5 1 2 2.5 3.5 4.5 3.5 2.5 0 4.5-1.8 4.5-4s-2-4-4.5-4c-2 0-3.5 1.5-4.5 3.5-1-2-2.5-3.5-4.5-3.5z"/>
         </svg>
@@ -665,8 +665,8 @@
         </p>
       </div>
 
-      <div class="data-management-cards">
-        <div class="data-card">
+      <div class="data-management-cards settings-row-group">
+        <div class="data-card settings-surface settings-surface-inline settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
           </svg>
@@ -682,7 +682,7 @@
           </button>
         </div>
 
-        <div class="data-card danger-card">
+        <div class="data-card settings-surface settings-surface-inline settings-surface-danger danger-card settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
@@ -698,7 +698,7 @@
           </button>
         </div>
 
-        <div class="data-card danger-card">
+        <div class="data-card settings-surface settings-surface-inline settings-surface-danger danger-card settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
