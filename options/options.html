@@ -287,21 +287,27 @@
         <span id="pageInfo" class="page-info"></span>
         <button id="nextPage" disabled>Next</button>
       </div>
-
-      <div class="repo-features-info info-box repo-notes">
-        <p class="help-text info-flex-start mb-8">
-          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Pin:</strong> Keep repositories at the top of your feed for quick access. Pinned repos always appear above other repositories in the popup.</span>
-        </p>
-        <p class="help-text info-flex-start">
-          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)</span>
-        </p>
       </div>
+
+      <div class="repo-notes" aria-label="Repository quick tips">
+        <div class="repo-note">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="repo-note-copy">
+            <span class="repo-note-label">Pin repositories</span>
+            <span class="repo-note-detail">Keep important repos at the top of your feed for quick access. Pinned repos always appear first in the popup.</span>
+          </div>
+        </div>
+        <div class="repo-note">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="repo-note-copy">
+            <span class="repo-note-label">Mute notifications</span>
+            <span class="repo-note-detail">Stop browser notifications for a repository while still keeping its activity in your feed.</span>
+          </div>
+        </div>
       </div>
     </section>
     </div>
@@ -398,19 +404,31 @@
         </div>
       </div>
 
-      <div class="filters-help info-box">
-        <p class="help-text">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Activity Filters:</strong> Enable categories to show them in your activity feed</span>
-        </p>
-        <p class="help-text">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Notifications:</strong> Enable browser notifications (requires the category to be enabled first)</span>
-        </p>
+      <div class="filters-help info-box" aria-label="Activity filter help">
+        <div class="filters-help-header">
+          <span class="filters-help-eyebrow">How it works</span>
+          <p class="filters-help-intro">Feed visibility and browser notifications are controlled separately for each activity type.</p>
+        </div>
+        <div class="filters-help-grid">
+          <div class="filters-help-item">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="filters-help-copy">
+              <span class="filters-help-label">Activity feed</span>
+              <span class="filters-help-detail">Enable a category here to include new and updated items in your feed.</span>
+            </div>
+          </div>
+          <div class="filters-help-item">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="filters-help-copy">
+              <span class="filters-help-label">Notifications</span>
+              <span class="filters-help-detail">Browser notifications only work after the matching category is enabled in the feed first.</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
     </div>
