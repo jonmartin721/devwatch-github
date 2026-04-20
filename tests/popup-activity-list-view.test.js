@@ -160,6 +160,33 @@ describe('Activity List View', () => {
       expect(mockOptionsLink.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
     });
 
+    test('options link opens the repositories tab with the add-repo query preserved', async () => {
+      const mockOptionsLink = {
+        addEventListener: jest.fn()
+      };
+
+      mockFilteredActivities = [];
+      mockState.showArchive = false;
+
+      document.getElementById = jest.fn((id) => {
+        if (id === 'activityList') return mockList;
+        if (id === 'optionsLink') return mockOptionsLink;
+        return null;
+      });
+
+      renderActivities(null, new Set(), [], jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn());
+
+      const clickHandler = mockOptionsLink.addEventListener.mock.calls[0][1];
+      const event = { preventDefault: jest.fn() };
+
+      await clickHandler(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(chrome.tabs.create).toHaveBeenCalledWith({
+        url: 'chrome-extension://test/options/options.html?showAdd=true#repositories'
+      });
+    });
+
     test('does not add options link listener in archive mode', () => {
       const mockOptionsLink = {
         addEventListener: jest.fn()

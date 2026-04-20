@@ -13,17 +13,19 @@ function setRepoAccessState(isConnected) {
   const repoInput = document.getElementById('repoInput');
   const addRepoBtn = document.getElementById('addRepoBtn');
   const repoHelpText = document.getElementById('repoHelpText');
-  const importSection = document.getElementById('importReposSection');
+  const githubImportButtons = document.querySelectorAll('.github-import-btn');
 
-  repoInput.disabled = !isConnected;
+  repoInput.disabled = false;
   repoInput.placeholder = isConnected
     ? 'e.g., react, facebook/react, or GitHub URL'
-    : 'Connect GitHub to add repositories';
-  addRepoBtn.disabled = !isConnected;
+    : 'e.g., react, facebook/react, GitHub URL, or public npm package';
+  addRepoBtn.disabled = false;
   repoHelpText.textContent = isConnected
     ? 'Add repositories to monitor (npm package, owner/repo, or GitHub URL)'
-    : 'Connect GitHub above to start adding repositories';
-  importSection.classList.toggle('hidden', !isConnected);
+    : 'Add public repositories manually now, or connect GitHub above to import your repos and access private ones.';
+  githubImportButtons.forEach((button) => {
+    button.classList.toggle('hidden', !isConnected);
+  });
 }
 
 function setDeviceCode(userCode = '') {
@@ -48,16 +50,54 @@ function setHelpText(message = '') {
   helpEl.textContent = message;
 }
 
+function setStatusRowVisible(isVisible) {
+  const statusRow = document.querySelector('.github-connect-status-row');
+
+  if (!statusRow) {
+    return;
+  }
+
+  statusRow.classList.toggle('hidden', !isVisible);
+}
+
+function setConnectionUiMode(isConnected) {
+  const connectCard = document.querySelector('.github-connect-card');
+  const introText = document.getElementById('githubConnectIntroText');
+  const connectedNote = document.getElementById('githubConnectConnectedNote');
+  const panelHeading = document.getElementById('githubConnectPanelHeading');
+  const panelCopy = document.getElementById('githubConnectPanelCopy');
+
+  connectCard?.classList.toggle('is-connected', isConnected);
+
+  if (introText) {
+    introText.textContent = 'Authorize DevWatch once so it can pull activity for the repositories you monitor without asking for a personal access token.';
+  }
+
+  if (connectedNote) {
+    connectedNote.textContent = 'You\'re all set. DevWatch keeps this browser profile connected until you disconnect or reset it.';
+  }
+
+  if (panelHeading) {
+    panelHeading.textContent = isConnected
+      ? 'Reconnect only if GitHub asks again'
+      : 'Connect once, then just paste if GitHub asks';
+  }
+
+  if (panelCopy) {
+    panelCopy.textContent = 'DevWatch opens GitHub for you and copies the verification code automatically, so the only extra step is pasting it if GitHub prompts for one.';
+  }
+}
+
 function getHelpText({ isConnected = false, isWaiting = false } = {}) {
   if (isWaiting) {
-    return 'Approve access in the GitHub tab, then return here. We copied the code to your clipboard in case GitHub asks for it.';
+    return 'Approve access in the GitHub tab, then return here. If GitHub asks for a code, just paste the one DevWatch already copied for you.';
   }
 
   if (isConnected) {
-    return 'Reconnect any time if your session expires or if you want to switch accounts.';
+    return 'Your GitHub connection stays in this Chrome profile until you disconnect it or reset DevWatch. If GitHub asks for a code during reconnect, just paste the one DevWatch copies for you.';
   }
 
-  return 'We\'ll open GitHub in a new tab and copy your code to the clipboard so it\'s ready if GitHub asks for it. Then come back here and DevWatch will finish connecting.';
+  return 'We\'ll open GitHub in a new tab and copy the code for you. If GitHub asks for one, just paste it there, approve access, and come back here.';
 }
 
 function setStatus(message = '', statusClass = '') {
@@ -76,7 +116,9 @@ export function applyStoredConnection(authSession, options = {}) {
   const clearBtn = document.getElementById('clearTokenBtn');
   const isConnected = Boolean(authSession?.accessToken);
   const username = authSession?.username;
+  const hasStatusMessage = Boolean(options.statusMessage);
 
+  setConnectionUiMode(isConnected);
   setRepoAccessState(isConnected);
   setDeviceCode(options.userCode || '');
   setHelpText(options.helpText || getHelpText({
@@ -95,6 +137,7 @@ export function applyStoredConnection(authSession, options = {}) {
 
   if (options.statusMessage) {
     setStatus(options.statusMessage, options.statusClass);
+    setStatusRowVisible(true);
     return;
   }
 
@@ -103,8 +146,10 @@ export function applyStoredConnection(authSession, options = {}) {
       username ? `Connected as ${username}` : 'GitHub is connected',
       'valid'
     );
+    setStatusRowVisible(true);
   } else {
     setStatus('', '');
+    setStatusRowVisible(hasStatusMessage);
   }
 }
 
@@ -145,9 +190,11 @@ export async function connectGitHub(_toastManager) {
     connectBtn.textContent = 'Waiting for GitHub...';
   }
 
+  setConnectionUiMode(Boolean(previousSession?.accessToken));
   setRepoAccessState(Boolean(previousSession?.accessToken));
   setStatus('Starting GitHub sign-in...', 'checking');
-  setHelpText('We\'re opening GitHub and copying your code to the clipboard so it\'s ready if GitHub asks for it. Come back here as soon as GitHub says the connection is ready.');
+  setStatusRowVisible(true);
+  setHelpText('We\'re opening GitHub and copying the code for you. If GitHub asks for one, just paste it there, then come back here as soon as the connection is ready.');
 
   try {
     const result = await completeGitHubDeviceAuth({
@@ -158,7 +205,7 @@ export async function connectGitHub(_toastManager) {
           : false;
         setStatus(
           copied
-            ? `Code ${userCode} copied to clipboard in case GitHub asks for it.`
+            ? `Code ${userCode} copied to your clipboard. Paste it on GitHub only if GitHub asks for it.`
             : `If GitHub asks for a code, enter ${userCode}.`,
           'checking'
         );

@@ -25,9 +25,17 @@ describe('Options Main Functions', () => {
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
-      <div id="importReposSection" class="hidden"></div>
+      <div id="importReposSection"></div>
+      <button id="togglePopularReposBtn"></button>
+      <button id="importWatchedBtn" class="github-import-btn hidden"></button>
+      <button id="importStarredBtn" class="github-import-btn hidden"></button>
+      <button id="importParticipatingBtn" class="github-import-btn hidden"></button>
+      <button id="importMineBtn" class="github-import-btn hidden"></button>
+      <div id="popularReposPanel" class="repo-panel"></div>
       <div id="repoValidationStatus" class="repo-validation-status"></div>
       <div id="repoError"></div>
+      <div id="popularReposState"></div>
+      <div id="popularReposList" class="hidden"></div>
       <div id="repoList"></div>
       <div id="repoCountBadge"></div>
       <div id="paginationControls"></div>
@@ -58,10 +66,6 @@ describe('Options Main Functions', () => {
       <input id="markReadOnSnooze" type="checkbox" />
       <input id="allowUnlimitedRepos" type="checkbox" />
       <div id="snoozedReposList"></div>
-      <button id="importWatchedBtn"></button>
-      <button id="importStarredBtn"></button>
-      <button id="importParticipatingBtn"></button>
-      <button id="importMineBtn"></button>
       <button id="importBtn"></button>
       <input id="importFileInput" type="file" />
       <button id="exportBtn"></button>
@@ -156,7 +160,14 @@ describe('Options Main Functions', () => {
       }
     };
 
-    global.fetch = jest.fn();
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => ({ items: [] }),
+      text: async () => ''
+    }));
     global.confirm = jest.fn(() => true);
     window.matchMedia = jest.fn().mockReturnValue({
       matches: false,
@@ -329,11 +340,12 @@ describe('Options Main Functions', () => {
       const addBtn = document.getElementById('addRepoBtn');
       const helpText = document.getElementById('repoHelpText');
       const importSection = document.getElementById('importReposSection');
+      const importMineBtn = document.getElementById('importMineBtn');
 
       repoInput.disabled = true;
       addBtn.disabled = true;
       helpText.textContent = 'GitHub sign-in expired or was revoked. Reconnect GitHub and try again.';
-      importSection.classList.add('hidden');
+      importMineBtn.classList.add('hidden');
 
       syncTokenUiWithStoredCredential(true);
 
@@ -342,7 +354,8 @@ describe('Options Main Functions', () => {
       expect(repoInput.disabled).toBe(false);
       expect(addBtn.disabled).toBe(false);
       expect(helpText.textContent).toContain('Add repositories to monitor');
-      expect(importSection.classList.contains('hidden')).toBe(false);
+      expect(importSection).not.toBeNull();
+      expect(importMineBtn.classList.contains('hidden')).toBe(false);
     });
 
     test('restores unauthenticated UI when no stored token is available', () => {
@@ -352,25 +365,40 @@ describe('Options Main Functions', () => {
       const addBtn = document.getElementById('addRepoBtn');
       const helpText = document.getElementById('repoHelpText');
       const importSection = document.getElementById('importReposSection');
+      const importMineBtn = document.getElementById('importMineBtn');
 
       syncTokenUiWithStoredCredential(false);
 
       expect(connectBtn.textContent).toBe('Connect GitHub');
       expect(clearBtn.classList.contains('hidden')).toBe(true);
-      expect(repoInput.disabled).toBe(true);
-      expect(addBtn.disabled).toBe(true);
-      expect(helpText.textContent).toContain('Connect GitHub above');
-      expect(importSection.classList.contains('hidden')).toBe(true);
+      expect(repoInput.disabled).toBe(false);
+      expect(addBtn.disabled).toBe(false);
+      expect(helpText.textContent).toContain('Add public repositories manually now');
+      expect(importSection).not.toBeNull();
+      expect(importMineBtn.classList.contains('hidden')).toBe(true);
     });
 
     test('loadSettings restores a stored auth session', async () => {
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({
-          githubAuthSession: {
-            accessToken: 'persisted-token',
-            username: 'persisted-user'
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
+        const requestedKeys = Array.isArray(keys) ? keys : [keys];
+        const result = {};
+
+        requestedKeys.forEach((key) => {
+          if (key === 'githubAuthSession') {
+            result.githubAuthSession = {
+              accessToken: 'persisted-token',
+              username: 'persisted-user'
+            };
+          } else if (key === 'activities') {
+            result.activities = [];
+          } else if (key === 'readItems') {
+            result.readItems = [];
+          } else if (key === 'rateLimit') {
+            result.rateLimit = null;
           }
         });
+
+        callback(result);
       });
       chrome.storage.sync.get.mockImplementation((keys, callback) => {
         const result = Array.isArray(keys) && keys.includes('snoozedRepos')
@@ -425,8 +453,12 @@ describe('Options Main Functions', () => {
 
       document.getElementById('clearTokenBtn').click();
       await Promise.resolve();
+      await Promise.resolve();
 
-      expect(chrome.storage.session.remove).toHaveBeenCalledWith(['githubAuthSession'], expect.any(Function));
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(
+        ['githubAuthSession'],
+        expect.any(Function)
+      );
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(
         ['encryptedGithubAuthSession', 'encryptionKey'],
         expect.any(Function)
@@ -469,7 +501,7 @@ describe('Options Main Functions', () => {
       expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
       expect(document.getElementById('repoInput').disabled).toBe(false);
       expect(document.getElementById('addRepoBtn').disabled).toBe(false);
-      expect(chrome.storage.session.set).toHaveBeenCalledWith(
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({
           githubAuthSession: expect.objectContaining({
             accessToken: 'oauth-token',

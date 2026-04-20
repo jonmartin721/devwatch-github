@@ -106,17 +106,34 @@ export async function normalizeRepoInput(rawInput) {
 }
 
 export async function validateWatchedRepo(repo, githubToken) {
-  if (!githubToken) {
-    return {
-      valid: false,
-      error: 'No GitHub connection found. Connect GitHub first.'
-    };
-  }
-
   const basicResult = await validateRepository(repo, githubToken);
 
   if (!basicResult.valid) {
+    if (!githubToken) {
+      const publicLookupError = String(basicResult.error || '').toLowerCase();
+      if (
+        publicLookupError.includes('not found')
+        || publicLookupError.includes('access denied')
+        || publicLookupError.includes('sign-in expired')
+        || publicLookupError.includes('unauthorized')
+      ) {
+        return {
+          valid: false,
+          error: `Repository "${repo}" was not found publicly. If it's private, connect GitHub and try again.`
+        };
+      }
+    }
     return basicResult;
+  }
+
+  if (!githubToken) {
+    return {
+      valid: true,
+      metadata: {
+        ...basicResult.metadata,
+        latestRelease: null
+      }
+    };
   }
 
   try {

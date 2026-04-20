@@ -24,20 +24,40 @@ const {
 describe('Token Controller', () => {
   beforeEach(() => {
     document.body.innerHTML = `
+      <div class="github-connect-card">
+        <p id="githubConnectIntroText"></p>
+        <p id="githubConnectConnectedNote"></p>
+        <h4 id="githubConnectPanelHeading"></h4>
+        <p id="githubConnectPanelCopy"></p>
+      </div>
       <button id="connectGitHubBtn">Connect GitHub</button>
       <button id="clearTokenBtn" class="hidden">Disconnect</button>
+      <div class="github-connect-status-row">
+        <div id="tokenStatus" class="token-status"></div>
+      </div>
       <div id="deviceCodeSection" class="hidden">
         <input id="githubToken" type="text" value="" />
       </div>
-      <div id="tokenStatus" class="token-status"></div>
+      <div id="token-help"></div>
       <input id="repoInput" />
       <button id="addRepoBtn">Add</button>
       <div id="repoHelpText"></div>
-      <div id="importReposSection" class="hidden"></div>
+      <div id="importReposSection"></div>
+      <button id="togglePopularReposBtn"></button>
+      <button id="importWatchedBtn" class="github-import-btn hidden"></button>
+      <button id="importStarredBtn" class="github-import-btn hidden"></button>
+      <button id="importParticipatingBtn" class="github-import-btn hidden"></button>
+      <button id="importMineBtn" class="github-import-btn hidden"></button>
     `;
 
     jest.clearAllMocks();
     global.confirm = jest.fn(() => true);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: jest.fn(() => Promise.resolve())
+      }
+    });
   });
 
   test('applyStoredConnection restores signed-out state', () => {
@@ -45,9 +65,13 @@ describe('Token Controller', () => {
 
     expect(document.getElementById('connectGitHubBtn').textContent).toBe('Connect GitHub');
     expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(true);
-    expect(document.getElementById('repoInput').disabled).toBe(true);
-    expect(document.getElementById('addRepoBtn').disabled).toBe(true);
-    expect(document.getElementById('repoHelpText').textContent).toContain('Connect GitHub above');
+    expect(document.getElementById('repoInput').disabled).toBe(false);
+    expect(document.getElementById('addRepoBtn').disabled).toBe(false);
+    expect(document.getElementById('repoHelpText').textContent).toContain('Add public repositories manually now');
+    expect(document.getElementById('token-help').textContent).toContain('copy the code for you');
+    expect(document.querySelector('.github-connect-status-row').classList.contains('hidden')).toBe(true);
+    expect(document.querySelector('.github-connect-card').classList.contains('is-connected')).toBe(false);
+    expect(document.getElementById('githubConnectPanelHeading').textContent).toContain('Connect once');
   });
 
   test('applyStoredConnection restores connected state', () => {
@@ -60,7 +84,11 @@ describe('Token Controller', () => {
     expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
     expect(document.getElementById('repoInput').disabled).toBe(false);
-    expect(document.getElementById('importReposSection').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('importMineBtn').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('token-help').textContent).toContain('just paste the one DevWatch copies for you');
+    expect(document.querySelector('.github-connect-status-row').classList.contains('hidden')).toBe(false);
+    expect(document.querySelector('.github-connect-card').classList.contains('is-connected')).toBe(true);
+    expect(document.getElementById('githubConnectPanelHeading').textContent).toContain('Reconnect only if GitHub asks again');
   });
 
   test('clearToken does nothing when cancelled', async () => {
@@ -83,7 +111,8 @@ describe('Token Controller', () => {
     expect(result).toBe(true);
     expect(mockClearAuthSession).toHaveBeenCalled();
     expect(document.getElementById('clearTokenBtn').classList.contains('hidden')).toBe(true);
-    expect(document.getElementById('repoInput').disabled).toBe(true);
+    expect(document.getElementById('repoInput').disabled).toBe(false);
+    expect(document.getElementById('repoHelpText').textContent).toContain('Add public repositories manually now');
   });
 
   test('connectGitHub stores auth session after a successful device flow', async () => {
@@ -112,9 +141,13 @@ describe('Token Controller', () => {
       accessToken: 'oauth-token',
       username: 'octocat'
     });
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('ABCD-EFGH');
     expect(document.getElementById('connectGitHubBtn').textContent).toBe('Reconnect GitHub');
     expect(document.getElementById('tokenStatus').textContent).toContain('octocat');
+    expect(document.getElementById('token-help').textContent).toContain('just paste the one DevWatch copies for you');
     expect(document.getElementById('githubToken').value).toBe('');
+    expect(document.querySelector('.github-connect-status-row').classList.contains('hidden')).toBe(false);
+    expect(document.querySelector('.github-connect-card').classList.contains('is-connected')).toBe(true);
   });
 
   test('connectGitHub keeps the existing session enabled when reconnect fails', async () => {

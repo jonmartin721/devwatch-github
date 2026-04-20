@@ -1,6 +1,9 @@
 import { STORAGE_CONFIG } from '../../shared/config.js';
 import { getAccessToken, getSyncItem, setWatchedRepos } from '../../shared/storage-helpers.js';
-import { createHeaders } from '../../shared/github-api.js';
+import {
+  fetchGitHubRepoSource,
+  getGitHubRepoSourceConfig
+} from '../../shared/github-repo-sources.js';
 import { getRepoFullName, normalizeWatchedRepoRecord } from '../../shared/repo-service.js';
 import { escapeHtml, unescapeHtml } from '../../shared/sanitize.js';
 import { formatDateVerbose } from '../../shared/utils.js';
@@ -72,15 +75,9 @@ export async function openImportModal(type, watchedRepos) {
   importModalState.type = type;
   const modal = document.getElementById('importModal');
   const title = document.getElementById('importModalTitle');
+  const sourceConfig = getGitHubRepoSourceConfig(type);
 
-  const titles = {
-    watched: 'Import Watched Repositories',
-    starred: 'Import Starred Repositories',
-    participating: 'Import Participating Repositories',
-    mine: 'Import My Repositories'
-  };
-
-  title.textContent = titles[type] || 'Import Repositories';
+  title.textContent = sourceConfig.modalTitle;
   importModalState.previousFocusElement = document.activeElement;
 
   modal.classList.add('show');
@@ -97,7 +94,7 @@ export async function openImportModal(type, watchedRepos) {
   }, 100);
 
   try {
-    const repos = await fetchReposFromGitHub(type, token);
+    const repos = await fetchGitHubRepoSource(type, token);
 
     const alreadyAdded = new Set(
       (watchedRepos || [])
@@ -121,88 +118,6 @@ export async function openImportModal(type, watchedRepos) {
     document.getElementById('importErrorState').classList.remove('hidden');
     document.getElementById('importErrorMessage').textContent = error.message || 'Failed to fetch repositories';
   }
-}
-
-async function fetchReposFromGitHub(type, token) {
-  const headers = createHeaders(token);
-  let allRepos = [];
-  let page = 1;
-  const perPage = 100;
-  const MAX_PAGES = 100; // Prevent infinite loops (10,000 repos max)
-  const MAX_REPOS = 10000; // Hard limit on total repos
-
-  const endpoints = {
-    watched: 'https://api.github.com/user/subscriptions',
-    starred: 'https://api.github.com/user/starred',
-    participating: 'https://api.github.com/user/repos?affiliation=collaborator,organization_member&sort=pushed',
-    mine: 'https://api.github.com/user/repos?type=all&sort=updated'
-  };
-
-  const url = endpoints[type];
-  if (!url) {
-    throw new Error(`Invalid import type: ${type}`);
-  }
-
-  let hasMorePages = true;
-  let startTime = Date.now();
-  const TIMEOUT_MS = 60000; // 60 second timeout
-
-  while (hasMorePages && page <= MAX_PAGES && allRepos.length < MAX_REPOS) {
-    // Check for timeout to prevent hanging
-    if (Date.now() - startTime > TIMEOUT_MS) {
-      break;
-    }
-
-    // Build URL safely with URLSearchParams
-    const urlObj = new URL(url);
-    urlObj.searchParams.set('per_page', perPage.toString());
-    urlObj.searchParams.set('page', page.toString());
-
-    const response = await fetch(urlObj.toString(), {
-      headers
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('GitHub sign-in expired or was revoked');
-      } else if (response.status === 403) {
-        throw new Error('Rate limit exceeded or insufficient permissions');
-      } else {
-        throw new Error(`GitHub API error: ${response.status}`);
-      }
-    }
-
-    const repos = await response.json();
-    if (!Array.isArray(repos) || repos.length === 0) {
-      hasMorePages = false;
-      break;
-    }
-
-    const transformed = repos.map(repo => ({
-      fullName: repo.full_name,
-      description: repo.description || 'No description provided',
-      language: repo.language || 'Unknown',
-      stars: repo.stargazers_count || 0,
-      forks: repo.forks_count || 0,
-      updatedAt: repo.updated_at || repo.pushed_at
-    }));
-
-    allRepos.push(...transformed);
-
-    // Stop if we've hit the max repos limit
-    if (allRepos.length >= MAX_REPOS) {
-      break;
-    }
-
-    const linkHeader = response.headers.get('Link');
-    if (!linkHeader || !linkHeader.includes('rel="next"')) {
-      hasMorePages = false;
-    } else {
-      page++;
-    }
-  }
-
-  return allRepos;
 }
 
 export function closeImportModal() {

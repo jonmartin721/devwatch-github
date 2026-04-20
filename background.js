@@ -109,11 +109,6 @@ async function checkGitHubActivity() {
       'unmutedRepos'
     ]);
 
-    if (!githubToken) {
-      console.warn('[DevWatch] No GitHub connection found. Please connect GitHub in settings.');
-      return;
-    }
-
     if (!watchedRepos || watchedRepos.length === 0) {
       console.warn('[DevWatch] No repositories being watched. Please add repos in settings.');
       return;
@@ -192,7 +187,9 @@ async function checkGitHubActivity() {
 
 async function fetchRepoActivity(repo, token, since, filters) {
   const activities = [];
-  const headers = createHeaders(token);
+  const headers = token
+    ? createHeaders(token)
+    : { 'Accept': 'application/vnd.github.v3+json' };
 
   async function fetchWithRateLimit(url) {
     try {
@@ -312,9 +309,13 @@ async function fetchRepoActivity(repo, token, since, filters) {
     if (error.message.includes('401')) {
       userMessage = 'GitHub sign-in expired or was revoked. Reconnect GitHub in settings.';
     } else if (error.message.includes('403')) {
-      userMessage = 'Access denied or rate limit exceeded.';
+      userMessage = token
+        ? 'Access denied or rate limit exceeded.'
+        : 'Anonymous GitHub access hit the rate limit or this repo requires GitHub sign-in.';
     } else if (error.message.includes('404')) {
-      userMessage = 'Repository not found or access denied.';
+      userMessage = token
+        ? 'Repository not found or access denied.'
+        : 'Repository not found publicly. If it is private, connect GitHub and try again.';
     } else if (error.message.includes('Network error')) {
       userMessage = 'Network connection error. Please check your internet connection.';
     }

@@ -30,7 +30,7 @@ Best for people who follow several repos and want one local review queue instead
 - Chrome or another Chromium-based browser that supports Manifest V3 extensions
 - A GitHub account to connect during setup
 - No separate hosted DevWatch account or backend service
-- GitHub sign-in lasts for the current browser session and is cleared when that session ends
+- GitHub sign-in persists in the current Chrome profile until you disconnect it or reset DevWatch
 
 ## Installation
 
@@ -119,7 +119,7 @@ That said, this project has not gone through a formal accessibility audit or doc
 
 ## Privacy & Security Notes
 
-The extension talks directly to GitHub's API and does not use a separate analytics or sync backend. It stores settings and cached activity in Chrome extension storage, while the current GitHub auth session stays in Chrome session storage so it is not persisted to disk. Legacy encrypted auth data from older builds is cleared when accessed.
+The extension talks directly to GitHub's API and does not use a separate analytics or sync backend. It stores settings, cached activity, and the current GitHub auth session in Chrome extension storage for the current browser profile. Legacy encrypted auth data from older builds is cleared when accessed.
 
 - **Direct network access** - Requests go to `api.github.com` for activity checks, `github.com` for OAuth device-flow sign-in, and `registry.npmjs.org` only when you use package-name lookup
 - **Scoped browser permissions** - The manifest asks for `storage`, `alarms`, and `notifications`

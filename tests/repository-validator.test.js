@@ -213,6 +213,30 @@ describe('repository-validator', () => {
         })
       );
     });
+
+    test('uses unauthenticated headers when no token is provided', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          full_name: 'test/repo',
+          name: 'repo',
+          stargazers_count: 0,
+          private: false,
+          archived: false
+        })
+      });
+
+      await validateRepository('test/repo');
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/repos/test/repo'),
+        expect.objectContaining({
+          headers: {
+            Accept: 'application/vnd.github.v3+json'
+          }
+        })
+      );
+    });
   });
 
   describe('quickValidateRepo', () => {

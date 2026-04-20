@@ -3,6 +3,7 @@ import { TextEncoder } from 'node:util';
 
 // Simple mock storage to simulate chrome.storage.local for onboarding flows
 let _localStorage = {};
+let _sessionStorage = {};
 
 global.chrome = {
   storage: {
@@ -40,23 +41,23 @@ global.chrome = {
         // keys can be array or single key
         const result = {};
         if (Array.isArray(keys)) {
-          keys.forEach(k => result[k] = _localStorage[k]);
+          keys.forEach(k => result[k] = _sessionStorage[k]);
         } else {
-          result[keys] = _localStorage[keys];
+          result[keys] = _sessionStorage[keys];
         }
 
         if (callback) callback(result);
         return Promise.resolve(result);
       }),
       set: jest.fn((items, callback) => {
-        _localStorage = { ..._localStorage, ...items };
+        _sessionStorage = { ..._sessionStorage, ...items };
         if (callback) callback();
         return Promise.resolve();
       }),
       remove: jest.fn((keys, callback) => {
         const keyArray = Array.isArray(keys) ? keys : [keys];
         keyArray.forEach((key) => {
-          delete _localStorage[key];
+          delete _sessionStorage[key];
         });
         if (callback) callback();
         return Promise.resolve();
@@ -87,6 +88,7 @@ async function renderTokenStep(stateOverrides = {}) {
       ...stateOverrides
     }
   };
+  _sessionStorage = {};
 
   document.body.innerHTML = `
     <div id="onboardingView"></div>
@@ -111,6 +113,7 @@ describe('Onboarding - token persistence', () => {
         }
       }
     };
+    _sessionStorage = {};
 
     jest.clearAllMocks();
     document.body.innerHTML = '';
@@ -257,6 +260,24 @@ describe('Onboarding - token persistence', () => {
     global.fetch = oldFetch;
   });
 
+  test('renderReposStep caps saved popular repositories to three cards', async () => {
+    const manager = new OnboardingManager();
+    const saved = [
+      { owner: { login: 'alice' }, name: 'one', description: 'desc', language: 'JS' },
+      { owner: { login: 'bob' }, name: 'two', description: 'desc', language: 'TS' },
+      { owner: { login: 'carol' }, name: 'three', description: 'desc', language: 'Go' },
+      { owner: { login: 'dave' }, name: 'four', description: 'desc', language: 'Rust' }
+    ];
+    await manager.saveStepData('popularRepos', saved);
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('alice/one');
+    expect(html).toContain('bob/two');
+    expect(html).toContain('carol/three');
+    expect(html).not.toContain('dave/four');
+  });
+
   test('renderReposStep escapes repository metadata before building HTML', async () => {
     const manager = new OnboardingManager();
     const saved = [
@@ -316,7 +337,7 @@ describe('Onboarding - token persistence', () => {
     expect(onboardingHtml).toContain('Connected');
   });
 
-  test('connect step lets you copy the saved device code', async () => {
+  test('connect step renders without a dedicated copy button', async () => {
     await renderTokenStep({
       data: {
         token: {
@@ -326,12 +347,235 @@ describe('Onboarding - token persistence', () => {
       }
     });
 
-    document.getElementById('copyTokenCodeBtn').click();
+    expect(document.getElementById('copyTokenCodeBtn')).toBeNull();
+  });
+
+  test('connect step lets you copy the saved device code by focusing the field', async () => {
+    await renderTokenStep({
+      data: {
+        token: {
+          userCode: 'ABCD-EFGH',
+          validated: false
+        }
+      }
+    });
+
+    document.getElementById('tokenInput').dispatchEvent(new Event('focus'));
     await Promise.resolve();
     await Promise.resolve();
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('ABCD-EFGH');
-    expect(document.getElementById('tokenStatus').textContent).toContain('Copied ABCD-EFGH');
+    expect(document.getElementById('tokenStatus').textContent).toContain('Code ABCD-EFGH copied to clipboard');
+  });
+
+  test('continue without GitHub skips the token step and advances to repos', async () => {
+    await renderTokenStep({
+      data: {
+        token: {
+          validated: false
+        }
+      }
+    });
+
+    document.getElementById('skipTokenStepBtn').click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const waitForSkippedState = async (timeout = 400) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        const state = await new Promise((resolve) => {
+          chrome.storage.local.get(['onboarding_state'], (res) => resolve(res.onboarding_state));
+        });
+
+        if (state?.currentStep === 2) {
+          return state;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+
+      return null;
+    };
+
+    const state = await waitForSkippedState();
+
+    expect(state).toBeTruthy();
+    expect(state.currentStep).toBe(2);
+    expect(state.skippedSteps).toContain('token');
+    expect(state.data.token).toEqual({
+      validated: false,
+      skipped: true
+    });
+  });
+
+  test('repos step shows anonymous guidance when no GitHub session exists', async () => {
+    const manager = new OnboardingManager();
+    await manager.saveStepData('popularRepos', [
+      { owner: { login: 'owner' }, name: 'repo', description: 'desc', language: 'JS' }
+    ]);
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('You can add public repositories now');
+  });
+
+  test('signed-in repos step shows GitHub source buttons and defaults to Mine', async () => {
+    _localStorage.githubAuthSession = {
+      accessToken: 'gho_TEST_TOKEN',
+      authType: 'oauth_device'
+    };
+
+    const manager = new OnboardingManager();
+    await manager.saveStepData('repoSource', {
+      selectedSource: 'mine',
+      previews: {
+        mine: [
+          { owner: { login: 'owner' }, name: 'repo', description: 'desc', language: 'JS', stargazers_count: 42 }
+        ]
+      },
+      loadedSources: ['mine']
+    });
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('Add from GitHub');
+    expect(html).toContain('data-source="mine"');
+    expect(html).toContain('repo-source-btn active');
+    expect(html).toContain('owner/repo');
+    expect(html).not.toContain('You can add public repositories now');
+  });
+
+  test('signed-in repos step lets you switch GitHub preview sources', async () => {
+    _localStorage.githubAuthSession = {
+      accessToken: 'gho_TEST_TOKEN',
+      authType: 'oauth_device'
+    };
+    _localStorage.onboarding_state = {
+      currentStep: 2,
+      completed: false,
+      skippedSteps: [],
+      data: {}
+    };
+
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Map(),
+        json: async () => ([{
+          full_name: 'mine/repo',
+          description: 'Mine repo',
+          language: 'TypeScript',
+          stargazers_count: 10,
+          forks_count: 1,
+          updated_at: '2026-04-20T00:00:00Z'
+        }])
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Map(),
+        json: async () => ([{
+          full_name: 'starred/repo',
+          description: 'Starred repo',
+          language: 'JavaScript',
+          stargazers_count: 20,
+          forks_count: 2,
+          updated_at: '2026-04-20T00:00:00Z'
+        }])
+      });
+
+    document.body.innerHTML = `
+      <div id="onboardingView"></div>
+      <button id="footerSkipBtn" class="hidden"></button>
+    `;
+
+    await _renderOnboardingStep();
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const waitForRepoSuggestion = async (expectedText, timeout = 400) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        if (document.getElementById('repoSuggestions').textContent.includes(expectedText)) {
+          return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      return false;
+    };
+
+    expect(await waitForRepoSuggestion('mine/repo')).toBe(true);
+
+    document.querySelector('[data-source="starred"]').click();
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(await waitForRepoSuggestion('starred/repo')).toBe(true);
+  });
+
+  test('signed-in repos step shows an empty state when a source has no addable repos', async () => {
+    _localStorage.githubAuthSession = {
+      accessToken: 'gho_TEST_TOKEN',
+      authType: 'oauth_device'
+    };
+
+    const manager = new OnboardingManager();
+    await manager.saveStepData('repoSource', {
+      selectedSource: 'mine',
+      previews: {
+        mine: []
+      },
+      loadedSources: ['mine']
+    });
+
+    const html = await _renderReposStep();
+
+    expect(html).toContain('No repositories found in your account yet.');
+  });
+
+  test('getPopularRepos filters noisy meta repositories and backfills sane defaults', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => ({
+        items: [
+          {
+            owner: { login: 'vinta' },
+            name: 'awesome-python',
+            description: 'A curated list of Python frameworks',
+            language: 'Python',
+            stargazers_count: 100000
+          },
+          {
+            owner: { login: 'ByteByteGoHq' },
+            name: 'system-design-101',
+            description: 'System design interview prep',
+            language: 'Markdown',
+            stargazers_count: 80000
+          },
+          {
+            owner: { login: 'supabase' },
+            name: 'supabase',
+            description: 'The open source Firebase alternative',
+            language: 'TypeScript',
+            stargazers_count: 90000
+          }
+        ]
+      }),
+      text: async () => ''
+    });
+
+    const manager = new OnboardingManager();
+    const result = await manager.getPopularRepos();
+
+    expect(result).toHaveLength(3);
+    expect(result.some(repo => `${repo.owner.login}/${repo.name}` === 'supabase/supabase')).toBe(true);
+    expect(result.some(repo => `${repo.owner.login}/${repo.name}` === 'microsoft/vscode')).toBe(true);
+    expect(result.some(repo => /awesome-python/i.test(`${repo.owner.login}/${repo.name}`))).toBe(false);
   });
 
   test('connect step shows device instructions when sign-in starts', async () => {
