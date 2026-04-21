@@ -187,7 +187,12 @@ async function updateRepoCount() {
   const count = watchedRepos.length;
   const repoCountEl = document.getElementById('repoCount');
   if (repoCountEl) {
-    repoCountEl.textContent = count === 0 ? 'Not watching any repos' : `Watching ${count} ${count === 1 ? 'repo' : 'repos'}`;
+    const repoLabel = count === 0 ? 'No repos' : `${count} ${count === 1 ? 'repo' : 'repos'}`;
+    const fullLabel = count === 0 ? 'Not watching any repos' : `Watching ${count} ${count === 1 ? 'repo' : 'repos'}`;
+
+    repoCountEl.textContent = repoLabel;
+    repoCountEl.title = fullLabel;
+    repoCountEl.setAttribute('aria-label', fullLabel);
   }
 }
 

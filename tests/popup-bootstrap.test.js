@@ -237,7 +237,7 @@ describe('popup bootstrap integration', () => {
     expect(document.querySelector('.toolbar').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('activityList').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('footerSkipBtn').classList.contains('hidden')).toBe(true);
-    expect(document.getElementById('repoCount').textContent).toBe('Watching 2 repos');
+    expect(document.getElementById('repoCount').textContent).toBe('2 repos');
     expect(mockApplyTheme).toHaveBeenCalledWith('dark');
     expect(mockApplyColorTheme).toHaveBeenCalledWith('graphite');
     expect(mockUpdateDarkModeIcon).toHaveBeenCalled();

@@ -62,24 +62,35 @@ body {
 /* ---- Header ---- */
 header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 16px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 14px 16px 10px;
   border-bottom: 1px solid var(--border);
   background: transparent;
 }
 
-.header-info {
+.header-main {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.header-stats {
+.header-meta {
   display: flex;
-  flex-direction: row;
-  gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 16px;
+}
+
+.header-meta-separator {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
+  flex-shrink: 0;
 }
 
 .header-refresh-btn {
@@ -109,20 +120,27 @@ header {
 }
 
 .last-updated {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .repo-count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 h1 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
   line-height: 1;
   color: var(--foreground);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
