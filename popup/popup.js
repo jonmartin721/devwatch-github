@@ -159,11 +159,9 @@ import { toggleDarkMode, updateDarkModeIcon } from './controllers/theme-controll
 
 async function loadAndApplyThemes() {
   const savedTheme = await getSyncItem('theme', null);
-  let theme = savedTheme;
+  let theme = savedTheme ?? 'system';
 
-  // If no saved theme, detect system preference and persist it
-  if (theme === null) {
-    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (savedTheme === null) {
     await chrome.storage.sync.set({ theme });
   }
 

@@ -21,7 +21,7 @@ global.chrome = {
 };
 
 // Import functions from shared utilities
-import { formatDate, applyColorTheme } from '../shared/utils.js';
+import { formatDate, applyTheme, applyColorTheme } from '../shared/utils.js';
 
 describe('Date Formatting', () => {
 
@@ -82,12 +82,22 @@ describe('Activity Filtering', () => {
 
 describe('Color Theme Application', () => {
   beforeEach(() => {
+    document.documentElement.className = '';
+    document.documentElement.removeAttribute('data-color-theme');
+    document.documentElement.style.colorScheme = '';
+    document.body.className = '';
     document.body.removeAttribute('data-color-theme');
+    window.matchMedia = jest.fn().mockReturnValue({
+      matches: false,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn()
+    });
   });
 
   test('applies color theme via data attribute', () => {
     applyColorTheme('graphite');
     expect(document.body.getAttribute('data-color-theme')).toBe('graphite');
+    expect(document.documentElement.getAttribute('data-color-theme')).toBe('graphite');
   });
 
   test('defaults to polar when called with null', () => {
@@ -106,5 +116,28 @@ describe('Color Theme Application', () => {
 
     applyColorTheme('obsidian');
     expect(document.body.getAttribute('data-color-theme')).toBe('obsidian');
+    expect(document.documentElement.getAttribute('data-color-theme')).toBe('obsidian');
+  });
+
+  test('applies dark mode to html and body when theme is dark', () => {
+    applyTheme('dark');
+
+    expect(document.body.classList.contains('dark-mode')).toBe(true);
+    expect(document.documentElement.classList.contains('dark-mode')).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  test('follows system theme when theme is system', () => {
+    window.matchMedia = jest.fn().mockReturnValue({
+      matches: true,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn()
+    });
+
+    applyTheme('system');
+
+    expect(document.body.classList.contains('dark-mode')).toBe(true);
+    expect(document.documentElement.classList.contains('dark-mode')).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
   });
 });
