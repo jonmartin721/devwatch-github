@@ -74,10 +74,13 @@ describe('Options accessibility', () => {
     expect(getPanel('setup')).toHaveAttribute('hidden');
   });
 
-  it('supports arrow-key navigation between actual settings tabs', () => {
+  it('supports arrow-key navigation in the shipped tab order', () => {
     setupTabNavigation();
 
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
     const setupTab = getTab('setup');
+    const setupIndex = tabs.indexOf(setupTab);
+    const expectedNextTab = tabs[(setupIndex + 1) % tabs.length];
 
     setupTab.focus();
     setupTab.dispatchEvent(new KeyboardEvent('keydown', {
@@ -85,32 +88,35 @@ describe('Options accessibility', () => {
       bubbles: true
     }));
 
-    expect(document.activeElement).toBe(getTab('repositories'));
-    expect(getTab('repositories')).toHaveAttribute('aria-selected', 'true');
-    expect(getTab('repositories')).toHaveAttribute('tabindex', '0');
-    expect(getPanel('repositories')).not.toHaveAttribute('hidden');
+    expect(document.activeElement).toBe(expectedNextTab);
+    expect(expectedNextTab).toHaveAttribute('aria-selected', 'true');
+    expect(expectedNextTab).toHaveAttribute('tabindex', '0');
+    expect(getPanel(expectedNextTab.dataset.tab)).not.toHaveAttribute('hidden');
     expect(getPanel('setup')).toHaveAttribute('hidden');
-    expect(localStorage.getItem('activeTab')).toBe('repositories');
+    expect(localStorage.getItem('activeTab')).toBe(expectedNextTab.dataset.tab);
   });
 
   it('supports Home and End keys across the vertical tablist', () => {
     setupTabNavigation();
 
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const firstTab = tabs[0];
+    const lastTab = tabs[tabs.length - 1];
     const setupTab = getTab('setup');
 
     setupTab.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'End',
       bubbles: true
     }));
-    expect(document.activeElement).toBe(getTab('help'));
-    expect(getTab('help')).toHaveAttribute('aria-selected', 'true');
+    expect(document.activeElement).toBe(lastTab);
+    expect(lastTab).toHaveAttribute('aria-selected', 'true');
 
-    getTab('help').dispatchEvent(new KeyboardEvent('keydown', {
+    lastTab.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Home',
       bubbles: true
     }));
-    expect(document.activeElement).toBe(getTab('setup'));
-    expect(getTab('setup')).toHaveAttribute('aria-selected', 'true');
+    expect(document.activeElement).toBe(firstTab);
+    expect(firstTab).toHaveAttribute('aria-selected', 'true');
   });
 
   it('lets setup-step links switch tabs without losing keyboard focus', () => {
