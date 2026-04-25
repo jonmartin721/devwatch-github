@@ -23,6 +23,20 @@ function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
 }
 
+function getConnectedStatusMarkup(username) {
+  const connectedLabel = username
+    ? `Connected as ${escapeHtml(username)}`
+    : 'GitHub connected';
+
+  return `
+    <div class="token-connected-card">
+      <div class="token-connected-badge">Ready</div>
+      <div class="token-connected-title">${connectedLabel}</div>
+      <p class="token-connected-copy">You're done here. Continue to choose repositories for your watchlist.</p>
+    </div>
+  `;
+}
+
 function getAnonymousRepoModeCopy() {
   return 'You can add public repositories now and connect GitHub later for private repos and a higher API budget.';
 }
@@ -274,7 +288,8 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   const isFinalStep = progress.current === progress.total;
   const isTokenStep = currentStep === 'token';
   const nextButtonText = isTokenStep ? 'Continue' : (isFinalStep ? 'Open Feed' : 'Next');
-  const nextButtonDisabled = isTokenStep ? 'disabled' : '';
+  const tokenStepData = isTokenStep ? await onboardingManager.getStepData('token') : null;
+  const nextButtonDisabled = isTokenStep && !tokenStepData?.validated ? 'disabled' : '';
 
   stepContent += `
     <div class="onboarding-nav">
@@ -348,20 +363,18 @@ function renderWelcomeStep() {
 async function renderTokenStep() {
   const tokenData = await onboardingManager.getStepData('token');
   const canSkipTokenStep = !tokenData?.validated;
+  const isConnected = Boolean(tokenData?.validated);
 
   let statusHtml = '';
-  let buttonDisabled = '';
-  let buttonText = 'Connect GitHub';
+  let tokenStatusClass = 'token-status';
   const safeUserCode = escapeHtml(tokenData?.userCode || '');
 
   if (tokenData && tokenData.validated && tokenData.username) {
-    statusHtml = getStatusMarkup('success', `Connected as ${tokenData.username}`);
-    buttonDisabled = 'disabled';
-    buttonText = 'Connected';
+    statusHtml = getConnectedStatusMarkup(tokenData.username);
+    tokenStatusClass += ' token-status-prominent';
   } else if (tokenData && tokenData.validated) {
-    statusHtml = getStatusMarkup('success', 'GitHub is connected');
-    buttonDisabled = 'disabled';
-    buttonText = 'Connected';
+    statusHtml = getConnectedStatusMarkup('');
+    tokenStatusClass += ' token-status-prominent';
   } else if (tokenData?.userCode) {
     statusHtml = getStatusMarkup('loading', `If GitHub asks for a code, use ${tokenData.userCode}.`);
   }
@@ -381,26 +394,28 @@ async function renderTokenStep() {
         </ol>
       </div>
 
-      <div class="token-input-group">
-        <div class="token-code-stack">
-          <input
-            type="text"
-            id="tokenInput"
-            placeholder="Code appears here"
-            class="token-input"
-            autocomplete="off"
-            value="${safeUserCode}"
-            readonly
-          >
+      ${isConnected ? '' : `
+        <div class="token-input-group">
+          <div class="token-code-stack">
+            <input
+              type="text"
+              id="tokenInput"
+              placeholder="Code appears here"
+              class="token-input"
+              autocomplete="off"
+              value="${safeUserCode}"
+              readonly
+            >
+          </div>
+          <p id="tokenCopyHint" class="token-copy-hint ${safeUserCode ? '' : 'hidden'}">Click the code field to copy it again.</p>
+          <div class="token-action-row">
+            <button id="validateTokenBtn" class="validate-btn">Connect GitHub</button>
+          </div>
+          ${canSkipTokenStep ? '<button id="skipTokenStepBtn" class="onboarding-btn link token-skip-link" type="button">Continue without GitHub</button>' : ''}
         </div>
-        <p id="tokenCopyHint" class="token-copy-hint ${safeUserCode ? '' : 'hidden'}">Click the code field to copy it again.</p>
-        <div class="token-action-row">
-          <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
-        </div>
-        ${canSkipTokenStep ? '<button id="skipTokenStepBtn" class="onboarding-btn link token-skip-link" type="button">Continue without GitHub</button>' : ''}
-      </div>
+      `}
 
-      <div id="tokenStatus" class="token-status">${statusHtml}</div>
+      <div id="tokenStatus" class="${tokenStatusClass}">${statusHtml}</div>
     </div>
 
     <p class="security-note">
@@ -506,10 +521,19 @@ async function loadAuthenticatedRepoSourcePreview(sourceType, options = {}) {
   return filteredPreview;
 }
 
+async function getPopularRepoPreview(watchedRepos) {
+  const saved = await onboardingManager.getStepData('popularRepos');
+  const hasSavedRepos = Array.isArray(saved) && saved.length > 0;
+  const popularRepos = hasSavedRepos ? saved : await onboardingManager.getPopularRepos();
+
+  return filterSuggestedRepos(popularRepos, watchedRepos).slice(0, 3);
+}
+
 export async function renderReposStep() {
   const githubToken = await getAccessToken();
   const watchedRepos = await getWatchedRepos();
   const publicOnlyMode = !githubToken;
+  const visiblePopularRepos = await getPopularRepoPreview(watchedRepos);
 
   if (!publicOnlyMode) {
     const sourceState = await getSavedRepoSourceState();
@@ -549,6 +573,16 @@ export async function renderReposStep() {
           </div>
         </div>
 
+        <div class="popular-repos popular-repos-panel">
+          <h3>Popular repositories</h3>
+          <p class="repo-source-copy">Quick picks to get started if you want a few broad defaults.</p>
+          <div class="repo-suggestions" id="popularRepoSuggestions">
+            ${renderRepoSuggestionsContent(visiblePopularRepos, {
+              emptyMessage: 'No popular repositories available right now.'
+            })}
+          </div>
+        </div>
+
         <div class="manual-repo">
           <h3>Or add one directly</h3>
           <div class="manual-input-group">
@@ -567,11 +601,6 @@ export async function renderReposStep() {
     `;
   }
 
-  const saved = await onboardingManager.getStepData('popularRepos');
-  const hasSavedRepos = Array.isArray(saved) && saved.length > 0;
-  const popularRepos = hasSavedRepos ? saved : await onboardingManager.getPopularRepos();
-  const visibleRepos = filterSuggestedRepos(popularRepos, watchedRepos).slice(0, 3);
-
   return `
     <div class="onboarding-step repos-step">
       <h2>Build your watchlist</h2>
@@ -580,8 +609,8 @@ export async function renderReposStep() {
       <div class="popular-repos">
         <h3>Popular repositories</h3>
         <div class="repo-suggestions" id="repoSuggestions">
-          ${visibleRepos.length > 0 ?
-            visibleRepos.map(renderRepoSuggestion).join('') :
+          ${visiblePopularRepos.length > 0 ?
+            visiblePopularRepos.map(renderRepoSuggestion).join('') :
             '<div class="repo-loading" id="repoLoading">Loading popular repositories...</div>'
           }
         </div>
@@ -871,9 +900,17 @@ function setupTokenStepListeners(loadActivitiesCallback) {
       }
 
       try {
-        await completePendingDeviceAuth(existingTokenData, tokenElements, {
+        const result = await completePendingDeviceAuth(existingTokenData, tokenElements, {
           showCheckingStatus: true
         });
+        if (result) {
+          try {
+            await loadAuthenticatedRepoSourcePreview('mine', { force: true });
+          } catch (_prefetchError) {
+            // Silent prefetch failure is fine here.
+          }
+          await renderOnboardingStep(loadActivitiesCallback);
+        }
       } catch (error) {
         tokenStatus.innerHTML = getStatusMarkup('error',
           error?.code === 'client_id_missing'
@@ -928,12 +965,12 @@ function setupTokenStepListeners(loadActivitiesCallback) {
       });
 
       if (result) {
-        skipTokenStepBtn?.classList.add('hidden');
         try {
           await loadAuthenticatedRepoSourcePreview('mine', { force: true });
         } catch (_prefetchError) {
           // Silently handle prefetch errors - not critical
         }
+        await renderOnboardingStep(loadActivitiesCallback);
       }
     } catch (error) {
       tokenStatus.innerHTML = getStatusMarkup('error',

@@ -5,6 +5,7 @@ const mockApplyTheme = jest.fn();
 const mockApplyColorTheme = jest.fn();
 const mockGetSettings = jest.fn();
 const mockGetWatchedRepos = jest.fn();
+const mockGetLocalItem = jest.fn();
 const mockUpdateSettings = jest.fn();
 const mockGetAuthSession = jest.fn();
 const mockClearAuthSession = jest.fn();
@@ -47,6 +48,7 @@ jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
   clearAuthSession: mockClearAuthSession,
   getAuthSession: mockGetAuthSession,
   getAccessToken: mockGetAccessToken,
+  getLocalItem: mockGetLocalItem,
   getSettings: mockGetSettings,
   getWatchedRepos: mockGetWatchedRepos,
   setLocalItem: mockSetLocalItem,
@@ -142,6 +144,10 @@ function renderOptionsDom() {
     <input id="repoSearch" />
     <button id="repoSearchClear" class="search-clear-btn hidden"></button>
     <button id="hidePinnedToggleBtn2"></button>
+    <p id="sidebarAuthAccount"></p>
+    <p id="sidebarAuthMeta"></p>
+    <p id="sidebarRateLimitValue"></p>
+    <p id="sidebarRateLimitMeta"></p>
 
     <button class="tab-button" data-tab="repositories">Repositories</button>
     <button class="tab-button" data-tab="filters">Filters</button>
@@ -251,6 +257,7 @@ beforeEach(() => {
   mockGetWatchedRepos.mockResolvedValue([]);
   mockGetAuthSession.mockResolvedValue(null);
   mockGetAccessToken.mockResolvedValue('token');
+  mockGetLocalItem.mockResolvedValue(null);
   mockUpdateSettings.mockResolvedValue();
   mockSetLocalItem.mockResolvedValue();
   mockSetWatchedRepos.mockResolvedValue();
@@ -432,17 +439,30 @@ describe('options interactions', () => {
   });
 
   test('loadSettings applies normalized settings to the UI and renders snoozed repos', async () => {
-    mockGetAuthSession.mockResolvedValue({ accessToken: 'stored-token' });
+    mockGetAuthSession.mockResolvedValue({
+      accessToken: 'stored-token',
+      username: 'octocat',
+      authType: 'oauth_device',
+      scopes: ['repo', 'read:user'],
+      grantedAt: '2026-04-21T14:20:00.000Z'
+    });
+    mockGetLocalItem.mockResolvedValue({
+      remaining: 1234,
+      limit: 5000,
+      reset: Date.UTC(2026, 3, 21, 20, 0, 0)
+    });
 
     await loadSettings();
 
-    expect(mockApplyStoredConnection).toHaveBeenCalledWith({ accessToken: 'stored-token' });
+    expect(mockApplyStoredConnection).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'stored-token' }));
     expect(mockApplyTheme).toHaveBeenCalledWith('dark');
     expect(mockApplyColorTheme).toHaveBeenCalledWith('graphite');
     expect(document.getElementById('theme-dark').checked).toBe(true);
     expect(document.getElementById('color-graphite').checked).toBe(true);
     expect(document.getElementById('itemExpiryEnabled').checked).toBe(true);
     expect(document.getElementById('itemExpiryInputRow').classList.contains('d-none')).toBe(false);
+    expect(document.getElementById('sidebarAuthAccount').textContent).toBe('@octocat');
+    expect(document.getElementById('sidebarRateLimitValue').textContent).toBe('1234/5000 left');
     expect(mockRenderSnoozedRepos).toHaveBeenCalledWith([]);
   });
 
@@ -529,6 +549,8 @@ describe('options interactions', () => {
 
   test('setup connection status actions share the same pill language', () => {
     expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*border-radius:\s*999px/);
+    expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*background:\s*var\(--error-bg\)/);
+    expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*color:\s*var\(--error-text\)/);
     expect(optionsStyles).toMatch(/\.github-connect-status-row\s*\{[\s\S]*justify-content:\s*space-between/);
     expect(optionsStyles).toMatch(/\.github-connect-inline-help\s*\{[\s\S]*flex-direction:\s*column/);
     expect(optionsStyles).toMatch(/\.github-connect-card\.is-connected [\s\S]*\.github-connect-flow[\s\S]*display:\s*none/);

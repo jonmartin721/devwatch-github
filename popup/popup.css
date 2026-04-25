@@ -1320,7 +1320,11 @@ body.dark-mode .search-box input:focus-visible {
   flex-direction: column;
   justify-content: flex-start;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .onboarding-step {
@@ -1328,6 +1332,7 @@ body.dark-mode .search-box input:focus-visible {
   flex-direction: column;
   text-align: center;
   min-height: 0;
+  padding-bottom: 8px;
 }
 
 /* Step icon — hero treatment */
@@ -1390,13 +1395,13 @@ body.dark-mode .search-box input:focus-visible {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 16px;
   border: 1px solid var(--border);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .feature-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .feature-icon {
@@ -1473,7 +1478,7 @@ body.dark-mode .search-box input:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 10px 0 8px;
+  margin: 10px 0 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -1542,6 +1547,8 @@ body.dark-mode .search-box input:focus-visible {
   align-self: center;
   padding: 0;
   font-size: 11px;
+  line-height: 1.35;
+  margin-top: 2px;
 }
 
 /* Primary button */
@@ -1576,6 +1583,50 @@ body.dark-mode .search-box input:focus-visible {
   min-height: 0;
 }
 
+.token-status-prominent {
+  margin-top: 10px;
+}
+
+.token-connected-card {
+  border: 1px solid color-mix(in srgb, var(--accent-color) 22%, var(--border));
+  border-radius: 18px;
+  padding: 14px 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 10%, transparent), transparent 65%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.token-connected-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  color: var(--accent-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.token-connected-title {
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.token-connected-copy {
+  margin: 6px 0 0;
+  max-width: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
 @media (max-width: 560px) {
   .token-input-group,
   .token-action-row {
@@ -1607,7 +1658,7 @@ body.dark-mode .search-box input:focus-visible {
 .security-note {
   font-size: 10px;
   color: var(--muted-foreground);
-  margin-top: 4px;
+  margin-top: 8px;
   display: flex;
   align-items: flex-start;
   gap: 5px;
@@ -1664,11 +1715,30 @@ body.dark-mode .search-box input:focus-visible {
   margin-bottom: 8px;
 }
 
+.popular-repos-panel {
+  margin-top: 18px;
+  padding: 16px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 70%),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
 .popular-repos h3 {
   margin-bottom: 12px;
   color: var(--foreground);
   font-size: 14px;
   font-weight: 600;
+}
+
+.popular-repos-panel h3 {
+  margin-bottom: 8px;
+}
+
+.popular-repos-panel .repo-source-copy {
+  margin-bottom: 12px;
 }
 
 .repo-source-copy {
@@ -1695,12 +1765,14 @@ body.dark-mode .search-box input:focus-visible {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 150ms;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
 .repo-source-btn:hover {
-  background: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
   color: var(--foreground);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .repo-source-btn.active {
@@ -1723,13 +1795,13 @@ body.dark-mode .search-box input:focus-visible {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 16px;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .repo-suggestion:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .repo-info {
@@ -1949,13 +2021,13 @@ body.dark-mode .search-box input:focus-visible {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 18px;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .category-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .category-icon {
@@ -2241,13 +2313,13 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 16px;
   border: 1px solid var(--border);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .tip-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .tip-icon {
@@ -2317,7 +2389,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12px;
+  padding-top: 14px;
   margin-top: auto;
   flex-shrink: 0;
 }

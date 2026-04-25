@@ -9,9 +9,10 @@
   <link rel="stylesheet" href="../shared/themes.css">
   <link rel="stylesheet" href="options.css">
 </head>
-<body>
-  <div class="container">
-    <nav class="tab-navigation" aria-label="Settings">
+  <body>
+    <div class="container">
+      <div class="sidebar-shell">
+        <nav class="tab-navigation" aria-label="Settings">
       <div class="sidebar-header">
         <h2>Settings</h2>
       </div>
@@ -53,10 +54,28 @@
           </svg>
           <span>Help</span>
         </button>
-      </div>
-    </nav>
+        </div>
+        </nav>
+        <aside class="sidebar-status-card" aria-live="polite" aria-label="GitHub status">
+          <div class="sidebar-status-header-row">
+            <p class="sidebar-status-eyebrow">GitHub Status</p>
+          </div>
 
-    <div class="content-wrapper">
+          <div class="sidebar-status-section">
+            <p class="sidebar-status-label">Account</p>
+            <p class="sidebar-status-value" id="sidebarAuthAccount">Not connected</p>
+            <p class="sidebar-status-meta" id="sidebarAuthMeta">Connect GitHub to show the signed-in account and scopes.</p>
+          </div>
+
+          <div class="sidebar-status-section">
+            <p class="sidebar-status-label">API Calls</p>
+            <p class="sidebar-status-value" id="sidebarRateLimitValue">No data yet</p>
+            <p class="sidebar-status-meta" id="sidebarRateLimitMeta">Updates after the next GitHub request finishes.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="content-wrapper">
     <!-- Tab Panel 1: Setup -->
     <div class="tab-panel" id="panel-setup" role="tabpanel" data-tab="setup" aria-labelledby="tab-setup" hidden>
     <section class="section">

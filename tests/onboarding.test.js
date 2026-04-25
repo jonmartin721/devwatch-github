@@ -311,11 +311,10 @@ describe('Onboarding - token persistence', () => {
     });
 
     const onboardingHtml = document.getElementById('onboardingView').innerHTML;
-    const tokenInput = document.getElementById('tokenInput');
     const tokenStatus = document.getElementById('tokenStatus');
 
-    expect(tokenInput.value).toBe('ABCD"&quot; autofocus="true');
-    expect(tokenInput.outerHTML).toContain('&quot;');
+    expect(document.getElementById('tokenInput')).toBeNull();
+    expect(document.getElementById('validateTokenBtn')).toBeNull();
     expect(tokenStatus.textContent).toContain('Connected as <img src=x onerror=alert(1)>');
     expect(onboardingHtml).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(onboardingHtml).not.toContain('<img src=x onerror=alert(1)>');
@@ -333,8 +332,9 @@ describe('Onboarding - token persistence', () => {
     const onboardingHtml = document.getElementById('onboardingView').innerHTML;
     const tokenStatus = document.getElementById('tokenStatus');
 
-    expect(tokenStatus.textContent).toContain('GitHub is connected');
-    expect(onboardingHtml).toContain('Connected');
+    expect(tokenStatus.textContent).toContain('GitHub connected');
+    expect(tokenStatus.textContent).toContain("You're done here");
+    expect(onboardingHtml).toContain('Ready');
   });
 
   test('connect step renders without a dedicated copy button', async () => {
@@ -427,6 +427,9 @@ describe('Onboarding - token persistence', () => {
     };
 
     const manager = new OnboardingManager();
+    await manager.saveStepData('popularRepos', [
+      { owner: { login: 'popular' }, name: 'starter', description: 'desc', language: 'JS', stargazers_count: 100 }
+    ]);
     await manager.saveStepData('repoSource', {
       selectedSource: 'mine',
       previews: {
@@ -440,9 +443,11 @@ describe('Onboarding - token persistence', () => {
     const html = await _renderReposStep();
 
     expect(html).toContain('Add from GitHub');
+    expect(html).toContain('Popular repositories');
     expect(html).toContain('data-source="mine"');
     expect(html).toContain('repo-source-btn active');
     expect(html).toContain('owner/repo');
+    expect(html).toContain('popular/starter');
     expect(html).not.toContain('You can add public repositories now');
   });
 
@@ -455,7 +460,11 @@ describe('Onboarding - token persistence', () => {
       currentStep: 2,
       completed: false,
       skippedSteps: [],
-      data: {}
+      data: {
+        popularRepos: [
+          { owner: { login: 'popular' }, name: 'starter', description: 'desc', language: 'JS' }
+        ]
+      }
     };
 
     global.fetch = jest.fn()
@@ -522,6 +531,9 @@ describe('Onboarding - token persistence', () => {
     };
 
     const manager = new OnboardingManager();
+    await manager.saveStepData('popularRepos', [
+      { owner: { login: 'popular' }, name: 'starter', description: 'desc', language: 'JS' }
+    ]);
     await manager.saveStepData('repoSource', {
       selectedSource: 'mine',
       previews: {
@@ -694,6 +706,8 @@ describe('Onboarding - token persistence', () => {
     const tokenStatus = document.getElementById('tokenStatus');
     expect(tokenStatus.textContent).toContain('Connected as <img src=x onerror=alert(1)>');
     expect(tokenStatus.innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(document.getElementById('tokenInput')).toBeNull();
+    expect(document.getElementById('validateTokenBtn')).toBeNull();
   });
 
   test('saves categories preferences during onboarding', async () => {

@@ -4,6 +4,7 @@ import {
   clearAuthSession,
   getAuthSession,
   getAccessToken,
+  getLocalItem,
   getSettings,
   getWatchedRepos,
   setLocalItem,
@@ -50,12 +51,15 @@ const state = {
   hidePinnedRepos: false
 };
 
+let sidebarStatusStorageListener = null;
+
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
     // Initialize toast manager first
     toastManager.init();
 
     await loadSettings();
+    setupSidebarStatusAutoRefresh();
     setupEventListeners();
     setupThemeListener();
     setupSnoozedReposAutoRefresh();
@@ -370,6 +374,132 @@ function getColorThemeDisplayName(colorTheme) {
   return themeNames[colorTheme] || colorTheme;
 }
 
+function formatSidebarTimestamp(timestamp) {
+  if (!timestamp) {
+    return '';
+  }
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function getSidebarAuthMeta(authSession) {
+  if (!authSession?.accessToken) {
+    return 'Connect GitHub to show the signed-in account and scopes.';
+  }
+
+  const authTypeLabel = authSession.authType === 'oauth_device'
+    ? 'OAuth device flow'
+    : 'GitHub OAuth';
+  const scopes = Array.isArray(authSession.scopes) && authSession.scopes.length > 0
+    ? authSession.scopes.join(', ')
+    : 'scopes unavailable';
+  const grantedAt = formatSidebarTimestamp(authSession.grantedAt);
+
+  return grantedAt
+    ? `${authTypeLabel} · ${scopes} · since ${grantedAt}`
+    : `${authTypeLabel} · ${scopes}`;
+}
+
+function getSidebarRateLimitMeta(rateLimit) {
+  if (!rateLimit || !Number.isFinite(rateLimit.remaining) || !Number.isFinite(rateLimit.limit)) {
+    return 'Updates after the next GitHub request finishes.';
+  }
+
+  if (rateLimit.reset) {
+    const resetTime = formatSidebarTimestamp(rateLimit.reset);
+    if (resetTime) {
+      return `Latest GitHub budget snapshot. Resets ${resetTime}.`;
+    }
+  }
+
+  return 'Latest GitHub budget snapshot from the most recent API response.';
+}
+
+function renderSidebarStatus(authSession, rateLimit) {
+  const accountEl = document.getElementById('sidebarAuthAccount');
+  const authMetaEl = document.getElementById('sidebarAuthMeta');
+  const rateValueEl = document.getElementById('sidebarRateLimitValue');
+  const rateMetaEl = document.getElementById('sidebarRateLimitMeta');
+
+  if (!accountEl || !authMetaEl || !rateValueEl || !rateMetaEl) {
+    return;
+  }
+
+  const isConnected = Boolean(authSession?.accessToken);
+  accountEl.textContent = isConnected
+    ? `@${authSession.username || 'Connected'}`
+    : 'Not connected';
+  authMetaEl.textContent = getSidebarAuthMeta(authSession);
+
+  if (rateLimit && Number.isFinite(rateLimit.remaining) && Number.isFinite(rateLimit.limit)) {
+    rateValueEl.textContent = `${rateLimit.remaining}/${rateLimit.limit} left`;
+  } else {
+    rateValueEl.textContent = 'No data yet';
+  }
+
+  rateMetaEl.textContent = getSidebarRateLimitMeta(rateLimit);
+}
+
+async function refreshSidebarStatus(overrides = {}) {
+  const authSession = overrides.authSession !== undefined
+    ? overrides.authSession
+    : await getAuthSession();
+  const rateLimit = overrides.rateLimit !== undefined
+    ? overrides.rateLimit
+    : await getLocalItem('rateLimit', null);
+
+  renderSidebarStatus(authSession, rateLimit);
+}
+
+function teardownSidebarStatusAutoRefresh() {
+  if (sidebarStatusStorageListener && chrome?.storage?.onChanged) {
+    chrome.storage.onChanged.removeListener(sidebarStatusStorageListener);
+    sidebarStatusStorageListener = null;
+  }
+}
+
+function setupSidebarStatusAutoRefresh() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
+    return;
+  }
+
+  teardownSidebarStatusAutoRefresh();
+
+  sidebarStatusStorageListener = async (changes, areaName) => {
+    const authChanged = (areaName === 'local' || areaName === 'session') && changes.githubAuthSession;
+    const rateLimitChanged = areaName === 'local' && changes.rateLimit;
+
+    if (!authChanged && !rateLimitChanged) {
+      return;
+    }
+
+    try {
+      await refreshSidebarStatus({
+        authSession: authChanged ? changes.githubAuthSession.newValue ?? null : undefined,
+        rateLimit: rateLimitChanged ? changes.rateLimit.newValue ?? null : undefined
+      });
+    } catch (error) {
+      console.error('Failed to refresh sidebar status:', error);
+    }
+  };
+
+  chrome.storage.onChanged.addListener(sidebarStatusStorageListener);
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', teardownSidebarStatusAutoRefresh, { once: true });
+  }
+}
+
 function getOptionCategorySettingsFromDom() {
   const filters = {};
   const notifications = {};
@@ -441,10 +571,16 @@ function setupEventListeners() {
 
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('connectGitHubBtn').addEventListener('click', async () => {
-    await connectGitHub(toastManager);
+    const result = await connectGitHub(toastManager);
+    await refreshSidebarStatus({
+      authSession: result?.authSession ?? undefined
+    });
   });
   document.getElementById('clearTokenBtn').addEventListener('click', async () => {
-    await clearToken();
+    const cleared = await clearToken();
+    if (cleared) {
+      await refreshSidebarStatus({ authSession: null });
+    }
   });
 
   // Action button toggles
@@ -783,6 +919,7 @@ async function loadSettings() {
     renderRepoListWrapper();
     await loadPopularRepos();
     applySettingsToUi(settings);
+    await refreshSidebarStatus({ authSession });
 
     // Load and display current snoozes
     renderSnoozedRepos(settings.snoozedRepos || []);
@@ -794,6 +931,7 @@ async function loadSettings() {
     state.pinnedRepos = state.pinnedRepos || [];
     renderRepoListWrapper();
     renderPopularReposSection();
+    await refreshSidebarStatus().catch(() => {});
   }
 }
 
