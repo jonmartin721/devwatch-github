@@ -183,6 +183,8 @@ npm test
 npm run build
 ```
 
+For the same full local validation pass used in this repo before packaging or release prep, run `npm run validate`.
+
 The automated checks cover shared logic, UI behavior, and a range of mocked extension flows. They do not replace manual testing in Chrome for permissions, service worker lifecycle behavior, or end-to-end interactions against live GitHub data.
 
 Jest enforces minimum global coverage thresholds of 47% lines, 46% branches, and 44% functions. That is a floor for the suite, not a claim of exhaustive coverage.
