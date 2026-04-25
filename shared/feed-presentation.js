@@ -19,6 +19,21 @@ export function getActivityTypeLabel(type) {
   return labels[type] || type;
 }
 
+export function getActivityTypeBadgeLabel(type) {
+  const labels = {
+    pr: 'PR',
+    issue: 'Issue',
+    release: 'Release',
+    PullRequestEvent: 'PR',
+    IssuesEvent: 'Issue',
+    ReleaseEvent: 'Release',
+    PushEvent: 'Push',
+    IssueCommentEvent: 'Comment'
+  };
+
+  return labels[type] || type;
+}
+
 export function formatRelativeTime(timestamp) {
   const date = new Date(timestamp);
 

@@ -137,9 +137,9 @@ jest.unstable_mockModule('../popup/controllers/theme-controller.js', () => ({
 
 function renderPopupDom() {
   document.body.innerHTML = `
-    <header style="display:none"></header>
-    <div class="toolbar" style="display:none"></div>
-    <div id="activityList" style="display:none"></div>
+    <header class="hidden"></header>
+    <div class="toolbar hidden"></div>
+    <div id="activityList" class="hidden"></div>
     <div id="errorMessage"></div>
     <div id="searchBox" class="hidden"></div>
     <button id="refreshBtn"></button>
@@ -233,11 +233,11 @@ describe('popup bootstrap integration', () => {
     expect(mockLoadActivitiesController).toHaveBeenCalledWith(expect.any(Function), {});
     expect(mockSetupKeyboardNavigationController).toHaveBeenCalled();
     expect(mockSetupOfflineListeners).toHaveBeenCalled();
-    expect(document.querySelector('header').style.display).toBe('flex');
-    expect(document.querySelector('.toolbar').style.display).toBe('flex');
-    expect(document.getElementById('activityList').style.display).toBe('block');
+    expect(document.querySelector('header').classList.contains('hidden')).toBe(false);
+    expect(document.querySelector('.toolbar').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('activityList').classList.contains('hidden')).toBe(false);
     expect(document.getElementById('footerSkipBtn').classList.contains('hidden')).toBe(true);
-    expect(document.getElementById('repoCount').textContent).toBe('Watching 2 repos');
+    expect(document.getElementById('repoCount').textContent).toBe('2 repos');
     expect(mockApplyTheme).toHaveBeenCalledWith('dark');
     expect(mockApplyColorTheme).toHaveBeenCalledWith('graphite');
     expect(mockUpdateDarkModeIcon).toHaveBeenCalled();

@@ -178,7 +178,7 @@ describe('Options Page - Repository Management', () => {
   describe('validateRepo', () => {
     beforeEach(() => {
       // Mock auth session storage for validateRepo tests
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
           result.githubAuthSession = { accessToken: 'test-token' };

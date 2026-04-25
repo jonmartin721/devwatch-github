@@ -75,15 +75,14 @@ async function initializePopup() {
       const header = document.querySelector('header');
       const toolbar = document.querySelector('.toolbar');
       const activityList = document.getElementById('activityList');
-      if (header) header.style.display = 'flex';
-      if (toolbar) toolbar.style.display = 'flex';
-      if (activityList) activityList.style.display = 'block';
+      if (header) header.classList.remove('hidden');
+      if (toolbar) toolbar.classList.remove('hidden');
+      if (activityList) activityList.classList.remove('hidden');
 
       // Ensure skip button is hidden when not in onboarding
       const footerSkipBtn = document.getElementById('footerSkipBtn');
       if (footerSkipBtn) {
         footerSkipBtn.classList.add('hidden');
-        footerSkipBtn.style.display = 'none';
       }
 
       loadActivities();
@@ -160,11 +159,9 @@ import { toggleDarkMode, updateDarkModeIcon } from './controllers/theme-controll
 
 async function loadAndApplyThemes() {
   const savedTheme = await getSyncItem('theme', null);
-  let theme = savedTheme;
+  let theme = savedTheme ?? 'system';
 
-  // If no saved theme, detect system preference and persist it
-  if (theme === null) {
-    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (savedTheme === null) {
     await chrome.storage.sync.set({ theme });
   }
 
@@ -190,7 +187,12 @@ async function updateRepoCount() {
   const count = watchedRepos.length;
   const repoCountEl = document.getElementById('repoCount');
   if (repoCountEl) {
-    repoCountEl.textContent = count === 0 ? 'Not watching any repos' : `Watching ${count} ${count === 1 ? 'repo' : 'repos'}`;
+    const repoLabel = count === 0 ? 'No repos' : `${count} ${count === 1 ? 'repo' : 'repos'}`;
+    const fullLabel = count === 0 ? 'Not watching any repos' : `Watching ${count} ${count === 1 ? 'repo' : 'repos'}`;
+
+    repoCountEl.textContent = repoLabel;
+    repoCountEl.title = fullLabel;
+    repoCountEl.setAttribute('aria-label', fullLabel);
   }
 }
 

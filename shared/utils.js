@@ -2,19 +2,78 @@
  * Shared utility functions used across the extension
  */
 
+const THEME_CACHE_KEY = 'devwatch:theme-preferences';
+const DEFAULT_THEME = 'system';
+const DEFAULT_COLOR_THEME = 'polar';
+
+function getThemeTargets() {
+  if (typeof document === 'undefined') {
+    return [];
+  }
+
+  return [document.documentElement, document.body].filter(Boolean);
+}
+
+function prefersDarkMode() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function updateThemeCache(updates) {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  let cachedPreferences = {
+    theme: DEFAULT_THEME,
+    colorTheme: DEFAULT_COLOR_THEME
+  };
+
+  try {
+    const rawValue = localStorage.getItem(THEME_CACHE_KEY);
+    if (rawValue) {
+      const parsedValue = JSON.parse(rawValue);
+      if (parsedValue && typeof parsedValue === 'object') {
+        cachedPreferences = {
+          ...cachedPreferences,
+          ...parsedValue
+        };
+      }
+    }
+  } catch {
+    // Ignore invalid cache contents and overwrite with the new values below.
+  }
+
+  try {
+    localStorage.setItem(THEME_CACHE_KEY, JSON.stringify({
+      ...cachedPreferences,
+      ...updates
+    }));
+  } catch {
+    // Ignore localStorage write failures. Live theme application still succeeds.
+  }
+}
+
 /**
  * Apply theme based on user preference
  * @param {string} theme - 'light', 'dark', or 'system'
  */
 export function applyTheme(theme) {
-  if (theme === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.body.classList.toggle('dark-mode', prefersDark);
-  } else if (theme === 'dark') {
-    document.body.classList.add('dark-mode');
-  } else {
-    document.body.classList.remove('dark-mode');
+  const normalizedTheme = theme || DEFAULT_THEME;
+  const useDarkMode = normalizedTheme === 'dark' || (normalizedTheme === 'system' && prefersDarkMode());
+
+  getThemeTargets().forEach((target) => {
+    target.classList.toggle('dark-mode', useDarkMode);
+  });
+
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.style.colorScheme = useDarkMode ? 'dark' : 'light';
   }
+
+  updateThemeCache({ theme: normalizedTheme });
 }
 
 /**
@@ -22,7 +81,13 @@ export function applyTheme(theme) {
  * @param {string} colorTheme - Theme name: 'polar', 'graphite', 'nightfall', 'obsidian', 'sand', 'terminal-ledger'
  */
 export function applyColorTheme(colorTheme) {
-  document.body.setAttribute('data-color-theme', colorTheme || 'polar');
+  const normalizedColorTheme = colorTheme || DEFAULT_COLOR_THEME;
+
+  getThemeTargets().forEach((target) => {
+    target.setAttribute('data-color-theme', normalizedColorTheme);
+  });
+
+  updateThemeCache({ colorTheme: normalizedColorTheme });
 }
 
 /**

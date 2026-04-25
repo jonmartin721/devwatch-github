@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
-- GitHub sign-in sessions now stay in Chrome session storage only instead of persisting to local extension storage
+- GitHub sign-in sessions now persist in local extension storage for the current Chrome profile instead of clearing at browser shutdown
 - Added validation for the GitHub device-flow verification URL before opening a browser tab
 - Tightened remote image handling for activity avatars and extension page CSP rules
 

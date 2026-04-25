@@ -3,6 +3,7 @@ import { escapeHtml, sanitizeImageUrl } from '../../shared/sanitize.js';
 import { CHECK_ICON, createSvg } from '../../shared/icons.js';
 import { useState } from '../../shared/state-manager.js';
 import {
+  getActivityTypeBadgeLabel,
   formatRelativeTime,
   getActivityTypeLabel,
   groupByRepo,
@@ -24,6 +25,7 @@ export function renderActivityItem(activity) {
   const sanitizedRepo = escapeHtml(activity.repo);
   const sanitizedType = escapeHtml(activity.type);
   const sanitizedTypeLabel = escapeHtml(getActivityTypeLabel(activity.type));
+  const sanitizedTypeBadgeLabel = escapeHtml(getActivityTypeBadgeLabel(activity.type));
   const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar);
 
   return `
@@ -31,7 +33,7 @@ export function renderActivityItem(activity) {
       <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
       <div class="activity-content">
         <div class="activity-header">
-          <span class="activity-type ${sanitizedType}">${sanitizedTypeLabel}</span>
+          <span class="activity-type ${sanitizedType}" title="${sanitizedTypeLabel}">${sanitizedTypeBadgeLabel}</span>
           <span class="activity-repo">${sanitizedRepo}</span>
         </div>
         <div class="activity-title">${sanitizedTitle}</div>

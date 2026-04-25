@@ -22,14 +22,21 @@ describe('repository-list-view', () => {
     // Set up DOM elements
     document.body.innerHTML = `
       <div id="repoList"></div>
-      <div id="paginationControls" style="display: none;">
+      <div id="paginationControls" class="pagination-controls hidden">
         <button id="prevPage">Previous</button>
         <span id="pageInfo"></span>
         <button id="nextPage">Next</button>
       </div>
-      <button id="hidePinnedToggleBtn2" style="display: none;"></button>
+      <button id="hidePinnedToggleBtn2" hidden></button>
       <span id="repoCountBadge">0</span>
     `;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .hidden { display: none !important; }
+      .pagination-controls { display: flex; }
+    `;
+    document.head.appendChild(style);
 
     repoList = document.getElementById('repoList');
     paginationControls = document.getElementById('paginationControls');
@@ -60,8 +67,8 @@ describe('repository-list-view', () => {
 
       expect(repoList.querySelector('.empty-repos-card')).not.toBeNull();
       expect(repoList.textContent).toContain('No Repositories Yet');
-      expect(paginationControls.style.display).toBe('none');
-      expect(hidePinnedToggleBtn.style.display).toBe('none');
+      expect(paginationControls.classList.contains('hidden')).toBe(true);
+      expect(hidePinnedToggleBtn.hidden).toBe(true);
       expect(repoCountBadge.textContent).toBe('0');
     });
 
@@ -100,7 +107,7 @@ describe('repository-list-view', () => {
 
       const repoItems = repoList.querySelectorAll('.repo-item');
       expect(repoItems.length).toBe(2);
-      expect(hidePinnedToggleBtn.style.display).toBe('flex');
+      expect(hidePinnedToggleBtn.hidden).toBe(false);
       expect(repoCountBadge.textContent).toBe('2');
     });
 
@@ -264,7 +271,7 @@ describe('repository-list-view', () => {
     test('should show pagination controls when repos exceed page size', () => {
       renderRepoList(mockState, mockOnToggleMute, mockOnTogglePin, mockOnRemove);
 
-      expect(paginationControls.style.display).toBe('flex');
+      expect(paginationControls.classList.contains('hidden')).toBe(false);
       expect(pageInfo.textContent).toBe('Page 1 of 3');
     });
 
@@ -303,7 +310,7 @@ describe('repository-list-view', () => {
 
       renderRepoList(mockState, mockOnToggleMute, mockOnTogglePin, mockOnRemove);
 
-      expect(paginationControls.style.display).toBe('none');
+      expect(paginationControls.classList.contains('hidden')).toBe(true);
     });
   });
 
@@ -374,7 +381,7 @@ describe('repository-list-view', () => {
       renderRepoList(mockState, mockOnToggleMute, mockOnTogglePin, mockOnRemove);
 
       expect(repoList.textContent).toContain('No repositories match your search');
-      expect(paginationControls.style.display).toBe('none');
+      expect(paginationControls.classList.contains('hidden')).toBe(true);
     });
   });
 

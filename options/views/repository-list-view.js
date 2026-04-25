@@ -20,7 +20,7 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
 
   if (state.watchedRepos.length === 0) {
     const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
-    if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'none';
+    if (hidePinnedToggleBtn) hidePinnedToggleBtn.hidden = true;
     updateRepoCountBadge(0);
 
     list.innerHTML = `
@@ -42,19 +42,19 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
         </div>
       </div>
     `;
-    paginationControls.style.display = 'none';
+    paginationControls.classList.add('hidden');
     return;
   }
 
   const hidePinnedToggleBtn = document.getElementById('hidePinnedToggleBtn2');
-  if (hidePinnedToggleBtn) hidePinnedToggleBtn.style.display = 'flex';
+  if (hidePinnedToggleBtn) hidePinnedToggleBtn.hidden = false;
   updateRepoCountBadge(state.watchedRepos.length);
 
   const filteredRepos = getFilteredRepos(state);
 
   if (filteredRepos.length === 0) {
     list.innerHTML = '<p class="help-text">No repositories match your search</p>';
-    paginationControls.style.display = 'none';
+    paginationControls.classList.add('hidden');
     return;
   }
 
@@ -75,12 +75,12 @@ export function renderRepoList(state, onToggleMute, onTogglePin, onRemove) {
   const reposToDisplay = sortedRepos.slice(startIndex, endIndex);
 
   if (filteredRepos.length > state.reposPerPage) {
-    paginationControls.style.display = 'flex';
+    paginationControls.classList.remove('hidden');
     document.getElementById('prevPage').disabled = state.currentPage === 1;
     document.getElementById('nextPage').disabled = state.currentPage === totalPages;
     document.getElementById('pageInfo').textContent = `Page ${state.currentPage} of ${totalPages}`;
   } else {
-    paginationControls.style.display = 'none';
+    paginationControls.classList.add('hidden');
   }
 
   list.innerHTML = reposToDisplay.map(repo => {

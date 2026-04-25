@@ -1,18 +1,32 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <!-- Git branch diagram (scaled up to use more space) -->
-  <circle cx="35" cy="35" r="14" fill="none" stroke="#3b82f6" stroke-width="5"/>
-  <circle cx="35" cy="93" r="14" fill="none" stroke="#3b82f6" stroke-width="5"/>
-  <circle cx="93" cy="93" r="14" fill="none" stroke="#3b82f6" stroke-width="5"/>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="0" y="0" width="128" height="128" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#0B1220" flood-opacity="0.26"/>
+    </filter>
+    <linearGradient id="tile" x1="1" y1="1" x2="127" y2="127" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#324158"/>
+      <stop offset="1" stop-color="#1A2230"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="22" y1="20" x2="104" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4CB6FF"/>
+      <stop offset="1" stop-color="#1785F4"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Branch lines -->
-  <line x1="35" y1="49" x2="35" y2="79" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
-  <path d="M 35 64 Q 50 64 64 79 L 79 93" fill="none" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
+  <g filter="url(#shadow)">
+    <rect x="1" y="1" width="126" height="126" rx="28" fill="url(#tile)"/>
+    <rect x="10" y="10" width="108" height="108" rx="22" fill="rgba(255,255,255,0.03)"/>
+    <rect x="1.5" y="1.5" width="125" height="125" rx="27.5" stroke="rgba(255,255,255,0.08)"/>
+  </g>
 
-  <!-- Filled centers -->
-  <circle cx="35" cy="35" r="7" fill="#3b82f6"/>
-  <circle cx="35" cy="93" r="7" fill="#3b82f6"/>
-  <circle cx="93" cy="93" r="7" fill="#3b82f6"/>
-
-  <!-- Notification badge -->
-  <circle cx="100" cy="28" r="18" fill="#ef4444"/>
+  <g stroke="url(#blue)" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34 82V49"/>
+    <path d="M34 82C34 72.5 40.5 66.5 50 63.5L66.5 58"/>
+    <path d="M66.5 58C76 55 82 48 82 37V31"/>
+    <path d="M66.5 58H91.5"/>
+    <circle cx="34" cy="41" r="7.25"/>
+    <circle cx="82" cy="25" r="7.25"/>
+    <circle cx="98" cy="58" r="7.25" fill="#99D8FF" stroke="#99D8FF"/>
+    <circle cx="34" cy="93" r="7.25" fill="url(#blue)" stroke="url(#blue)"/>
+  </g>
 </svg>

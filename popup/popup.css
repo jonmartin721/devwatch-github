@@ -7,10 +7,14 @@
   padding: 0;
   box-sizing: border-box;
 }
-
+html,
 body {
   width: 450px;
-  max-height: 600px;
+  height: 600px;
+  overflow: hidden;
+}
+
+body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -39,41 +43,54 @@ body {
   padding: 20px;
 }
 
+.clipboard-temp-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---- Layout ---- */
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: transparent;
 }
 
 /* ---- Header ---- */
 header {
-  display: none;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 14px 16px 10px;
   border-bottom: 1px solid var(--border);
   background: transparent;
 }
 
-.header-info {
+.header-main {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.header-stats {
+.header-meta {
   display: flex;
-  flex-direction: row;
-  gap: 0;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 16px;
 }
 
-.header-stats .repo-count::before {
-  content: "\B7";
-  margin: 0 6px;
-  color: var(--muted-foreground);
+.header-meta-separator {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
+  flex-shrink: 0;
 }
 
 .header-refresh-btn {
@@ -103,23 +120,30 @@ header {
 }
 
 .last-updated {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .repo-count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 h1 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
   line-height: 1;
   color: var(--foreground);
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -169,7 +193,7 @@ h1 {
 
 /* ---- Toolbar ---- */
 .toolbar {
-  display: none;
+  display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px 14px;
@@ -273,7 +297,7 @@ h1 {
   font-weight: 600;
   color: var(--foreground);
   white-space: nowrap;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -302,9 +326,10 @@ h1 {
 /* ---- Activity List ---- */
 .activity-list {
   flex: 1;
+  display: block;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   min-height: 200px;
-  display: none;
 }
 
 /* shadcn ScrollArea style scrollbar */
@@ -475,7 +500,7 @@ h1 {
 .repo-group-name {
   font-weight: 600;
   color: var(--foreground);
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 12px;
   letter-spacing: -0.03em;
   text-transform: lowercase;
@@ -498,7 +523,7 @@ h1 {
   color: var(--primary-foreground);
   border-radius: 9999px;
   font-weight: 700;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .repo-snooze-btn,
@@ -588,7 +613,7 @@ h1 {
   padding: 5px 10px;
   border-radius: 999px;
   transition: all 150ms;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -713,7 +738,7 @@ h1 {
 .activity-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 4px;
   min-width: 0;
 }
@@ -722,41 +747,55 @@ h1 {
 .activity-type {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
+  letter-spacing: 0.06em;
+  line-height: 1;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   color: var(--foreground);
   text-transform: uppercase;
-}
-
-.activity-type::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
-.activity-type.pr::before { background: #22C55E; }
-.activity-type.issue::before { background: #F59E0B; }
-.activity-type.release::before { background: #3B82F6; }
+.activity-type.pr {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(34, 197, 94, 0.1);
+}
 
-body.dark-mode .activity-type.pr::before { background: #4ADE80; }
-body.dark-mode .activity-type.issue::before { background: #FBBF24; }
-body.dark-mode .activity-type.release::before { background: #60A5FA; }
+.activity-type.issue {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.activity-type.release {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+body.dark-mode .activity-type.pr {
+  border-color: rgba(74, 222, 128, 0.26);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+body.dark-mode .activity-type.issue {
+  border-color: rgba(251, 191, 36, 0.26);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+body.dark-mode .activity-type.release {
+  border-color: rgba(96, 165, 250, 0.26);
+  background: rgba(96, 165, 250, 0.1);
+}
 
 .activity-repo {
   font-size: 11px;
   color: var(--muted-foreground);
   font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -788,8 +827,7 @@ body.dark-mode .activity-type.release::before { background: #60A5FA; }
 
 /* ---- Footer ---- */
 footer {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   padding: 12px 16px 16px;
   border-top: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(0, 0, 0, 0), var(--background) 22%);
@@ -847,7 +885,7 @@ footer {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--input);
   border-radius: 999px;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -868,10 +906,16 @@ footer a:hover {
 }
 
 .rate-limit-info {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   color: var(--muted-foreground);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   letter-spacing: 0.02em;
+}
+
+.rate-limit-info.warning {
+  color: #f0ad4e;
 }
 
 /* ---- Error & Toast Messages ---- */
@@ -906,7 +950,8 @@ footer a:hover {
 }
 
 .error-toast {
-  background: var(--background);
+  background: var(--card);
+  color: var(--foreground);
   border: 1px solid var(--destructive);
   border-radius: var(--radius);
   overflow: hidden;
@@ -920,6 +965,7 @@ footer a:hover {
   cursor: pointer;
   transition: background 150ms;
   user-select: none;
+  color: var(--foreground);
 }
 
 .error-summary:hover {
@@ -929,6 +975,7 @@ footer a:hover {
 .error-icon {
   font-size: 16px;
   flex-shrink: 0;
+  color: var(--destructive);
 }
 
 .error-brief {
@@ -974,7 +1021,7 @@ footer a:hover {
   display: block;
   font-size: 12px;
   color: var(--muted-foreground);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   margin-top: 8px;
   padding: 6px 8px;
   background: var(--accent);
@@ -1147,15 +1194,6 @@ body.dark-mode .cached-indicator {
   opacity: 0.9;
 }
 
-.activity-item.cached::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
 /* ---- shadcn Focus Ring ---- */
 .filter-btn:focus-visible,
 .toolbar-btn:focus-visible,
@@ -1205,8 +1243,9 @@ body.dark-mode .search-box input:focus-visible {
    ================================================ */
 .onboarding-view {
   flex: 1;
-  padding: 18px 18px 14px;
+  padding: 14px 18px 10px;
   overflow: hidden;
+  scrollbar-gutter: stable;
   min-height: 0;
   background: transparent;
   display: flex;
@@ -1232,7 +1271,7 @@ body.dark-mode .search-box input:focus-visible {
 
 /* Progress — thin line */
 .onboarding-progress {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -1247,10 +1286,23 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .progress-fill {
+  width: 0;
   height: 100%;
   background: var(--primary);
   border-radius: 9999px;
   transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-fill[data-progress="33"] {
+  width: 33%;
+}
+
+.progress-fill[data-progress="67"] {
+  width: 67%;
+}
+
+.progress-fill[data-progress="100"] {
+  width: 100%;
 }
 
 .progress-text {
@@ -1258,7 +1310,7 @@ body.dark-mode .search-box input:focus-visible {
   color: var(--muted-foreground);
   font-weight: 600;
   letter-spacing: 0.08em;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -1266,17 +1318,26 @@ body.dark-mode .search-box input:focus-visible {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .onboarding-step {
+  display: flex;
+  flex-direction: column;
   text-align: center;
+  min-height: 0;
+  padding-bottom: 8px;
 }
 
 /* Step icon — hero treatment */
 .step-icon {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1299,18 +1360,18 @@ body.dark-mode .search-box input:focus-visible {
 
 /* Headings — large, tight, confident */
 .onboarding-step h2 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--foreground);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   letter-spacing: -0.04em;
   line-height: 1.05;
 }
 
 .onboarding-step p {
   color: var(--muted-foreground);
-  line-height: 1.5;
-  margin-bottom: 14px;
+  line-height: 1.45;
+  margin-bottom: 12px;
   max-width: 340px;
   margin-left: auto;
   margin-right: auto;
@@ -1321,26 +1382,26 @@ body.dark-mode .search-box input:focus-visible {
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 24px 0;
+  gap: 8px;
+  margin: 16px 0 12px;
   text-align: left;
 }
 
 .feature-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
+  gap: 14px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .feature-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .feature-icon {
@@ -1348,8 +1409,8 @@ body.dark-mode .search-box input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
@@ -1357,22 +1418,22 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .feature-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .feature-item span:last-child {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .step-description {
   font-size: 13px;
   color: var(--muted-foreground);
   font-weight: 400;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 /* Token Step */
@@ -1380,8 +1441,8 @@ body.dark-mode .search-box input:focus-visible {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 16px;
-  margin: 14px 0;
+  padding: 14px;
+  margin: 10px 0;
   text-align: left;
 }
 
@@ -1390,7 +1451,7 @@ body.dark-mode .search-box input:focus-visible {
   color: var(--foreground);
   font-size: 12px;
   font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1398,8 +1459,8 @@ body.dark-mode .search-box input:focus-visible {
 .token-instructions ol {
   margin-left: 20px;
   color: var(--muted-foreground);
-  line-height: 1.5;
-  font-size: 14px;
+  line-height: 1.4;
+  font-size: 13px;
 }
 
 .token-link {
@@ -1417,11 +1478,11 @@ body.dark-mode .search-box input:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 14px 0 10px;
+  margin: 10px 0 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 14px;
+  padding: 12px;
 }
 
 .token-code-stack {
@@ -1453,7 +1514,7 @@ body.dark-mode .search-box input:focus-visible {
   border: 1px solid var(--input);
   border-radius: 12px;
   font-size: 15px;
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
   letter-spacing: 0.14em;
@@ -1473,29 +1534,21 @@ body.dark-mode .search-box input:focus-visible {
   color: var(--muted-foreground);
 }
 
-/* shadcn outline button */
-.copy-code-btn {
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--foreground);
-  border: 1px solid var(--input);
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  text-transform: uppercase;
+.token-action-row {
+  display: flex;
+  gap: 8px;
 }
 
-.copy-code-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-foreground);
+.token-action-row > * {
+  flex: 1;
 }
 
-.copy-code-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.token-skip-link {
+  align-self: center;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: 2px;
 }
 
 /* Primary button */
@@ -1510,7 +1563,7 @@ body.dark-mode .search-box input:focus-visible {
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -1530,11 +1583,55 @@ body.dark-mode .search-box input:focus-visible {
   min-height: 0;
 }
 
+.token-status-prominent {
+  margin-top: 10px;
+}
+
+.token-connected-card {
+  border: 1px solid color-mix(in srgb, var(--accent-color) 22%, var(--border));
+  border-radius: 18px;
+  padding: 14px 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 10%, transparent), transparent 65%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.token-connected-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  color: var(--accent-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.token-connected-title {
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.token-connected-copy {
+  margin: 6px 0 0;
+  max-width: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
 @media (max-width: 560px) {
-  .token-input-group {
+  .token-input-group,
+  .token-action-row {
     flex-direction: column;
   }
-  .copy-code-btn,
   .validate-btn {
     width: 100%;
   }
@@ -1559,17 +1656,16 @@ body.dark-mode .search-box input:focus-visible {
 }
 
 .security-note {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted-foreground);
   margin-top: 8px;
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  line-height: 1.4;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 5px;
+  line-height: 1.35;
+  padding: 0;
+  border: none;
+  background: none;
   text-align: left;
 }
 
@@ -1583,7 +1679,51 @@ body.dark-mode .search-box input:focus-visible {
 /* Repos Step */
 .popular-repos {
   text-align: left;
-  margin: 16px 0;
+  margin: 12px 0 10px;
+}
+
+.repos-step {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 4px;
+  padding-right: 6px;
+  padding-bottom: 10px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.repos-step::-webkit-scrollbar {
+  width: 6px;
+}
+
+.repos-step::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.repos-step::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.repos-step::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+.repo-source-panel {
+  margin-bottom: 8px;
+}
+
+.popular-repos-panel {
+  margin-top: 18px;
+  padding: 16px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 70%),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .popular-repos h3 {
@@ -1593,27 +1733,75 @@ body.dark-mode .search-box input:focus-visible {
   font-weight: 600;
 }
 
+.popular-repos-panel h3 {
+  margin-bottom: 8px;
+}
+
+.popular-repos-panel .repo-source-copy {
+  margin-bottom: 12px;
+}
+
+.repo-source-copy {
+  margin: -4px 0 10px;
+  max-width: none;
+  font-size: 12px;
+}
+
+.repo-source-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.repo-source-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.repo-source-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  color: var(--foreground);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.repo-source-btn.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
 .repo-suggestions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .repo-suggestion {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 9px 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 16px;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .repo-suggestion:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .repo-info {
@@ -1792,7 +1980,7 @@ body.dark-mode .search-box input:focus-visible {
   font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -1805,10 +1993,15 @@ body.dark-mode .search-box input:focus-visible {
   min-height: 0;
 }
 
+.repos-step .step-subtitle {
+  margin: 0 auto 10px;
+  max-width: 340px;
+}
+
 /* Categories Step */
 .categories-step .step-subtitle {
   margin-top: -8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   color: var(--muted-foreground);
   font-size: 14px;
 }
@@ -1816,30 +2009,30 @@ body.dark-mode .search-box input:focus-visible {
 .categories-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 24px 0;
+  gap: 8px;
+  margin: 14px 0 10px;
 }
 
 .category-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 18px;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .category-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .category-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -1892,7 +2085,7 @@ body.dark-mode .releases-icon {
 
 .category-controls {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   flex-shrink: 0;
 }
@@ -1910,7 +2103,7 @@ body.dark-mode .releases-icon {
   color: var(--muted-foreground);
   font-weight: 600;
   min-width: 38px;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -2076,53 +2269,57 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   font-size: 12px;
   color: var(--muted-foreground);
   font-style: italic;
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 /* Complete Step */
+.complete-step .step-icon {
+  margin-bottom: 14px;
+}
+
 .complete-step .step-icon svg {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   color: var(--foreground);
   stroke-width: 1.5;
 }
 
 .next-steps {
-  margin: 24px 0;
+  margin: 14px 0 10px;
   text-align: left;
 }
 
 .next-steps h3 {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   color: var(--muted-foreground);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .tips-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .tip-item {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .tip-item:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .tip-icon {
@@ -2130,17 +2327,17 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   color: var(--accent-color);
 }
 
 .tip-icon svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .tip-content {
@@ -2150,7 +2347,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .tip-content strong {
   display: block;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 12px;
   margin-bottom: 2px;
   font-weight: 600;
 }
@@ -2158,15 +2355,15 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .tip-content p {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .final-tips {
-  margin-top: 20px;
-  padding: 14px 16px;
+  margin-top: 10px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid var(--border);
 }
 
@@ -2192,7 +2389,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 16px;
+  padding-top: 14px;
   margin-top: auto;
   flex-shrink: 0;
 }
@@ -2211,7 +2408,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   cursor: pointer;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -2295,6 +2492,10 @@ body.dark-mode .add-repo-btn:hover {
   .manual-input-group {
     flex-direction: column;
     max-width: none;
+  }
+
+  .tips-grid {
+    grid-template-columns: 1fr;
   }
 
   .onboarding-nav {

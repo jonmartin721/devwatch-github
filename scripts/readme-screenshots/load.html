@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Devwatch README Screenshot Harness</title>
+  <style>
+    body {
+      margin: 0;
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      font: 14px/1.5 Inter, system-ui, sans-serif;
+      background: #111827;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <p id="status">Loading screenshot surface...</p>
+  <script>
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get('target');
+
+      if (!target) {
+        document.getElementById('status').textContent = 'Missing target parameter.';
+        return;
+      }
+
+      try {
+        const targetUrl = new URL(target, window.location.origin);
+        const targetResponse = await fetch(targetUrl.href);
+
+        if (!targetResponse.ok) {
+          throw new Error(`Failed to load ${target}: ${targetResponse.status}`);
+        }
+
+        const baseHref = targetUrl.pathname.replace(/[^/]*$/, '');
+        const targetHtml = await targetResponse.text();
+        const injectedHtml = targetHtml.replace(
+          '<head>',
+          `<head><base href="${baseHref}"><script src="/scripts/readme-screenshots/mock-extension.js"><\/script>`
+        );
+
+        document.open();
+        document.write(injectedHtml);
+        document.close();
+      } catch (error) {
+        document.body.innerHTML = `<pre style="white-space: pre-wrap; padding: 24px;">${String(error?.stack || error)}</pre>`;
+      }
+    })();
+  </script>
+</body>
+</html>

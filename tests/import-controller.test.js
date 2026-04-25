@@ -45,6 +45,15 @@ describe('import-controller', () => {
     // Setup DOM
     document.body.innerHTML = '';
 
+    const style = document.createElement('style');
+    style.textContent = `
+      .hidden { display: none !important; }
+      .import-loading { display: flex; }
+      .import-repos-list { display: block; }
+      .import-error { display: block; }
+    `;
+    document.head.appendChild(style);
+
     // Create modal structure
     modal = document.createElement('div');
     modal.id = 'importModal';
@@ -56,17 +65,17 @@ describe('import-controller', () => {
 
     loadingState = document.createElement('div');
     loadingState.id = 'importLoadingState';
-    loadingState.style.display = 'none';
+    loadingState.className = 'import-loading hidden';
     modal.appendChild(loadingState);
 
     reposList = document.createElement('div');
     reposList.id = 'importReposList';
-    reposList.style.display = 'none';
+    reposList.className = 'import-repos-list hidden';
     modal.appendChild(reposList);
 
     errorState = document.createElement('div');
     errorState.id = 'importErrorState';
-    errorState.style.display = 'none';
+    errorState.className = 'import-error hidden';
     modal.appendChild(errorState);
 
     errorMessage = document.createElement('p');
@@ -184,9 +193,9 @@ describe('import-controller', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(loadingState.style.display).toBe('flex');
-      expect(reposList.style.display).toBe('none');
-      expect(errorState.style.display).toBe('none');
+      expect(loadingState.classList.contains('hidden')).toBe(false);
+      expect(reposList.classList.contains('hidden')).toBe(true);
+      expect(errorState.classList.contains('hidden')).toBe(true);
     });
 
     test('fetches and displays repos successfully', async () => {
@@ -209,9 +218,9 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(loadingState.style.display).toBe('none');
-      expect(reposList.style.display).toBe('block');
-      expect(errorState.style.display).toBe('none');
+      expect(loadingState.classList.contains('hidden')).toBe(true);
+      expect(reposList.classList.contains('hidden')).toBe(false);
+      expect(errorState.classList.contains('hidden')).toBe(true);
     });
 
     test('marks already watched repos as added', async () => {
@@ -247,7 +256,7 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(errorState.style.display).toBe('block');
+      expect(errorState.classList.contains('hidden')).toBe(false);
       expect(errorMessage.textContent).toContain('GitHub sign-in expired or was revoked');
     });
 
@@ -259,7 +268,7 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(errorState.style.display).toBe('block');
+      expect(errorState.classList.contains('hidden')).toBe(false);
       expect(errorMessage.textContent).toContain('Rate limit exceeded');
     });
 
@@ -271,7 +280,7 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(errorState.style.display).toBe('block');
+      expect(errorState.classList.contains('hidden')).toBe(false);
       expect(errorMessage.textContent).toContain('GitHub API error');
     });
 
@@ -708,7 +717,7 @@ describe('import-controller', () => {
 
       await openImportModal('starred', []);
 
-      expect(errorState.style.display).toBe('block');
+      expect(errorState.classList.contains('hidden')).toBe(false);
       expect(errorMessage.textContent).toContain('Network error');
     });
   });

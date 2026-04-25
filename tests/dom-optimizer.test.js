@@ -464,7 +464,8 @@ describe('ActivityListRenderer', () => {
       const html = renderer.generateSingleActivityHTML(activity);
 
       expect(html).toContain('Test PR');
-      expect(html).toContain('Pull Request');
+      expect(html).toContain('>PR<');
+      expect(html).toContain('title="Pull Request"');
       expect(html).toContain('Test description');
       expect(html).toContain('https://github.com/test/repo/pull/1');
     });

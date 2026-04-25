@@ -70,9 +70,9 @@ describe('Dark Mode', () => {
     document.body.className = '';
     document.body.innerHTML = `
       <button id="darkModeBtn">
-        <svg class="system-icon" style="display: block;"></svg>
-        <svg class="moon-icon" style="display: block;"></svg>
-        <svg class="sun-icon" style="display: none;"></svg>
+        <svg class="system-icon"></svg>
+        <svg class="moon-icon"></svg>
+        <svg class="sun-icon hidden"></svg>
       </button>
     `;
   });
@@ -130,9 +130,8 @@ describe('Rate Limit Display', () => {
 
     const info = document.getElementById('rateLimitInfo');
     expect(info.textContent).toContain('500/5000 API calls remaining');
-    expect(info.style.display).toBe('block');
-    // Check warning color (accept both hex and rgb formats)
-    expect(['#f0ad4e', 'rgb(240, 173, 78)']).toContain(info.style.color);
+    expect(info.classList.contains('hidden')).toBe(false);
+    expect(info.classList.contains('warning')).toBe(true);
     // Either SVG or text content should be present - the SVG might be rendered differently in test environment
     expect(info.innerHTML.length > 0).toBe(true);
   });
@@ -148,7 +147,7 @@ describe('Rate Limit Display', () => {
 
     const info = document.getElementById('rateLimitInfo');
     expect(info.textContent).toBe('');
-    expect(info.style.display).toBe('none');
+    expect(info.classList.contains('hidden')).toBe(true);
   });
 
   test('hides rate limit when no data', () => {
@@ -156,13 +155,13 @@ describe('Rate Limit Display', () => {
 
     const info = document.getElementById('rateLimitInfo');
     expect(info.textContent).toBe('');
-    expect(info.style.display).toBe('none');
+    expect(info.classList.contains('hidden')).toBe(true);
   });
 });
 
 describe('Error Display', () => {
   beforeEach(() => {
-    document.body.innerHTML = '<div id="errorMessage" style="display: none;"></div>';
+    document.body.innerHTML = '<div id="errorMessage" class="hidden"></div>';
   });
 
   test('shows recent errors', () => {
@@ -176,7 +175,7 @@ describe('Error Display', () => {
     showError('errorMessage', error);
 
     const errorMsg = document.getElementById('errorMessage');
-    expect(errorMsg.style.display).toBe('block');
+    expect(errorMsg.classList.contains('hidden')).toBe(false);
     expect(errorMsg.textContent).toContain('GitHub Sign-In Needed');
     expect(errorMsg.textContent).toContain('revoked');
   });
@@ -190,7 +189,7 @@ describe('Error Display', () => {
     showError('errorMessage', error);
 
     const errorMsg = document.getElementById('errorMessage');
-    expect(errorMsg.style.display).toBe('block');
+    expect(errorMsg.classList.contains('hidden')).toBe(false);
     expect(errorMsg.textContent).toContain('Unexpected Error');
   });
 });

@@ -2,6 +2,8 @@ import { stateManager, useState } from '../../shared/state-manager.js';
 import { showError } from '../../shared/error-handler.js';
 import { safelyOpenUrl } from '../../shared/security.js';
 
+const OPTIONS_REPOSITORIES_URL = 'options/options.html?showAdd=true#repositories';
+
 /**
  * Renders the filtered activity list using ActivityListRenderer for efficient DOM updates
  * This is the main rendering function that delegates to optimized or legacy renderer
@@ -78,7 +80,7 @@ export function renderActivities(
           e.preventDefault();
 
           // Open options page with hash and query parameter
-          const optionsUrl = chrome.runtime.getURL('options/options.html#repositories?showAdd=true');
+          const optionsUrl = chrome.runtime.getURL(OPTIONS_REPOSITORIES_URL);
           await chrome.tabs.create({ url: optionsUrl });
         });
       }
@@ -299,7 +301,7 @@ function attachEventListeners(
     // Handle options link in empty state
     if (e.target.closest('#optionsLink')) {
       e.preventDefault();
-      chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#repositories?showAdd=true') });
+      chrome.tabs.create({ url: chrome.runtime.getURL(OPTIONS_REPOSITORIES_URL) });
     }
   };
 

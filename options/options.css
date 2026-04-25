@@ -21,7 +21,7 @@ body {
 
 /* Utility classes */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 /* Margin utilities */
@@ -75,7 +75,7 @@ body {
 
 /* Display utilities */
 .d-none {
-  display: none;
+  display: none !important;
 }
 
 .d-block {
@@ -137,6 +137,22 @@ body {
   background: transparent;
 }
 
+.sidebar-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border-right: 1px solid var(--border-color);
+  min-width: 228px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  backdrop-filter: blur(14px);
+}
+
 .content-wrapper {
   flex: 1;
   overflow-y: auto;
@@ -164,22 +180,67 @@ h1 {
 .tab-navigation {
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.035);
-  border-right: 1px solid var(--border-color);
-  min-width: 228px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  backdrop-filter: blur(14px);
+  min-height: 0;
 }
 
 .tab-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.sidebar-status-card {
+  margin-top: auto;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-status-header-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.sidebar-status-eyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sidebar-status-section + .sidebar-status-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.sidebar-status-label {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sidebar-status-value {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sidebar-status-meta {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .sidebar-header {
@@ -193,16 +254,16 @@ h1 {
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
   letter-spacing: -0.03em;
 }
 
-.tab-navigation::-webkit-scrollbar {
+.sidebar-shell::-webkit-scrollbar {
   width: 4px;
 }
 
-.tab-navigation::-webkit-scrollbar-thumb {
+.sidebar-shell::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 2px;
 }
@@ -222,7 +283,7 @@ h1 {
   transition: all 0.2s ease;
   text-align: left;
   position: relative;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -280,8 +341,11 @@ h1 {
     flex-direction: column;
   }
 
-  .tab-navigation {
+  .sidebar-shell {
     flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
     min-width: unset;
     width: 100%;
     height: auto;
@@ -292,9 +356,21 @@ h1 {
     padding: 4px;
   }
 
+  .tab-navigation {
+    flex: 1 1 100%;
+  }
+
   .tab-list {
     flex-direction: row;
+    flex: 1 1 100%;
     min-width: max-content;
+  }
+
+  .sidebar-header {
+    width: 100%;
+    margin-bottom: 0;
+    padding: 8px 10px 0;
+    border-bottom: none;
   }
 
   .tab-button {
@@ -315,28 +391,27 @@ h1 {
     height: 20px;
   }
 
+  .sidebar-status-card {
+    width: 100%;
+    margin-top: 0;
+  }
+
   .content-wrapper {
     padding: 20px;
   }
 }
 
 .section {
-  margin-bottom: 32px;
-  padding-bottom: 32px;
+  margin-bottom: 40px;
+  padding: 0 0 36px;
   border-bottom: 1px solid var(--border-color);
   scroll-margin-top: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
 }
 
 .section:last-child {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
   margin-bottom: 0;
-  padding-bottom: 32px;
+  padding-bottom: 0;
 }
 
 h2 {
@@ -402,9 +477,9 @@ select:focus {
   height: 14px;
   display: inline-block;
   vertical-align: middle;
-  margin-right: 4px;
   color: var(--link-color);
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* Warning icon with color - placed after .info-icon to take precedence */
@@ -414,20 +489,28 @@ select:focus {
 }
 
 .info-box {
-  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.025) 100%);
   border: 1px solid var(--border-color);
-  padding: 12px 16px;
+  padding: 14px 16px;
   margin: 12px 0;
-  border-radius: 16px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
-
 .info-box .help-text {
   margin: 0;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.info-box strong {
+  color: var(--text-primary);
 }
 
 .info-box-compact {
@@ -445,6 +528,22 @@ select:focus {
 .info-box-compact .info-icon {
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.setup-inline-link {
+  color: var(--link-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.setup-inline-link:hover {
+  text-decoration: underline;
+}
+
+.setup-inline-link:focus-visible {
+  outline: 2px solid var(--link-color);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 button {
@@ -534,7 +633,7 @@ button.danger:hover {
   font-weight: 600;
   transition: all 0.2s ease;
   user-select: none;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -574,6 +673,30 @@ button.danger:hover {
   border: 1px solid var(--border);
 }
 
+.swatch-polar {
+  background: #0D9488;
+}
+
+.swatch-graphite {
+  background: #6366F1;
+}
+
+.swatch-nightfall {
+  background: #E87B00;
+}
+
+.swatch-obsidian {
+  background: #10B981;
+}
+
+.swatch-sand {
+  background: #9F1239;
+}
+
+.swatch-terminal-ledger {
+  background: #D3A24B;
+}
+
 .subsection-heading {
   font-size: 15px;
   font-weight: 600;
@@ -582,36 +705,191 @@ button.danger:hover {
   color: var(--foreground);
 }
 
-/* Activity Cards Styles */
-.activity-cards {
+/* Shared Settings Surfaces */
+.settings-surface {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.settings-surface:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.settings-surface-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.settings-surface-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-surface-actions {
+  display: flex;
+  gap: 24px;
+}
+
+.settings-surface-split {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-surface-split .settings-surface-header {
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.settings-surface-split .settings-surface-actions {
+  justify-content: space-around;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.settings-surface-split .settings-surface-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.settings-surface-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+}
+
+.settings-surface-inline .settings-surface-header {
+  gap: 12px;
+  flex: 1;
+}
+
+.settings-surface-inline .settings-surface-actions {
+  justify-content: flex-end;
+  padding: 0;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.settings-surface-prominent {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 16px 28px rgba(0, 0, 0, 0.08);
+}
+
+.settings-surface-prominent:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 30px rgba(0, 0, 0, 0.1);
+}
+
+.settings-surface-nested {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+}
+
+.settings-surface-dashed {
+  border-style: dashed;
+  border-color: var(--border-hover);
+  box-shadow: none;
+}
+
+.settings-surface-dashed:hover {
+  box-shadow: none;
+}
+
+.settings-surface-danger:hover {
+  border-color: var(--destructive);
+}
+
+.settings-row-group {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.settings-row-group > .settings-row {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-row-group > .settings-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+  transform: none;
+  box-shadow: none;
+}
+
+.settings-row-group > .settings-row + .settings-row {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Secondary support surfaces reused across Settings tabs */
+:where(.github-connect-fact, .filters-help-item, .repo-note, .resource-link, .version-badge, .changelog-content, .import-select-all) {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Activity Cards Styles */
+.activity-cards {
   margin-top: 16px;
 }
 
 .activity-card {
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  min-width: 0;
 }
 
-.activity-card:hover {
-  border-color: var(--link-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.activity-cards.settings-row-group > .activity-card.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+}
+
+.activity-cards.settings-row-group .settings-surface-header,
+.activity-cards.settings-row-group .settings-surface-actions {
+  padding: 0;
+  background: transparent;
+}
+
+.activity-cards.settings-row-group .settings-surface-actions {
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.activity-cards.settings-row-group .settings-surface-action {
+  min-width: 104px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.activity-cards.settings-row-group .control-label {
+  text-align: left;
 }
 
 .card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.025);
+  min-width: 0;
 }
 
 .activity-icon {
@@ -641,19 +919,11 @@ button.danger:hover {
 }
 
 .card-controls {
-  display: flex;
-  justify-content: space-around;
-  gap: 24px;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.04);
+  min-width: 0;
 }
 
 .control-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
+  min-width: 0;
 }
 
 .control-label {
@@ -755,51 +1025,36 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Feed Management Card */
 .feed-management-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
   margin-top: 16px;
-  transition: all 0.2s ease;
-}
-
-.feed-management-card:hover {
-  border-color: var(--link-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.feed-management-card .card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 0;
-  background: transparent;
-  flex: 1;
-}
-
-.feed-management-card .card-controls {
-  padding: 0;
-  background: transparent;
 }
 
 .expiry-settings {
-  margin-top: 20px;
-  padding: 20px;
-  background: var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.expiry-settings .info-box {
+  margin: 0;
+}
+
+.expiry-settings .input-label-styled {
+  margin-bottom: 0;
 }
 
 /* Styled Number Input */
 .number-input-group {
   display: inline-flex;
   align-items: center;
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
   overflow: hidden;
   transition: all 0.2s ease;
 }
@@ -827,7 +1082,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .input-suffix {
   padding: 10px 16px;
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
@@ -847,11 +1102,11 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   align-items: flex-start;
   gap: 16px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 20px;
   transition: all 0.2s ease;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .setup-step.clickable {
@@ -862,8 +1117,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 .setup-step:hover {
   border-color: var(--border-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
 }
 
 .step-number {
@@ -879,7 +1135,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   font-size: 16px;
   font-weight: 700;
   flex-shrink: 0;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .step-content h3 {
@@ -903,7 +1159,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   border-color: var(--border-hover);
   padding: 24px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
 }
 
 .setup-step-primary:hover {
@@ -940,7 +1196,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .github-step-label {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -962,6 +1218,15 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   color: var(--text-secondary);
   margin: 0;
   max-width: 60ch;
+}
+
+.github-connect-connected-note {
+  display: none;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  max-width: 56ch;
 }
 
 .github-connect-facts {
@@ -1005,7 +1270,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--text-primary);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -1017,26 +1282,20 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .github-connect-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  border-radius: 22px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 34px rgba(0, 0, 0, 0.08);
+  min-width: 0;
 }
 
 .github-connect-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  display: block;
+}
+
+.github-connect-panel-title {
+  min-width: 0;
 }
 
 .github-panel-label {
   margin: 0 0 10px;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1044,10 +1303,77 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   color: var(--text-secondary);
 }
 
+.github-connect-panel-heading {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.github-connect-panel-copy {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 40ch;
+}
+
 .github-connect-panel-body {
+  min-width: 0;
+}
+
+.github-connect-status-row {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.github-connect-status-hint {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 34px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 34ch;
+}
+
+.github-disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.github-disconnect-btn:hover {
+  background: color-mix(in srgb, var(--error-bg) 72%, var(--destructive));
+  border-color: var(--destructive);
+  color: var(--error-text);
+  transform: none;
+}
+
+.github-disconnect-btn:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.45);
+  outline-offset: 2px;
 }
 
 .github-connect-btn {
@@ -1063,6 +1389,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .github-connect-help {
   margin: 0;
   font-size: 13px;
+  line-height: 1.6;
+}
+
+.github-connect-inline-help {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .github-connect-flow {
@@ -1072,11 +1406,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .github-connect-flow-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  min-height: 108px;
+  min-height: 96px;
 }
 
 .github-connect-flow-step span {
@@ -1086,13 +1423,12 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  margin-bottom: 12px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .github-connect-flow-step p {
@@ -1102,29 +1438,73 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   line-height: 1.5;
 }
 
+.github-connect-card.is-connected .github-connect-intro {
+  gap: 14px;
+}
+
+.github-connect-card.is-connected #githubConnectIntroText,
+.github-connect-card.is-connected .github-connect-facts,
+.github-connect-card.is-connected .github-connect-flow,
+.github-connect-card.is-connected .github-connect-status-hint,
+.github-connect-card.is-connected #githubConnectPanelCopy {
+  display: none;
+}
+
+.github-connect-card.is-connected .github-connect-connected-note {
+  display: block;
+}
+
+.github-connect-card.is-connected .github-connect-panel {
+  gap: 14px;
+}
+
+.github-connect-card.is-connected .github-connect-panel-body {
+  gap: 14px;
+}
+
+.github-connect-card.is-connected .github-connect-panel-heading {
+  font-size: 20px;
+  max-width: 20ch;
+}
+
 .device-code-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--border-hover);
-  border-radius: 18px;
+  min-width: 0;
 }
 
 .device-code-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
+.device-code-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.device-code-copy-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .device-code-note {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
 }
 
 .step-header-section {
@@ -1202,6 +1582,26 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
     align-items: stretch;
   }
 
+  .github-connect-panel-header {
+    display: flex;
+  }
+
+  .github-connect-panel-heading {
+    font-size: 20px;
+  }
+
+  .github-connect-status-row {
+    align-items: stretch;
+  }
+
+  .github-disconnect-btn {
+    width: fit-content;
+  }
+
+  .github-connect-status-hint {
+    max-width: none;
+  }
+
   .github-connect-flow {
     grid-template-columns: 1fr;
   }
@@ -1229,28 +1629,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .data-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  transition: all 0.2s ease;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-}
-
-.data-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
-}
-
-.data-card.danger-card {
-  border-color: var(--border-color);
-}
-
-.data-card.danger-card:hover {
-  border-color: var(--destructive);
+  min-width: 0;
 }
 
 .data-icon {
@@ -1282,37 +1661,51 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   line-height: 1.4;
 }
 
-.data-action-btn {
+/* Unified Settings button families */
+:is(.action-btn, .data-action-btn, .import-btn, .import-export-btn, .hide-pinned-btn, .unsnooze-btn, .pagination-controls button, #cancelImportBtn) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--link-color);
-  color: var(--background);
-  border: 1px solid var(--link-color);
-  border-radius: 12px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
-.data-action-btn:hover {
-  background: var(--link-hover);
+:is(.action-btn, .data-action-btn, .import-btn, .import-export-btn, .hide-pinned-btn, .unsnooze-btn, .pagination-controls button, #cancelImportBtn):hover {
+  background: var(--bg-secondary);
+  border-color: var(--link-color);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.data-action-btn.danger-btn {
-  background: var(--destructive);
+:is(.action-btn, .data-action-btn, .import-btn, .import-export-btn, .hide-pinned-btn, .unsnooze-btn, .pagination-controls button, #cancelImportBtn):active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
-.data-action-btn.danger-btn:hover {
-  background: var(--danger-hover);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+:is(.action-btn, .data-action-btn, .import-btn, .import-export-btn, .hide-pinned-btn, .unsnooze-btn, .pagination-controls button, #cancelImportBtn) svg {
+  flex-shrink: 0;
+}
+
+:is(.data-action-btn.danger-btn, .unsnooze-btn) {
+  border-color: rgba(239, 68, 68, 0.28);
+  color: var(--text-primary);
+}
+
+:is(.data-action-btn.danger-btn, .unsnooze-btn):hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--destructive);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Help Tab Styles */
@@ -1323,10 +1716,12 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .help-logo {
-  width: 64px;
-  height: 64px;
+  display: block;
+  width: 72px;
+  height: 72px;
   margin: 0 auto 16px;
-  color: var(--accent-color);
+  border-radius: 18px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .help-hero h2 {
@@ -1452,115 +1847,345 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   border-top: 1px solid var(--border-color);
 }
 
+.help-version-header {
+  margin-bottom: 20px;
+}
+
 .help-version-changelog h3 {
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 20px;
-  text-align: center;
+  margin: 0 0 8px;
+}
+
+.help-version-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .version-info {
-  margin-bottom: 24px;
-  text-align: center;
+  margin-bottom: 16px;
 }
 
-.version-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.04);
+.version-brief {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.025) 100%),
+    var(--card);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border-radius: 20px;
   color: var(--text-primary);
 }
 
-.version-badge svg {
+.version-brief-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.version-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link-color);
+  margin-bottom: 10px;
+}
+
+.version-headline {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.version-summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.release-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.version-badge,
+.release-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.version-badge svg,
+.release-pill svg {
   color: var(--link-color);
   flex-shrink: 0;
 }
 
-.changelog-content {
-  background: rgba(255, 255, 255, 0.04);
+.release-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.release-highlight-card {
+  padding: 14px;
+  border-radius: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
-  padding: 24px;
-  max-height: 600px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 6px;
+}
+
+.release-highlight-title,
+.release-chip,
+.release-section-count {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+.release-highlight-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.release-highlight-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.changelog-content {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.02) 100%),
+    var(--card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.release-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.release-chip {
+  appearance: none;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.release-chip:hover,
+.release-chip:focus-visible,
+.release-chip.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--link-color) 30%, var(--border-color));
+  color: var(--text-primary);
+  outline: none;
+}
+
+.release-notes-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  max-height: 620px;
   overflow-y: auto;
 }
 
-.changelog-content h2 {
-  font-size: 24px;
+.release-section {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 12px;
+  scroll-margin-top: 16px;
+}
+
+.release-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.release-section-title {
+  margin: 0;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--border-color);
+  letter-spacing: -0.02em;
 }
 
-.changelog-content h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--link-color);
-  margin: 24px 0 12px;
-}
-
-.changelog-content h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 16px 0 8px;
-}
-
-.changelog-content p {
-  font-size: 14px;
+.release-section-count {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 8px 0;
 }
 
-.changelog-content ul {
-  margin: 12px 0;
-  padding-left: 24px;
+.release-section-body {
+  display: grid;
+  gap: 10px;
 }
 
-.changelog-content li {
+.release-section-body p {
+  margin: 0;
   font-size: 14px;
-  color: var(--text-secondary);
   line-height: 1.6;
-  margin: 4px 0;
+  color: var(--text-secondary);
 }
 
-.changelog-content code {
+.release-section-body ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.release-section-body li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.release-section-body code {
   background: var(--bg-secondary);
   padding: 2px 6px;
-  border-radius: 4px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 14px;
+  border-radius: 6px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
   color: var(--link-color);
 }
 
-.changelog-content a {
+.release-section-body a {
   color: var(--link-color);
   text-decoration: none;
   font-weight: 500;
 }
 
-.changelog-content a:hover {
+.release-section-body a:hover {
   text-decoration: underline;
 }
 
-.changelog-content strong {
+.release-section-body strong {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.changelog-footer {
+.changelog-content > h2,
+.changelog-content > h3,
+.changelog-content > h4,
+.changelog-content > p,
+.changelog-content > ul {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.changelog-content > h2 {
   margin-top: 20px;
-  padding-top: 16px;
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.changelog-content > h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.changelog-content > h4 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.changelog-content > p,
+.changelog-content > li,
+.changelog-content > ul li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.changelog-content > ul {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 40px;
+}
+
+.changelog-content > p code,
+.changelog-content > ul code {
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--link-color);
+}
+
+.changelog-content > p a,
+.changelog-content > ul a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.changelog-content > p a:hover,
+.changelog-content > ul a:hover {
+  text-decoration: underline;
+}
+
+.changelog-footer {
+  display: flex;
+  justify-content: center;
+  padding: 16px 20px 20px;
   border-top: 1px solid var(--border-color);
-  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .changelog-link {
@@ -1571,14 +2196,37 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.changelog-link:hover {
-  background: var(--bg-secondary);
-  text-decoration: none;
+.changelog-link:hover,
+.changelog-link:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: color-mix(in srgb, var(--link-color) 24%, var(--border-color));
+  outline: none;
+}
+
+.release-empty-state {
+  padding: 24px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .version-brief-top,
+  .release-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .release-highlight-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .changelog-link svg {
@@ -1608,6 +2256,20 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .activity-cards.settings-row-group > .activity-card.settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-cards.settings-row-group .settings-surface-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .activity-cards.settings-row-group .settings-surface-action {
+    min-width: 0;
+    flex: 1;
+  }
+
   .repo-section-header {
     flex-wrap: wrap;
   }
@@ -1628,29 +2290,17 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 @media (max-width: 480px) {
   .activity-card {
-    margin: 0 -8px;
-    border-radius: 8px;
+    margin: 0;
+    border-radius: 0;
   }
 
-  .card-header {
-    padding: 12px;
-  }
-
-  .card-controls {
-    padding: 10px 12px;
-  }
-
-  .control-section {
-    gap: 6px;
-  }
-
-  .feed-management-card {
+  .settings-surface-inline {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
 
-  .feed-management-card .card-controls {
+  .settings-surface-inline .settings-surface-actions {
     width: 100%;
     display: flex;
     justify-content: flex-end;
@@ -1659,6 +2309,16 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   .repo-section-card {
     padding: 16px;
     margin-bottom: 16px;
+  }
+
+  .repo-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .repo-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .repo-section-header {
@@ -1696,12 +2356,79 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   }
 }
 
-.filters-help .help-text {
+.filters-help {
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.filters-help-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filters-help-eyebrow {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filters-help-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
   line-height: 1.6;
 }
 
-.filters-help .help-text:first-of-type {
-  margin-bottom: 8px;
+.filters-help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.filters-help-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.filters-help-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filters-help-label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filters-help-detail {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.filters-help .info-icon {
+  color: var(--text-primary);
+  opacity: 0.82;
+  margin-top: 1px;
 }
 
 .subsection {
@@ -1720,25 +2447,30 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .repo-list {
   list-style: none;
   margin-top: 16px;
+  padding: 0;
 }
 
 .repo-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  align-items: center;
+  padding: 18px 20px;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  background: transparent;
   gap: 16px;
   transition: all 0.15s ease;
 }
 
 .repo-item:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  transform: none;
+  box-shadow: none;
+}
+
+.repo-list.settings-row-group .repo-item + .repo-item {
+  border-top: 1px solid var(--border-color);
 }
 
 .repo-content {
@@ -1749,7 +2481,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .repo-name {
   display: flex;
   align-items: center;
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1787,13 +2519,13 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Repository Section Cards */
 .repo-section-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
   border-radius: 22px;
   padding: 24px;
   margin-bottom: 24px;
-  transition: all 0.2s ease;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
 }
 
 .add-repo-card {
@@ -1810,9 +2542,131 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-color);
+}
+
+#addRepoPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.import-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.popular-repos-panel {
+  margin: 0;
+}
+
+.popular-repos-surface {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: var(--border-color);
+}
+
+.popular-repos-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.popular-repos-panel-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.popular-repos-panel-header .help-text {
+  margin: 6px 0 0;
+}
+
+.popular-repos-state {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.popular-repo-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.popular-repo-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  transition: all 0.15s ease;
+}
+
+.popular-repo-card:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.045);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.popular-repo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.popular-repo-name {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+.popular-repo-description {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.popular-repo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.popular-repo-add-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 14px;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.popular-repo-add-btn:disabled {
+  opacity: 1;
+}
+
+.popular-repo-add-btn.added {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
 }
 
 .repo-section-icon {
@@ -1862,7 +2716,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   font-size: 12px;
   font-weight: 700;
   margin-left: 4px;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 /* Action Buttons Layout */
@@ -1884,39 +2738,6 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   align-items: center;
 }
 
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  text-transform: uppercase;
-}
-
-.action-btn:hover {
-  background: var(--input-bg);
-  border-color: var(--link-color);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.action-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.action-btn svg {
-  flex-shrink: 0;
-}
-
 .action-btn.active {
   background: var(--link-color);
   color: white;
@@ -1930,17 +2751,74 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Collapsible Panels */
 .repo-panel {
-  margin: 16px 0 24px 0;
+  margin: 0 0 16px 0;
   overflow: hidden;
   opacity: 0;
   max-height: 0;
   transition: all 0.2s ease-in-out; /* Simpler transition */
-  border-radius: 18px;
+  border-radius: 0;
 }
 
 .repo-panel.show {
   opacity: 1;
   max-height: 300px; /* Increased max-height to accommodate import buttons */
+}
+
+.popular-repos-panel.show {
+  max-height: 520px;
+}
+
+.repo-toolbar.show {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.repo-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.repo-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.repo-note-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repo-note-label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.repo-note-detail {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.repo-notes .info-icon {
+  color: var(--text-primary);
+  opacity: 0.82;
+}
+
+.repo-notes .help-text {
+  margin: 0;
+  font-size: 13px;
 }
 
 .repo-search-container {
@@ -1967,23 +2845,26 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.search-clear-btn {
-  position: absolute;
-  right: 8px;
-  background: none;
+:is(.search-clear-btn, .close-modal) {
+  background: transparent;
   border: none;
-  padding: 4px;
-  cursor: pointer;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  border-radius: 10px;
   transition: all 0.2s ease;
 }
 
-.search-clear-btn:hover {
-  background-color: var(--hover-bg);
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+:is(.search-clear-btn, .close-modal):hover {
+  background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
@@ -1992,26 +2873,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .hide-pinned-btn {
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color-dark);
-  border-radius: 12px;
-  cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.2s;
   white-space: nowrap;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  text-transform: uppercase;
 }
 
 .hide-pinned-btn:hover {
-  background: var(--bg-secondary);
-  border-color: var(--link-color);
   color: var(--link-color);
 }
 
@@ -2050,13 +2919,16 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 .pagination-controls button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-color);
 }
 
 .add-repo-form {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .repo-input-label {
@@ -2131,20 +3003,22 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 
 /* Import Repos Section */
 .import-repos-section {
-  margin: 16px 0;
-  padding: 16px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
 }
 
 /* Import Repos Section when inside panel */
 .repo-panel .import-repos-section {
-  margin: 16px 0 0 0;
-  padding: 12px 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
 }
 
 .import-repos-section .help-text {
@@ -2163,27 +3037,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   flex-wrap: wrap;
 }
 
-.import-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid var(--border-color-dark);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
 /* Import buttons when inside panel - make them smaller */
 .repo-panel .import-btn {
-  padding: 6px 12px;
-  font-size: 14px;
+  padding: 8px 14px;
 }
 
 .repo-panel .import-icon {
@@ -2191,14 +3047,11 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   height: 16px;
 }
 
-.import-btn:hover {
-  background: var(--bg-secondary);
-  border-color: var(--link-color);
-}
-
 .import-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .import-icon {
@@ -2231,7 +3084,9 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .modal-content {
-  background: rgba(24, 22, 20, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.03) 100%),
+    var(--card);
   border: 1px solid var(--border-color);
   border-radius: 22px;
   width: 90%;
@@ -2267,30 +3122,17 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   margin: 0;
   font-size: 18px;
   color: var(--text-primary);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
   letter-spacing: -0.03em;
 }
 
 .close-modal {
-  background: none;
-  border: none;
   font-size: 24px;
-  color: var(--text-secondary);
-  cursor: pointer;
   padding: 0;
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.close-modal:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  cursor: pointer;
 }
 
 .modal-body {
@@ -2381,14 +3223,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .repo-item.import-variant.selected {
-  border-color: var(--link-color);
-  box-shadow: 0 0 0 2px var(--link-color);
-  background: var(--bg-tertiary);
+  border-color: rgba(16, 185, 129, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 0 0 1px rgba(16, 185, 129, 0.34);
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .repo-item.import-variant.selected:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 0 2px var(--link-color), 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 0 0 1px rgba(16, 185, 129, 0.34), 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .repo-item.import-variant.already-added {
@@ -2405,7 +3247,8 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   padding: 6px 12px;
   background: var(--success-bg);
   color: var(--success-text);
-  border-radius: 4px;
+  border: 1px solid var(--success-border);
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -2457,14 +3300,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 #deviceCodeSection input {
   letter-spacing: 0.22em;
   font-weight: 600;
   text-align: center;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 20px;
   padding: 16px 14px;
 }
@@ -2511,11 +3354,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  align-self: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.pin-btn {
+:is(.pin-btn, .mute-btn, .link-btn) {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color-dark);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 8px 10px;
   cursor: pointer;
@@ -2523,13 +3369,13 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.pin-btn:hover {
-  background: var(--bg-tertiary);
+:is(.pin-btn, .mute-btn, .link-btn):hover {
+  background: var(--bg-secondary);
   border-color: var(--link-color);
-  color: var(--link-color);
+  color: var(--text-primary);
 }
 
 .pin-btn.pinned {
@@ -2543,50 +3389,14 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   border-color: #f59e0b;
 }
 
-.mute-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color-dark);
-  border-radius: 12px;
-  padding: 8px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--link-color);
-  transition: all 0.2s;
-}
-
-.mute-btn:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--link-color);
-}
-
 .mute-btn.muted {
   color: var(--text-secondary);
   border-color: var(--border-color);
 }
 
 .mute-btn.muted:hover {
-  color: var(--error-text);
-  border-color: var(--error-text);
-}
-
-.link-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color-dark);
-  border-radius: 12px;
-  padding: 8px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--link-color);
-  transition: all 0.2s;
-}
-
-.link-btn:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--link-color);
+  color: var(--destructive);
+  border-color: var(--destructive);
 }
 
 .link-btn:focus-visible {
@@ -2622,7 +3432,7 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
 }
 
 .repo-item.pinned {
-  border-left: 3px solid #f59e0b;
+  box-shadow: inset 3px 0 0 #f59e0b;
   background: rgba(245, 158, 11, 0.05);
 }
 
@@ -2634,42 +3444,10 @@ body.dark-mode .notification-toggle input:checked + .toggle-slider {
   flex-wrap: wrap;
 }
 
-.import-export-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  color: var(--text-primary);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  text-transform: uppercase;
-}
-
-.import-export-btn:hover {
-  background: var(--bg-secondary);
-  border-color: var(--link-color);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.import-export-btn:active {
-  transform: translateY(0);
-}
-
 .ie-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-}
-
-body.dark-mode .import-export-btn:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Focus indicators for accessibility */
@@ -2711,9 +3489,17 @@ body.dark-mode select:focus-visible {
   outline-offset: 2px;
 }
 
+.repo-item.import-variant:focus {
+  outline: none;
+}
+
 .repo-item.import-variant:focus-visible {
-  outline: 2px solid var(--link-color);
-  outline-offset: -2px;
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 0 1px rgba(16, 185, 129, 0.4),
+    0 0 0 4px rgba(16, 185, 129, 0.16);
 }
 
 .search-clear-btn:focus-visible {
@@ -2724,6 +3510,8 @@ body.dark-mode select:focus-visible {
 /* Current Snoozes Section */
 .current-snoozes {
   margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
 }
 
 .current-snoozes h3 {
@@ -2737,13 +3525,17 @@ body.dark-mode select:focus-visible {
   margin-top: 16px;
 }
 
+.snoozed-repos-list.settings-row-group .snoozed-repo-item + .snoozed-repo-item {
+  border-top: 1px solid var(--border-color);
+}
+
 .empty-snoozes {
   text-align: center;
-  padding: 40px 20px;
+  padding: 28px 20px;
   color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border: 2px dashed var(--border-color);
-  border-radius: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .empty-snoozes p {
@@ -2761,10 +3553,11 @@ body.dark-mode select:focus-visible {
 .empty-repos-card {
   text-align: center;
   padding: 48px 32px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
-  margin: 16px 0;
+  margin: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .empty-repos-icon {
@@ -2800,10 +3593,11 @@ body.dark-mode select:focus-visible {
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
+  padding: 16px 0 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
   text-align: left;
 }
 
@@ -2812,16 +3606,15 @@ body.dark-mode select:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  margin-bottom: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   transition: all 0.2s;
 }
 
 .snoozed-repo-item:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-color-dark);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .snoozed-repo-info {
@@ -2831,7 +3624,7 @@ body.dark-mode select:focus-visible {
 .snoozed-repo-name {
   font-weight: 600;
   color: var(--text-primary);
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   margin-bottom: 4px;
 }
@@ -2845,26 +3638,6 @@ body.dark-mode select:focus-visible {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.unsnooze-btn {
-  background: var(--danger-bg);
-  color: white;
-  border: 1px solid var(--danger-bg);
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  text-transform: uppercase;
-}
-
-.unsnooze-btn:hover {
-  background: var(--danger-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .unsnooze-btn:focus-visible {
@@ -2896,8 +3669,11 @@ body.dark-mode .snooze-expiry-warning {
 }
 
 .toast {
-  background: rgba(24, 22, 20, 0.96);
-  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px 16px;
   box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
@@ -2958,14 +3734,14 @@ body.dark-mode .snooze-expiry-warning {
 
 .toast-message {
   flex: 1;
-  color: var(--text-primary);
+  color: var(--foreground);
 }
 
 .toast-close {
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
   cursor: pointer;
   padding: 4px;
   border-radius: 10px;
@@ -2978,7 +3754,25 @@ body.dark-mode .snooze-expiry-warning {
 
 .toast-close:hover {
   opacity: 1;
-  background: var(--bg-secondary);
+  background: var(--accent);
+}
+
+.toast-action {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.toast-action:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 
 /* Auto-remove toast progress bar */
@@ -2987,7 +3781,7 @@ body.dark-mode .snooze-expiry-warning {
   bottom: 0;
   left: 0;
   height: 3px;
-  background: var(--border-color);
+  background: var(--border);
   border-radius: 0 0 6px 6px;
   transition: width linear;
 }
@@ -3021,7 +3815,7 @@ body.dark-mode .snooze-expiry-warning {
   cursor: pointer;
   transition: all 0.2s;
   text-decoration: none;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -3075,7 +3869,7 @@ body.dark-mode .snooze-expiry-warning {
   padding: 8px 10px;
   border-radius: 10px;
   transition: background 0.2s, transform 0.2s;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -3112,7 +3906,7 @@ body.dark-mode .setup-btn:hover {
   font-size: 16px;
   margin-bottom: 12px;
   font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 
@@ -3136,7 +3930,7 @@ body.dark-mode .setup-btn:hover {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .footer-column ul {
@@ -3159,7 +3953,7 @@ body.dark-mode .setup-btn:hover {
   padding: 6px 8px;
   border-radius: 10px;
   transition: all 0.2s;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   text-transform: uppercase;
 }
 

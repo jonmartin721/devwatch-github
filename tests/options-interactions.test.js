@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 const mockApplyTheme = jest.fn();
 const mockApplyColorTheme = jest.fn();
 const mockGetSettings = jest.fn();
 const mockGetWatchedRepos = jest.fn();
+const mockGetLocalItem = jest.fn();
 const mockUpdateSettings = jest.fn();
 const mockGetAuthSession = jest.fn();
 const mockClearAuthSession = jest.fn();
@@ -46,6 +48,7 @@ jest.unstable_mockModule('../shared/storage-helpers.js', () => ({
   clearAuthSession: mockClearAuthSession,
   getAuthSession: mockGetAuthSession,
   getAccessToken: mockGetAccessToken,
+  getLocalItem: mockGetLocalItem,
   getSettings: mockGetSettings,
   getWatchedRepos: mockGetWatchedRepos,
   setLocalItem: mockSetLocalItem,
@@ -101,6 +104,7 @@ jest.unstable_mockModule('../options/views/repository-list-view.js', () => ({
 }));
 
 const {
+  addRepo,
   clearAllData,
   clearCacheData,
   loadSettings,
@@ -109,6 +113,8 @@ const {
   setupTabNavigation,
   state
 } = await import('../options/options.js');
+
+const optionsStyles = readFileSync(new URL('../options/options.css', import.meta.url), 'utf8');
 
 function renderOptionsDom() {
   document.body.innerHTML = `
@@ -119,23 +125,42 @@ function renderOptionsDom() {
     <button id="addRepoBtn"></button>
     <div id="repoHelpText"></div>
     <div id="importReposSection"></div>
+    <button id="togglePopularReposBtn" aria-expanded="false"></button>
+    <div id="popularReposPanel" class="repo-panel"></div>
+    <button id="importWatchedBtn" class="github-import-btn hidden"></button>
+    <button id="importStarredBtn" class="github-import-btn hidden"></button>
+    <button id="importParticipatingBtn" class="github-import-btn hidden"></button>
+    <button id="importMineBtn" class="github-import-btn hidden"></button>
     <div id="repoValidationStatus"></div>
     <div id="repoError"></div>
+    <div id="popularReposState"></div>
+    <div id="popularReposList" class="hidden"></div>
     <div id="repoList"></div>
     <div id="repoCountBadge"></div>
-    <div id="paginationControls"></div>
+    <div id="paginationControls" class="pagination-controls hidden"></div>
     <button id="prevPage"></button>
     <button id="nextPage"></button>
     <div id="pageInfo"></div>
     <input id="repoSearch" />
-    <button id="repoSearchClear"></button>
+    <button id="repoSearchClear" class="search-clear-btn hidden"></button>
     <button id="hidePinnedToggleBtn2"></button>
+    <p id="sidebarAuthAccount"></p>
+    <p id="sidebarAuthMeta"></p>
+    <p id="sidebarRateLimitValue"></p>
+    <p id="sidebarRateLimitMeta"></p>
 
-    <button class="tab-button" data-tab="setup">Setup</button>
+    <button class="tab-button" data-tab="repositories">Repositories</button>
+    <button class="tab-button" data-tab="filters">Filters</button>
+    <button class="tab-button" data-tab="preferences">Preferences</button>
     <button class="tab-button" data-tab="advanced">Advanced</button>
-    <div class="tab-panel" data-tab="setup"></div>
+    <button class="tab-button" data-tab="setup">Setup</button>
+    <div class="tab-panel" data-tab="repositories"></div>
+    <div class="tab-panel" data-tab="filters"></div>
+    <div class="tab-panel" data-tab="preferences"></div>
     <div class="tab-panel" data-tab="advanced"></div>
+    <div class="tab-panel" data-tab="setup"></div>
     <a class="setup-step clickable" data-tab="advanced"></a>
+    <a class="setup-inline-link" data-tab="preferences" href="#preferences">Preferences</a>
 
     <input id="filterPrs" type="checkbox" checked />
     <input id="filterIssues" type="checkbox" checked />
@@ -156,15 +181,11 @@ function renderOptionsDom() {
     <input id="snooze-4" name="snoozeHours" type="radio" value="4" />
     <input id="itemExpiryEnabled" type="checkbox" />
     <input id="itemExpiryHours" value="24" />
-    <div id="itemExpiryInputRow" style="display:none"></div>
+    <div id="itemExpiryInputRow" class="expiry-settings d-none"></div>
     <input id="markReadOnSnooze" type="checkbox" />
     <input id="allowUnlimitedRepos" type="checkbox" />
 
     <div id="snoozedReposList"></div>
-    <button id="importWatchedBtn"></button>
-    <button id="importStarredBtn"></button>
-    <button id="importParticipatingBtn"></button>
-    <button id="importMineBtn"></button>
     <button id="importBtn"></button>
     <input id="importFileInput" type="file" />
     <button id="exportBtn"></button>
@@ -173,7 +194,7 @@ function renderOptionsDom() {
     <button id="confirmImportBtn"></button>
     <input id="selectAllImport" type="checkbox" />
     <input id="importRepoSearch" />
-    <button id="importSearchClear"></button>
+    <button id="importSearchClear" class="search-clear-btn hidden"></button>
     <div id="importModal"></div>
 
     <button id="clearCacheBtn"></button>
@@ -197,6 +218,16 @@ beforeEach(() => {
   localStorage.clear();
   history.replaceState(null, '', '/options/options.html');
   renderOptionsDom();
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .hidden { display: none !important; }
+    .d-none { display: none !important; }
+    .search-clear-btn { display: flex; }
+    .pagination-controls { display: flex; }
+    .expiry-settings { display: block; }
+  `;
+  document.head.appendChild(style);
 
   Object.assign(state, {
     watchedRepos: [],
@@ -226,6 +257,7 @@ beforeEach(() => {
   mockGetWatchedRepos.mockResolvedValue([]);
   mockGetAuthSession.mockResolvedValue(null);
   mockGetAccessToken.mockResolvedValue('token');
+  mockGetLocalItem.mockResolvedValue(null);
   mockUpdateSettings.mockResolvedValue();
   mockSetLocalItem.mockResolvedValue();
   mockSetWatchedRepos.mockResolvedValue();
@@ -247,17 +279,33 @@ beforeEach(() => {
   fetch.mockImplementation(async (url) => {
     if (url === 'manifest.json') {
       return {
+        ok: true,
         json: async () => ({ version: '1.2.3' })
       };
     }
 
     if (url === 'CHANGELOG.md') {
       return {
+        ok: true,
         text: async () => '# Changelog\n\n- Added tests'
       };
     }
 
+    if (url === 'https://api.github.com/repos/jonmartin721/devwatch-github/releases/latest') {
+      return {
+        ok: true,
+        json: async () => ({
+          tag_name: 'v1.2.3',
+          name: 'v1.2.3',
+          body: '## Highlights\n- Added tests',
+          published_at: '2026-04-20T00:00:00Z',
+          html_url: 'https://github.com/jonmartin721/devwatch-github/releases/tag/v1.2.3'
+        })
+      };
+    }
+
     return {
+      ok: true,
       json: async () => ({}),
       text: async () => ''
     };
@@ -287,9 +335,29 @@ describe('options interactions', () => {
 
     expect(buttons[1].classList.contains('active')).toBe(true);
     expect(buttons[1].focus).toHaveBeenCalled();
-    expect(localStorage.getItem('activeTab')).toBe('advanced');
-    expect(document.querySelector('.tab-panel[data-tab="advanced"]').hidden).toBe(false);
+    expect(localStorage.getItem('activeTab')).toBe('filters');
+    expect(document.querySelector('.tab-panel[data-tab="filters"]').hidden).toBe(false);
+    expect(document.querySelector('.tab-panel[data-tab="repositories"]').hidden).toBe(true);
+  });
+
+  test('defaults to repositories when there is no saved tab or hash', () => {
+    setupTabNavigation();
+
+    expect(localStorage.getItem('activeTab')).toBe('repositories');
+    expect(document.querySelector('.tab-button[data-tab="repositories"]').classList.contains('active')).toBe(true);
+    expect(document.querySelector('.tab-panel[data-tab="repositories"]').hidden).toBe(false);
     expect(document.querySelector('.tab-panel[data-tab="setup"]').hidden).toBe(true);
+  });
+
+  test('setup inline links can switch directly to another tab', () => {
+    const preferencesLink = document.querySelector('.setup-inline-link');
+
+    setupTabNavigation();
+    preferencesLink.click();
+
+    expect(localStorage.getItem('activeTab')).toBe('preferences');
+    expect(document.querySelector('.tab-button[data-tab="preferences"]').classList.contains('active')).toBe(true);
+    expect(document.querySelector('.tab-panel[data-tab="preferences"]').hidden).toBe(false);
   });
 
   test('search, hide-pinned, and modal close interactions update local state and controller calls', () => {
@@ -303,10 +371,11 @@ describe('options interactions', () => {
     repoSearch.dispatchEvent(new Event('input', { bubbles: true }));
     expect(state.searchQuery).toBe('react');
     expect(state.currentPage).toBe(1);
-    expect(repoSearchClear.style.display).toBe('flex');
+    expect(repoSearchClear.classList.contains('hidden')).toBe(false);
 
     repoSearchClear.click();
     expect(state.searchQuery).toBe('');
+    expect(repoSearchClear.classList.contains('hidden')).toBe(true);
     expect(repoSearch.focus).toHaveBeenCalled();
 
     document.getElementById('hidePinnedToggleBtn2').click();
@@ -314,6 +383,20 @@ describe('options interactions', () => {
 
     document.getElementById('importModal').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     expect(mockCloseImportModal).toHaveBeenCalled();
+  });
+
+  test('popular repositories open from the quick-action button instead of a standalone card', async () => {
+    const popularBtn = document.getElementById('togglePopularReposBtn');
+    const popularPanel = document.getElementById('popularReposPanel');
+
+    setupEventListeners();
+
+    popularBtn.click();
+    await Promise.resolve();
+
+    expect(popularPanel.classList.contains('show')).toBe(true);
+    expect(popularBtn.classList.contains('active')).toBe(true);
+    expect(popularBtn.getAttribute('aria-expanded')).toBe('true');
   });
 
   test('persists radio, checkbox, and category dependency changes through updateSettings', async () => {
@@ -356,18 +439,132 @@ describe('options interactions', () => {
   });
 
   test('loadSettings applies normalized settings to the UI and renders snoozed repos', async () => {
-    mockGetAuthSession.mockResolvedValue({ accessToken: 'stored-token' });
+    mockGetAuthSession.mockResolvedValue({
+      accessToken: 'stored-token',
+      username: 'octocat',
+      authType: 'oauth_device',
+      scopes: ['repo', 'read:user'],
+      grantedAt: '2026-04-21T14:20:00.000Z'
+    });
+    mockGetLocalItem.mockResolvedValue({
+      remaining: 1234,
+      limit: 5000,
+      reset: Date.UTC(2026, 3, 21, 20, 0, 0)
+    });
 
     await loadSettings();
 
-    expect(mockApplyStoredConnection).toHaveBeenCalledWith({ accessToken: 'stored-token' });
+    expect(mockApplyStoredConnection).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'stored-token' }));
     expect(mockApplyTheme).toHaveBeenCalledWith('dark');
     expect(mockApplyColorTheme).toHaveBeenCalledWith('graphite');
     expect(document.getElementById('theme-dark').checked).toBe(true);
     expect(document.getElementById('color-graphite').checked).toBe(true);
     expect(document.getElementById('itemExpiryEnabled').checked).toBe(true);
-    expect(document.getElementById('itemExpiryInputRow').style.display).toBe('block');
+    expect(document.getElementById('itemExpiryInputRow').classList.contains('d-none')).toBe(false);
+    expect(document.getElementById('sidebarAuthAccount').textContent).toBe('@octocat');
+    expect(document.getElementById('sidebarRateLimitValue').textContent).toBe('1234/5000 left');
     expect(mockRenderSnoozedRepos).toHaveBeenCalledWith([]);
+  });
+
+  test('loadSettings renders a popular public repositories section', async () => {
+    fetch.mockImplementation(async (url) => {
+      if (String(url).includes('/search/repositories')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          headers: new Map(),
+          json: async () => ({
+            items: [
+              {
+                owner: { login: 'facebook' },
+                name: 'react',
+                description: 'A JavaScript library for building user interfaces',
+                language: 'JavaScript',
+                stargazers_count: 200000
+              }
+            ]
+          })
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({}),
+        text: async () => ''
+      };
+    });
+
+    await loadSettings();
+
+    expect(document.getElementById('popularReposList').innerHTML).toContain('microsoft/vscode');
+    expect(document.getElementById('popularReposState').classList.contains('hidden')).toBe(true);
+  });
+
+  test('import search clear button actually hides when the query is cleared', () => {
+    const importSearch = document.getElementById('importRepoSearch');
+    const importSearchClear = document.getElementById('importSearchClear');
+
+    setupEventListeners();
+
+    importSearch.value = 'react';
+    importSearch.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(importSearchClear.classList.contains('hidden')).toBe(false);
+
+    importSearchClear.click();
+    expect(importSearch.value).toBe('');
+    expect(importSearchClear.classList.contains('hidden')).toBe(true);
+  });
+
+  test('disconnected users can still add public repositories manually', async () => {
+    mockGetAccessToken.mockResolvedValueOnce(null);
+    mockResolveWatchedRepoInput.mockResolvedValueOnce({
+      valid: true,
+      normalizedRepo: 'facebook/react',
+      record: { fullName: 'facebook/react', description: 'React', language: 'JS' }
+    });
+
+    state.watchedRepos = [];
+    document.getElementById('repoInput').value = 'facebook/react';
+
+    await addRepo();
+
+    expect(mockResolveWatchedRepoInput).toHaveBeenCalled();
+    expect(mockResolveWatchedRepoInput.mock.calls[0][0]).toBe('facebook/react');
+    expect(mockResolveWatchedRepoInput.mock.calls[0][1].githubToken).toBeNull();
+    expect(state.watchedRepos).toEqual([
+      { fullName: 'facebook/react', description: 'React', language: 'JS' }
+    ]);
+  });
+
+  test('options hide utilities override later component display rules', () => {
+    expect(optionsStyles).toMatch(/\.hidden\s*\{[\s\S]*display:\s*none\s*!important;/);
+    expect(optionsStyles).toMatch(/\.d-none\s*\{[\s\S]*display:\s*none\s*!important;/);
+  });
+
+  test('setup inline links use the themed link treatment', () => {
+    expect(optionsStyles).toMatch(/\.setup-inline-link\s*\{[\s\S]*font-weight:\s*600/);
+    expect(optionsStyles).toMatch(/\.setup-inline-link:focus-visible\s*\{[\s\S]*outline:\s*2px solid var\(--link-color\)/);
+  });
+
+  test('setup connection status actions share the same pill language', () => {
+    expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*border-radius:\s*999px/);
+    expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*background:\s*var\(--error-bg\)/);
+    expect(optionsStyles).toMatch(/\.github-disconnect-btn\s*\{[\s\S]*color:\s*var\(--error-text\)/);
+    expect(optionsStyles).toMatch(/\.github-connect-status-row\s*\{[\s\S]*justify-content:\s*space-between/);
+    expect(optionsStyles).toMatch(/\.github-connect-inline-help\s*\{[\s\S]*flex-direction:\s*column/);
+    expect(optionsStyles).toMatch(/\.github-connect-card\.is-connected [\s\S]*\.github-connect-flow[\s\S]*display:\s*none/);
+  });
+
+  test('popular repositories are tucked behind a toggleable utility panel', () => {
+    expect(optionsStyles).toMatch(/\.popular-repos-panel\.show\s*\{[\s\S]*max-height:\s*520px/);
+    expect(optionsStyles).toMatch(/\.import-btn\.active\s*\{[\s\S]*border-color:\s*var\(--border-hover\)/);
+  });
+
+  test('import selection and focus styles use themed treatment instead of default outlines', () => {
+    expect(optionsStyles).toMatch(/\.repo-item\.import-variant\.selected\s*\{[\s\S]*rgba\(16,\s*185,\s*129,\s*0\.12\)/);
+    expect(optionsStyles).toMatch(/\.repo-item\.import-variant:focus\s*\{[\s\S]*outline:\s*none/);
+    expect(optionsStyles).toMatch(/\.repo-item\.import-variant:focus-visible\s*\{[\s\S]*box-shadow:/);
   });
 
   test('clears cache data and handles destructive actions', async () => {

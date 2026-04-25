@@ -6,6 +6,66 @@
 import { getAccessToken } from './storage-helpers.js';
 import { createHeaders } from './github-api.js';
 
+const CURATED_POPULAR_REPOS = [
+    {
+        owner: { login: 'microsoft' },
+        name: 'vscode',
+        description: 'Visual Studio Code - lightweight but powerful source code editor',
+        language: 'TypeScript',
+        stargazers_count: 150000
+    },
+    {
+        owner: { login: 'facebook' },
+        name: 'react',
+        description: 'A declarative, efficient, and flexible JavaScript library for building user interfaces',
+        language: 'JavaScript',
+        stargazers_count: 220000
+    },
+    {
+        owner: { login: 'vercel' },
+        name: 'next.js',
+        description: 'The React framework for the web',
+        language: 'TypeScript',
+        stargazers_count: 130000
+    },
+    {
+        owner: { login: 'microsoft' },
+        name: 'TypeScript',
+        description: 'TypeScript is a superset of JavaScript that compiles to clean JavaScript output',
+        language: 'TypeScript',
+        stargazers_count: 100000
+    },
+    {
+        owner: { login: 'home-assistant' },
+        name: 'core',
+        description: 'Open source home automation that puts local control and privacy first',
+        language: 'Python',
+        stargazers_count: 80000
+    },
+    {
+        owner: { login: 'supabase' },
+        name: 'supabase',
+        description: 'The open source Firebase alternative',
+        language: 'TypeScript',
+        stargazers_count: 90000
+    }
+];
+
+const POPULAR_REPO_BLOCKLIST = [
+    /(^|\/)awesome([-/]|$)/i,
+    /roadmap/i,
+    /interview/i,
+    /\bbook(s)?\b/i,
+    /primer/i,
+    /curriculum/i,
+    /collection/i,
+    /resources/i,
+    /system[\s-]?design/i,
+    /free[-\s]?programming/i,
+    /developer[-\s]?roadmap/i,
+    /build[-\s]?your[-\s]?own/i
+];
+
 export class OnboardingManager {
     static STORAGE_KEY = 'onboarding_state';
     static STEPS = ['welcome', 'token', 'repos', 'categories', 'complete'];
@@ -131,8 +191,10 @@ export class OnboardingManager {
             const headers = storedToken
                 ? createHeaders(storedToken)
                 : { 'Accept': 'application/vnd.github.v3+json' };
-
-            const apiUrl = 'https://api.github.com/search/repositories?q=stars:1000..50000&sort=stars&order=desc&per_page=20';
+            const recentCutoff = new Date();
+            recentCutoff.setFullYear(recentCutoff.getFullYear() - 1);
+            const recentCutoffDate = recentCutoff.toISOString().slice(0, 10);
+            const apiUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(`stars:>15000 archived:false fork:false is:public pushed:>${recentCutoffDate}`)}&sort=stars&order=desc&per_page=24`;
 
             let response;
             let retryCount = 0;
@@ -234,77 +296,62 @@ export class OnboardingManager {
             const data = await response.json();
             const repos = data.items || [];
 
-            // Filter to get 4 diverse repositories
             const filteredRepos = this.getFilteredRepos(repos);
-            const finalRepos = filteredRepos.slice(0, 3);
+            const finalRepos = this.withCuratedBackfill(filteredRepos).slice(0, 3);
 
             return finalRepos;
 
         } catch (_error) {
-            // Fallback to static popular repos - diverse, well-maintained projects
-            const fallbackRepos = [
-                {
-                    owner: { login: 'microsoft' },
-                    name: 'vscode',
-                    description: 'Visual Studio Code - lightweight but powerful source code editor',
-                    language: 'TypeScript',
-                    stargazers_count: 150000
-                },
-                {
-                    owner: { login: 'facebook' },
-                    name: 'react',
-                    description: 'A declarative, efficient, and flexible JavaScript library for building user interfaces',
-                    language: 'JavaScript',
-                    stargazers_count: 220000
-                },
-                {
-                    owner: { login: 'openai' },
-                    name: 'whisper',
-                    description: 'Robust Speech Recognition via Large-Scale Weak Supervision',
-                    language: 'Python',
-                    stargazers_count: 60000
-                },
-                {
-                    owner: { login: 'langchain-ai' },
-                    name: 'langchain',
-                    description: 'Building applications with LLMs through composability',
-                    language: 'Python',
-                    stargazers_count: 85000
-                }
-            ];
-
-            return fallbackRepos;
+            return CURATED_POPULAR_REPOS.slice(0, 3);
         }
     }
 
     getFilteredRepos(repos) {
-        // Filter out very large projects and aim for diversity
-        const excludePatterns = [
-            /github/i,  // GitHub itself
-            /chromium/i, // Very large OS projects
-            /android/i, // Very large OS projects
-        ];
+        const seenRepos = new Set();
 
-        const filtered = repos.filter(repo => {
-            const fullName = `${repo.owner.login}/${repo.name}`.toLowerCase();
+        return (Array.isArray(repos) ? repos : []).filter((repo) => {
+            const owner = repo?.owner?.login || '';
+            const name = repo?.name || '';
+            const fullName = `${owner}/${name}`.trim();
+            const normalizedFullName = fullName.toLowerCase();
+            const haystack = `${normalizedFullName} ${repo?.description || ''}`.toLowerCase();
+            const language = String(repo?.language || '').trim();
 
-            // Exclude by patterns
-            if (excludePatterns.some(pattern => pattern.test(fullName))) {
+            if (!owner || !name || seenRepos.has(normalizedFullName)) {
                 return false;
             }
 
-            // Exclude extremely large projects (over 75k stars)
-            if (repo.stargazers_count > 75000) {
+            if (!language || language.toLowerCase() === 'markdown') {
                 return false;
             }
 
+            if (POPULAR_REPO_BLOCKLIST.some(pattern => pattern.test(haystack))) {
+                return false;
+            }
+
+            seenRepos.add(normalizedFullName);
             return true;
         });
+    }
 
-        // Shuffle for variety and take first 4
-        const result = this.shuffleArray(filtered);
+    withCuratedBackfill(repos) {
+        const uniqueRepos = [];
+        const seenRepos = new Set();
 
-        return result;
+        [...(Array.isArray(repos) ? repos : []), ...CURATED_POPULAR_REPOS].forEach((repo) => {
+            const owner = repo?.owner?.login || '';
+            const name = repo?.name || '';
+            const fullName = `${owner}/${name}`.trim().toLowerCase();
+
+            if (!fullName || seenRepos.has(fullName)) {
+                return;
+            }
+
+            seenRepos.add(fullName);
+            uniqueRepos.push(repo);
+        });
+
+        return uniqueRepos;
     }
 
     shuffleArray(array) {

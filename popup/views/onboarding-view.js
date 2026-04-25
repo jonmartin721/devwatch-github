@@ -6,6 +6,10 @@ import {
   requestGitHubDeviceCode
 } from '../../shared/auth.js';
 import { OnboardingManager } from '../../shared/onboarding.js';
+import {
+  fetchGitHubRepoSource,
+  getGitHubRepoSourceConfig
+} from '../../shared/github-repo-sources.js';
 import { getAccessToken, getWatchedRepos, setAuthSession, setWatchedRepos } from '../../shared/storage-helpers.js';
 import { resolveWatchedRepoInput } from '../../shared/repo-service.js';
 import { CATEGORY_SETTINGS, createCategorySettings } from '../../shared/settings-schema.js';
@@ -13,9 +17,28 @@ import { escapeHtml } from '../../shared/sanitize.js';
 
 // Create onboarding manager instance
 const onboardingManager = new OnboardingManager();
+const ONBOARDING_REPO_SOURCE_TYPES = ['mine', 'watched', 'starred', 'participating'];
 
 function getStatusMarkup(type, message) {
   return `<div class="status-${type}">${escapeHtml(message)}</div>`;
+}
+
+function getConnectedStatusMarkup(username) {
+  const connectedLabel = username
+    ? `Connected as ${escapeHtml(username)}`
+    : 'GitHub connected';
+
+  return `
+    <div class="token-connected-card">
+      <div class="token-connected-badge">Ready</div>
+      <div class="token-connected-title">${connectedLabel}</div>
+      <p class="token-connected-copy">You're done here. Continue to choose repositories for your watchlist.</p>
+    </div>
+  `;
+}
+
+function getAnonymousRepoModeCopy() {
+  return 'You can add public repositories now and connect GitHub later for private repos and a higher API budget.';
 }
 
 async function addWatchedRepoFromInput(rawInput) {
@@ -50,10 +73,9 @@ async function copyTextToClipboard(text) {
 
   const activeElement = document.activeElement;
   const tempInput = document.createElement('input');
+  tempInput.className = 'clipboard-temp-input';
   tempInput.value = text;
   tempInput.setAttribute('readonly', '');
-  tempInput.style.position = 'absolute';
-  tempInput.style.opacity = '0';
   document.body.appendChild(tempInput);
   tempInput.select();
 
@@ -157,15 +179,18 @@ async function completePendingDeviceAuth(tokenData, elements, options = {}) {
 }
 
 function renderRepoSuggestion(repo) {
-  const rawOwner = repo?.owner?.login || 'unknown';
-  const rawName = repo?.name || 'unknown';
+  const normalizedFullName = repo?.fullName || '';
+  const [fullNameOwner = '', fullNameName = ''] = normalizedFullName.split('/');
+  const rawOwner = repo?.owner?.login || fullNameOwner || 'unknown';
+  const rawName = repo?.name || fullNameName || 'unknown';
   const owner = escapeHtml(rawOwner);
   const name = escapeHtml(rawName);
   const description = escapeHtml(repo?.description || `${repo?.language || 'Popular'} project worth watching`);
   const language = escapeHtml(repo?.language || '');
   const repoFullName = `${rawOwner}/${rawName}`;
-  const stars = Number.isFinite(repo?.stargazers_count)
-    ? repo.stargazers_count.toLocaleString()
+  const starCount = Number.isFinite(repo?.stargazers_count) ? repo.stargazers_count : repo?.stars;
+  const stars = Number.isFinite(starCount)
+    ? starCount.toLocaleString()
     : '';
 
   return `
@@ -199,16 +224,15 @@ export async function showOnboarding(loadActivitiesCallback) {
   // Hide main content and show onboarding
   if (onboardingView) {
     onboardingView.classList.remove('hidden');
-    onboardingView.style.display = 'block';
   }
-  if (activityList) activityList.style.display = 'none';
-  if (toolbar) toolbar.style.display = 'none';
-  if (searchBox) searchBox.style.display = 'none';
+  if (activityList) activityList.classList.add('hidden');
+  if (toolbar) toolbar.classList.add('hidden');
+  if (searchBox) searchBox.classList.add('hidden');
 
   // Hide entire header during onboarding
   const header = document.querySelector('header');
   if (header) {
-    header.style.display = 'none';
+    header.classList.add('hidden');
   }
 
   // Load current step
@@ -264,7 +288,8 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   const isFinalStep = progress.current === progress.total;
   const isTokenStep = currentStep === 'token';
   const nextButtonText = isTokenStep ? 'Continue' : (isFinalStep ? 'Open Feed' : 'Next');
-  const nextButtonDisabled = isTokenStep ? 'disabled' : '';
+  const tokenStepData = isTokenStep ? await onboardingManager.getStepData('token') : null;
+  const nextButtonDisabled = isTokenStep && !tokenStepData?.validated ? 'disabled' : '';
 
   stepContent += `
     <div class="onboarding-nav">
@@ -280,7 +305,7 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   if (progress.showProgress) {
     const progressFill = onboardingView.querySelector('.progress-fill');
     if (progressFill) {
-      progressFill.style.width = `${progress.percentage}%`;
+      progressFill.dataset.progress = String(progress.percentage);
     }
   }
 
@@ -292,13 +317,7 @@ export async function renderOnboardingStep(loadActivitiesCallback) {
   if (footerSkipBtn) {
     // Show skip button for repos and categories steps only (token is required)
     const showSkip = progress.showProgress && currentStep !== 'complete' && currentStep !== 'token';
-    if (showSkip) {
-      footerSkipBtn.classList.remove('hidden');
-      footerSkipBtn.style.display = 'block';
-    } else {
-      footerSkipBtn.classList.add('hidden');
-      footerSkipBtn.style.display = 'none';
-    }
+    footerSkipBtn.classList.toggle('hidden', !showSkip);
   }
 }
 
@@ -343,87 +362,255 @@ function renderWelcomeStep() {
 
 async function renderTokenStep() {
   const tokenData = await onboardingManager.getStepData('token');
+  const canSkipTokenStep = !tokenData?.validated;
+  const isConnected = Boolean(tokenData?.validated);
 
   let statusHtml = '';
-  let buttonDisabled = '';
-  let buttonText = 'Connect GitHub';
+  let tokenStatusClass = 'token-status';
   const safeUserCode = escapeHtml(tokenData?.userCode || '');
 
   if (tokenData && tokenData.validated && tokenData.username) {
-    statusHtml = getStatusMarkup('success', `Connected as ${tokenData.username}`);
-    buttonDisabled = 'disabled';
-    buttonText = 'Connected';
+    statusHtml = getConnectedStatusMarkup(tokenData.username);
+    tokenStatusClass += ' token-status-prominent';
   } else if (tokenData && tokenData.validated) {
-    statusHtml = getStatusMarkup('success', 'GitHub is connected');
-    buttonDisabled = 'disabled';
-    buttonText = 'Connected';
+    statusHtml = getConnectedStatusMarkup('');
+    tokenStatusClass += ' token-status-prominent';
   } else if (tokenData?.userCode) {
-    statusHtml = getStatusMarkup('loading', `Enter ${tokenData.userCode} on GitHub to finish connecting.`);
+    statusHtml = getStatusMarkup('loading', `If GitHub asks for a code, use ${tokenData.userCode}.`);
   }
 
   return `
     <div class="onboarding-step token-step">
       <h2>Connect your GitHub account</h2>
-      <p>We'll open GitHub in a new tab and keep the device code ready here for you.</p>
+      <p>We'll open GitHub in a new tab and copy your code to the clipboard so it's ready if GitHub asks for it.</p>
 
       <div class="token-instructions">
         <h3>Quick setup</h3>
         <ol>
           <li>Click <strong>Connect GitHub</strong></li>
+          <li>GitHub opens and DevWatch copies the code for you</li>
           <li>Approve access on the GitHub page that opens</li>
           <li>Come back here once GitHub says you're done</li>
         </ol>
       </div>
 
-      <div class="token-input-group">
-        <div class="token-code-stack">
-          <input
-            type="text"
-            id="tokenInput"
-            placeholder="Verification code appears here"
-            class="token-input"
-            autocomplete="off"
-            value="${safeUserCode}"
-            readonly
-          >
-          <p class="token-copy-hint">Click the code to select it, or use Copy.</p>
+      ${isConnected ? '' : `
+        <div class="token-input-group">
+          <div class="token-code-stack">
+            <input
+              type="text"
+              id="tokenInput"
+              placeholder="Code appears here"
+              class="token-input"
+              autocomplete="off"
+              value="${safeUserCode}"
+              readonly
+            >
+          </div>
+          <p id="tokenCopyHint" class="token-copy-hint ${safeUserCode ? '' : 'hidden'}">Click the code field to copy it again.</p>
+          <div class="token-action-row">
+            <button id="validateTokenBtn" class="validate-btn">Connect GitHub</button>
+          </div>
+          ${canSkipTokenStep ? '<button id="skipTokenStepBtn" class="onboarding-btn link token-skip-link" type="button">Continue without GitHub</button>' : ''}
         </div>
-        <button id="copyTokenCodeBtn" class="copy-code-btn" ${safeUserCode ? '' : 'disabled'}>Copy</button>
-        <button id="validateTokenBtn" class="validate-btn" ${buttonDisabled}>${buttonText}</button>
-      </div>
+      `}
 
-      <div id="tokenStatus" class="token-status">${statusHtml}</div>
+      <div id="tokenStatus" class="${tokenStatusClass}">${statusHtml}</div>
     </div>
 
     <p class="security-note">
       <svg class="info-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
-      Your GitHub session stays in Chrome session storage for the current browser session only. It's used for GitHub API access and is cleared when the browser session ends.
+      GitHub access stays in this Chrome profile until you disconnect it or reset DevWatch.
     </p>
   `;
 }
 
-export async function renderReposStep() {
+function renderRepoSourceButton(type, selectedSource) {
+  const sourceConfig = getGitHubRepoSourceConfig(type);
+  const isSelected = type === selectedSource;
+
+  return `
+    <button
+      type="button"
+      class="repo-source-btn${isSelected ? ' active' : ''}"
+      data-source="${escapeHtml(type)}"
+      aria-pressed="${isSelected ? 'true' : 'false'}"
+    >
+      ${escapeHtml(sourceConfig.label)}
+    </button>
+  `;
+}
+
+function renderRepoSuggestionsContent(repos, { loadingMessage = 'Loading repositories...', emptyMessage = 'No repositories found.' } = {}) {
+  if (!Array.isArray(repos)) {
+    return `<div class="repo-loading" id="repoLoading">${escapeHtml(loadingMessage)}</div>`;
+  }
+
+  if (repos.length === 0) {
+    return `<div class="repo-loading">${escapeHtml(emptyMessage)}</div>`;
+  }
+
+  return repos.map(renderRepoSuggestion).join('');
+}
+
+function filterSuggestedRepos(repos, watchedRepos) {
+  const watchedRepoNames = new Set(
+    (Array.isArray(watchedRepos) ? watchedRepos : [])
+      .map(repo => repo?.fullName?.toLowerCase())
+      .filter(Boolean)
+  );
+
+  return (Array.isArray(repos) ? repos : []).filter((repo) => {
+    const fullName = String(repo?.fullName || `${repo?.owner?.login || ''}/${repo?.name || ''}`).toLowerCase();
+    return fullName && !watchedRepoNames.has(fullName);
+  });
+}
+
+async function getSavedRepoSourceState() {
+  const state = await onboardingManager.getStepData('repoSource');
+  return state && typeof state === 'object'
+    ? state
+    : {};
+}
+
+async function saveRepoSourceState(nextState) {
+  await onboardingManager.saveStepData('repoSource', nextState);
+}
+
+async function loadAuthenticatedRepoSourcePreview(sourceType, options = {}) {
+  const githubToken = await getAccessToken();
+  if (!githubToken) {
+    return [];
+  }
+
+  const sourceState = await getSavedRepoSourceState();
+  const cachedPreview = sourceState?.previews?.[sourceType];
+  if (!options.force && Array.isArray(cachedPreview)) {
+    return cachedPreview;
+  }
+
+  const existingRepos = await getWatchedRepos();
+  const previewRepos = await fetchGitHubRepoSource(sourceType, githubToken, {
+    perPage: 12,
+    maxPages: 1,
+    maxRepos: 12,
+    timeLimitMs: 10000
+  });
+
+  const filteredPreview = previewRepos
+    .filter((repo) => !existingRepos.some(existing => existing?.fullName?.toLowerCase() === repo.fullName.toLowerCase()))
+    .slice(0, 3);
+
+  const nextState = {
+    ...sourceState,
+    selectedSource: sourceType,
+    previews: {
+      ...(sourceState.previews || {}),
+      [sourceType]: filteredPreview
+    },
+    loadedSources: Array.from(new Set([...(sourceState.loadedSources || []), sourceType])),
+    errors: {
+      ...(sourceState.errors || {}),
+      [sourceType]: null
+    }
+  };
+
+  await saveRepoSourceState(nextState);
+  return filteredPreview;
+}
+
+async function getPopularRepoPreview(watchedRepos) {
   const saved = await onboardingManager.getStepData('popularRepos');
   const hasSavedRepos = Array.isArray(saved) && saved.length > 0;
+  const popularRepos = hasSavedRepos ? saved : await onboardingManager.getPopularRepos();
 
-  let popularRepos;
-  if (hasSavedRepos) {
-    popularRepos = saved;
-  } else {
-    popularRepos = await onboardingManager.getPopularRepos();
+  return filterSuggestedRepos(popularRepos, watchedRepos).slice(0, 3);
+}
+
+export async function renderReposStep() {
+  const githubToken = await getAccessToken();
+  const watchedRepos = await getWatchedRepos();
+  const publicOnlyMode = !githubToken;
+  const visiblePopularRepos = await getPopularRepoPreview(watchedRepos);
+
+  if (!publicOnlyMode) {
+    const sourceState = await getSavedRepoSourceState();
+    const selectedSource = ONBOARDING_REPO_SOURCE_TYPES.includes(sourceState?.selectedSource)
+      ? sourceState.selectedSource
+      : 'mine';
+    const sourceConfig = getGitHubRepoSourceConfig(selectedSource);
+    const cachedPreview = Array.isArray(sourceState?.previews?.[selectedSource])
+      ? filterSuggestedRepos(sourceState.previews[selectedSource], watchedRepos).slice(0, 3)
+      : null;
+    const isLoaded = Array.isArray(sourceState?.loadedSources) && sourceState.loadedSources.includes(selectedSource);
+    const sourceError = sourceState?.errors?.[selectedSource];
+
+    return `
+      <div class="onboarding-step repos-step">
+        <h2>Build your watchlist</h2>
+        <p class="step-subtitle">Add repos manually, or pull from the same GitHub sources available in settings.</p>
+
+        <div class="popular-repos repo-source-panel">
+          <h3>Add from GitHub</h3>
+          <p class="repo-source-copy">Choose a source to preview repos from your account.</p>
+          <div class="repo-source-tabs" id="repoSourceTabs">
+            ${ONBOARDING_REPO_SOURCE_TYPES.map(type => renderRepoSourceButton(type, selectedSource)).join('')}
+          </div>
+          <div class="repo-suggestions" id="repoSuggestions" data-source="${escapeHtml(selectedSource)}" data-loaded="${isLoaded ? 'true' : 'false'}">
+            ${sourceError
+              ? `<div class="repo-loading repo-error">${escapeHtml(sourceError)}</div>`
+              : renderRepoSuggestionsContent(
+                cachedPreview,
+                {
+                  loadingMessage: `Loading ${sourceConfig.label.toLowerCase()} repositories...`,
+                  emptyMessage: isLoaded
+                    ? sourceConfig.emptyState
+                    : `Loading ${sourceConfig.label.toLowerCase()} repositories...`
+                }
+              )}
+          </div>
+        </div>
+
+        <div class="popular-repos popular-repos-panel">
+          <h3>Popular repositories</h3>
+          <p class="repo-source-copy">Quick picks to get started if you want a few broad defaults.</p>
+          <div class="repo-suggestions" id="popularRepoSuggestions">
+            ${renderRepoSuggestionsContent(visiblePopularRepos, {
+              emptyMessage: 'No popular repositories available right now.'
+            })}
+          </div>
+        </div>
+
+        <div class="manual-repo">
+          <h3>Or add one directly</h3>
+          <div class="manual-input-group">
+            <input
+              type="text"
+              id="manualRepoInput"
+              placeholder="owner/repo, github.com/owner/repo, or npm package name"
+              class="repo-input"
+            >
+            <button id="addManualRepoBtn" class="add-btn">Add</button>
+          </div>
+        </div>
+
+        <div id="repoStatus" class="repo-status"></div>
+      </div>
+    `;
   }
 
   return `
     <div class="onboarding-step repos-step">
       <h2>Build your watchlist</h2>
+      ${publicOnlyMode ? `<p class="step-subtitle">${getAnonymousRepoModeCopy()}</p>` : ''}
 
       <div class="popular-repos">
         <h3>Popular repositories</h3>
         <div class="repo-suggestions" id="repoSuggestions">
-          ${popularRepos && popularRepos.length > 0 ?
-            popularRepos.map(renderRepoSuggestion).join('') :
+          ${visiblePopularRepos.length > 0 ?
+            visiblePopularRepos.map(renderRepoSuggestion).join('') :
             '<div class="repo-loading" id="repoLoading">Loading popular repositories...</div>'
           }
         </div>
@@ -645,7 +832,7 @@ export async function setupOnboardingStepListeners(currentStep, loadActivitiesCa
   // Step-specific listeners
   switch (currentStep) {
     case 'token':
-      setupTokenStepListeners();
+      setupTokenStepListeners(loadActivitiesCallback);
       break;
     case 'repos':
       setupReposStepListeners();
@@ -656,36 +843,50 @@ export async function setupOnboardingStepListeners(currentStep, loadActivitiesCa
   }
 }
 
-function setupTokenStepListeners() {
+function setupTokenStepListeners(loadActivitiesCallback) {
   const tokenInput = document.getElementById('tokenInput');
-  const copyTokenCodeBtn = document.getElementById('copyTokenCodeBtn');
+  const tokenCopyHint = document.getElementById('tokenCopyHint');
   const validateBtn = document.getElementById('validateTokenBtn');
+  const skipTokenStepBtn = document.getElementById('skipTokenStepBtn');
   const tokenStatus = document.getElementById('tokenStatus');
   const nextBtn = document.getElementById('nextBtn');
   const tokenElements = { tokenInput, validateBtn, tokenStatus, nextBtn };
+  let lastTokenCopyAttemptAt = 0;
 
-  tokenInput?.addEventListener('click', () => {
-    tokenInput.select();
-  });
-
-  tokenInput?.addEventListener('focus', () => {
-    tokenInput.select();
-  });
-
-  copyTokenCodeBtn?.addEventListener('click', async () => {
+  const tryCopyDisplayedCode = async () => {
     const userCode = tokenInput?.value?.trim();
     if (!userCode) {
-      return;
+      return false;
     }
+
+    const now = Date.now();
+    if (now - lastTokenCopyAttemptAt < 150) {
+      return false;
+    }
+    lastTokenCopyAttemptAt = now;
 
     try {
       const copied = await copyTextToClipboard(userCode);
       if (copied) {
-        tokenStatus.innerHTML = getStatusMarkup('success', `Copied ${userCode}. Paste it into GitHub to finish connecting.`);
+        tokenStatus.innerHTML = getStatusMarkup('success', `Code ${userCode} copied to clipboard in case GitHub asks for it.`);
+        return true;
       }
     } catch (_error) {
-      tokenStatus.innerHTML = getStatusMarkup('error', 'Could not copy the code automatically. Select it manually.');
+      // Fall through to the shared fallback message below.
     }
+
+    tokenStatus.innerHTML = getStatusMarkup('error', 'Could not copy the code automatically. Select it manually.');
+    return false;
+  };
+
+  tokenInput?.addEventListener('click', () => {
+    tokenInput.select();
+    void tryCopyDisplayedCode();
+  });
+
+  tokenInput?.addEventListener('focus', () => {
+    tokenInput.select();
+    void tryCopyDisplayedCode();
   });
 
   // Resume the device flow if the popup was closed while GitHub was waiting
@@ -694,14 +895,22 @@ function setupTokenStepListeners() {
     const existingTokenData = await onboardingManager.getStepData('token');
     if (!existingTokenData?.validated && existingTokenData?.pendingDeviceAuth) {
       tokenInput.value = existingTokenData.userCode || existingTokenData.pendingDeviceAuth.userCode || '';
-      if (copyTokenCodeBtn) {
-        copyTokenCodeBtn.disabled = !tokenInput.value;
+      if (tokenCopyHint) {
+        tokenCopyHint.classList.toggle('hidden', !tokenInput.value);
       }
 
       try {
-        await completePendingDeviceAuth(existingTokenData, tokenElements, {
+        const result = await completePendingDeviceAuth(existingTokenData, tokenElements, {
           showCheckingStatus: true
         });
+        if (result) {
+          try {
+            await loadAuthenticatedRepoSourcePreview('mine', { force: true });
+          } catch (_prefetchError) {
+            // Silent prefetch failure is fine here.
+          }
+          await renderOnboardingStep(loadActivitiesCallback);
+        }
       } catch (error) {
         tokenStatus.innerHTML = getStatusMarkup('error',
           error?.code === 'client_id_missing'
@@ -727,15 +936,15 @@ function setupTokenStepListeners() {
       const pendingDeviceAuth = createPendingDeviceAuthState(deviceCodeData);
 
       tokenInput.value = deviceCodeData.userCode || '';
-      if (copyTokenCodeBtn) {
-        copyTokenCodeBtn.disabled = !tokenInput.value;
+      if (tokenCopyHint) {
+        tokenCopyHint.classList.toggle('hidden', !tokenInput.value);
       }
 
       const copied = await copyTextToClipboard(deviceCodeData.userCode).catch(() => false);
       tokenStatus.innerHTML = getStatusMarkup('loading',
         copied
-          ? `Code ${deviceCodeData.userCode} copied to clipboard — paste it on the GitHub page that opens.`
-          : `Enter ${deviceCodeData.userCode} on GitHub to finish connecting.`
+          ? `Code ${deviceCodeData.userCode} copied to clipboard in case GitHub asks for it.`
+          : `If GitHub asks for a code, enter ${deviceCodeData.userCode}.`
       );
 
       await onboardingManager.saveStepData('token', {
@@ -757,13 +966,11 @@ function setupTokenStepListeners() {
 
       if (result) {
         try {
-          const popular = await onboardingManager.getPopularRepos();
-          if (Array.isArray(popular) && popular.length > 0) {
-            await onboardingManager.saveStepData('popularRepos', popular);
-          }
+          await loadAuthenticatedRepoSourcePreview('mine', { force: true });
         } catch (_prefetchError) {
           // Silently handle prefetch errors - not critical
         }
+        await renderOnboardingStep(loadActivitiesCallback);
       }
     } catch (error) {
       tokenStatus.innerHTML = getStatusMarkup('error',
@@ -779,6 +986,15 @@ function setupTokenStepListeners() {
       validateBtn.textContent = 'Connect GitHub';
     }
   });
+
+  skipTokenStepBtn?.addEventListener('click', async () => {
+    await onboardingManager.saveStepData('token', {
+      validated: false,
+      skipped: true
+    });
+    await onboardingManager.skipStep();
+    await renderOnboardingStep(loadActivitiesCallback);
+  });
 }
 
 async function loadPopularRepos() {
@@ -787,10 +1003,12 @@ async function loadPopularRepos() {
 
   try {
     const popularRepos = await onboardingManager.getPopularRepos();
+    const watchedRepos = await getWatchedRepos();
+    const visibleRepos = filterSuggestedRepos(popularRepos, watchedRepos).slice(0, 3);
 
-    if (popularRepos && popularRepos.length > 0) {
+    if (visibleRepos.length > 0) {
       // Success: render the repos
-      repoSuggestions.innerHTML = popularRepos.map(renderRepoSuggestion).join('');
+      repoSuggestions.innerHTML = visibleRepos.map(renderRepoSuggestion).join('');
 
       // Re-attach event listeners to new buttons
       attachRepoButtonListeners();
@@ -802,6 +1020,39 @@ async function loadPopularRepos() {
   } catch (_error) {
     repoLoading.innerHTML = 'Failed to load popular repositories. Please add repositories manually below.';
     repoLoading.className = 'repo-loading repo-error';
+  }
+}
+
+async function loadRepoSourcePreviewIntoDom(sourceType, options = {}) {
+  const repoSuggestions = document.getElementById('repoSuggestions');
+  if (!repoSuggestions) {
+    return;
+  }
+
+  const sourceConfig = getGitHubRepoSourceConfig(sourceType);
+  repoSuggestions.dataset.source = sourceType;
+  repoSuggestions.dataset.loaded = 'false';
+  repoSuggestions.innerHTML = `<div class="repo-loading">Loading ${escapeHtml(sourceConfig.label.toLowerCase())} repositories...</div>`;
+
+  try {
+    const previewRepos = await loadAuthenticatedRepoSourcePreview(sourceType, options);
+    repoSuggestions.dataset.loaded = 'true';
+    repoSuggestions.innerHTML = renderRepoSuggestionsContent(previewRepos, {
+      emptyMessage: sourceConfig.emptyState
+    });
+    attachRepoButtonListeners();
+  } catch (error) {
+    const sourceState = await getSavedRepoSourceState();
+    await saveRepoSourceState({
+      ...sourceState,
+      selectedSource: sourceType,
+      errors: {
+        ...(sourceState.errors || {}),
+        [sourceType]: error?.message || 'Failed to load repositories'
+      }
+    });
+    repoSuggestions.dataset.loaded = 'true';
+    repoSuggestions.innerHTML = `<div class="repo-loading repo-error">${escapeHtml(error?.message || 'Failed to load repositories')}</div>`;
   }
 }
 
@@ -846,10 +1097,42 @@ function attachRepoButtonListeners() {
 }
 
 function setupReposStepListeners() {
+  const repoSourceButtons = document.querySelectorAll('.repo-source-btn');
+  const activeRepoSource = document.getElementById('repoSuggestions')?.dataset.source || 'mine';
+
+  if (repoSourceButtons.length > 0) {
+    repoSourceButtons.forEach((button) => {
+      button.addEventListener('click', async () => {
+        const sourceType = button.dataset.source;
+        if (!sourceType) {
+          return;
+        }
+
+        repoSourceButtons.forEach((candidate) => {
+          const isActive = candidate.dataset.source === sourceType;
+          candidate.classList.toggle('active', isActive);
+          candidate.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        const sourceState = await getSavedRepoSourceState();
+        await saveRepoSourceState({
+          ...sourceState,
+          selectedSource: sourceType
+        });
+
+        await loadRepoSourcePreviewIntoDom(sourceType);
+      });
+    });
+
+    if (document.getElementById('repoSuggestions')?.dataset.loaded !== 'true') {
+      void loadRepoSourcePreviewIntoDom(activeRepoSource);
+    }
+  }
+
   // Handle loading state for popular repos
   const repoLoading = document.getElementById('repoLoading');
 
-  if (repoLoading && !document.querySelector('.repo-suggestion')) {
+  if (repoLoading && repoSourceButtons.length === 0 && !document.querySelector('.repo-suggestion')) {
     // We're in loading state, try to fetch repos
     loadPopularRepos();
   }
@@ -986,17 +1269,15 @@ export function exitOnboarding(loadActivitiesCallback) {
   // Show main content and hide onboarding
   if (onboardingView) {
     onboardingView.classList.add('hidden');
-    onboardingView.style.display = 'none';
   }
-  if (activityList) activityList.style.display = 'block';
-  if (toolbar) toolbar.style.display = 'flex';
-  if (header) header.style.display = 'flex';
+  if (activityList) activityList.classList.remove('hidden');
+  if (toolbar) toolbar.classList.remove('hidden');
+  if (header) header.classList.remove('hidden');
 
   // Hide footer skip button when exiting onboarding
   const footerSkipBtn = document.getElementById('footerSkipBtn');
   if (footerSkipBtn) {
     footerSkipBtn.classList.add('hidden');
-    footerSkipBtn.style.display = 'none';
   }
 
   // Load normal activities

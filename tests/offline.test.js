@@ -18,7 +18,7 @@ import {
 
 // Mock DOM
 document.body.innerHTML = `
-  <div id="offlineStatus" style="display: none;"></div>
+  <div id="offlineStatus" class="hidden"></div>
   <div id="activityList">
     <div class="empty-state">
       <p>No recent activity</p>
@@ -84,9 +84,9 @@ describe('Offline Manager', () => {
       showOfflineStatus('offlineStatus', true);
 
       const element = document.getElementById('offlineStatus');
-      expect(element.style.display).toBe('block');
+      expect(element.classList.contains('hidden')).toBe(false);
       expect(element.innerHTML).toContain('Offline Mode');
-      expect(element.className).toBe('offline-message');
+      expect(element.classList.contains('offline-message')).toBe(true);
     });
 
     it('should hide offline status when online', () => {
@@ -94,8 +94,8 @@ describe('Offline Manager', () => {
       showOfflineStatus('offlineStatus', false);
 
       const element = document.getElementById('offlineStatus');
-      expect(element.style.display).toBe('none');
-      expect(element.className).toBe('');
+      expect(element.classList.contains('hidden')).toBe(true);
+      expect(element.classList.contains('offline-message')).toBe(false);
     });
 
     it('should handle missing element gracefully', () => {

@@ -450,7 +450,29 @@ describe('Storage Helpers', () => {
   });
 
   describe('auth session helpers', () => {
-    it('returns auth session from session storage when available', async () => {
+    it('returns auth session from persistent local storage when available', async () => {
+      mockLocalStorage.githubAuthSession = {
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      };
+
+      const result = await getAuthSession();
+
+      expect(result).toEqual({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
+      expect(chrome.storage.session.remove).toHaveBeenCalledWith(
+        ['githubAuthSession'],
+        expect.any(Function)
+      );
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(
+        ['encryptedGithubAuthSession', 'encryptionKey'],
+        expect.any(Function)
+      );
+    });
+
+    it('migrates a session-stored auth session into persistent local storage', async () => {
       mockSessionStorage.githubAuthSession = {
         accessToken: 'oauth-token',
         username: 'octocat'
@@ -462,10 +484,11 @@ describe('Storage Helpers', () => {
         accessToken: 'oauth-token',
         username: 'octocat'
       });
-      expect(chrome.storage.local.remove).toHaveBeenCalledWith(
-        ['encryptedGithubAuthSession', 'encryptionKey'],
-        expect.any(Function)
-      );
+      expect(mockLocalStorage.githubAuthSession).toEqual({
+        accessToken: 'oauth-token',
+        username: 'octocat'
+      });
+      expect(mockSessionStorage.githubAuthSession).toBeUndefined();
     });
 
     it('clears legacy persisted auth data when no session exists', async () => {
@@ -477,16 +500,17 @@ describe('Storage Helpers', () => {
       expect(result).toBeNull();
     });
 
-    it('stores auth session in session storage only', async () => {
+    it('stores auth session in persistent local storage', async () => {
       await setAuthSession({
         accessToken: 'oauth-token',
         username: 'octocat'
       });
 
-      expect(mockSessionStorage.githubAuthSession).toEqual({
+      expect(mockLocalStorage.githubAuthSession).toEqual({
         accessToken: 'oauth-token',
         username: 'octocat'
       });
+      expect(mockSessionStorage.githubAuthSession).toBeUndefined();
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(
         ['encryptedGithubAuthSession', 'encryptionKey'],
         expect.any(Function)
@@ -494,20 +518,22 @@ describe('Storage Helpers', () => {
     });
 
     it('clears the session when the payload is invalid', async () => {
-      mockSessionStorage.githubAuthSession = { accessToken: 'old-token' };
+      mockLocalStorage.githubAuthSession = { accessToken: 'old-token' };
 
       await setAuthSession({ username: 'octocat' });
 
-      expect(mockSessionStorage.githubAuthSession).toBeUndefined();
+      expect(mockLocalStorage.githubAuthSession).toBeUndefined();
     });
 
-    it('clears auth session from session storage and removes legacy persisted data', async () => {
+    it('clears auth session from local and session storage and removes legacy persisted data', async () => {
+      mockLocalStorage.githubAuthSession = { accessToken: 'oauth-token' };
       mockSessionStorage.githubAuthSession = { accessToken: 'oauth-token' };
       mockLocalStorage.encryptedGithubAuthSession = { iv: [], data: [] };
       mockLocalStorage.encryptionKey = [1, 2, 3];
 
       await clearAuthSession();
 
+      expect(mockLocalStorage.githubAuthSession).toBeUndefined();
       expect(mockSessionStorage.githubAuthSession).toBeUndefined();
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(
         ['encryptedGithubAuthSession', 'encryptionKey'],
@@ -516,7 +542,7 @@ describe('Storage Helpers', () => {
     });
 
     it('returns the access token from the current auth session', async () => {
-      mockSessionStorage.githubAuthSession = {
+      mockLocalStorage.githubAuthSession = {
         accessToken: 'oauth-token',
         username: 'octocat'
       };

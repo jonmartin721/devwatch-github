@@ -4,24 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitHub DevWatch - Settings</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="../shared/theme-boot.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared/themes.css">
   <link rel="stylesheet" href="options.css">
 </head>
-<body>
-  <div class="container">
-    <nav class="tab-navigation" aria-label="Settings">
+  <body>
+    <div class="container">
+      <div class="sidebar-shell">
+        <nav class="tab-navigation" aria-label="Settings">
       <div class="sidebar-header">
         <h2>Settings</h2>
       </div>
       <div class="tab-list" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
-        <button class="tab-button active" type="button" id="tab-setup" role="tab" data-tab="setup" aria-selected="true" aria-controls="panel-setup" tabindex="0">
-          <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-          </svg>
-          <span>Setup</span>
-        </button>
-        <button class="tab-button" type="button" id="tab-repositories" role="tab" data-tab="repositories" aria-selected="false" aria-controls="panel-repositories" tabindex="-1">
+        <button class="tab-button active" type="button" id="tab-repositories" role="tab" data-tab="repositories" aria-selected="true" aria-controls="panel-repositories" tabindex="0">
           <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
@@ -46,18 +42,42 @@
           </svg>
           <span>Advanced</span>
         </button>
+        <button class="tab-button" type="button" id="tab-setup" role="tab" data-tab="setup" aria-selected="false" aria-controls="panel-setup" tabindex="-1">
+          <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+          <span>Setup</span>
+        </button>
         <button class="tab-button" type="button" id="tab-help" role="tab" data-tab="help" aria-selected="false" aria-controls="panel-help" tabindex="-1">
           <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
           <span>Help</span>
         </button>
-      </div>
-    </nav>
+        </div>
+        </nav>
+        <aside class="sidebar-status-card" aria-live="polite" aria-label="GitHub status">
+          <div class="sidebar-status-header-row">
+            <p class="sidebar-status-eyebrow">GitHub Status</p>
+          </div>
 
-    <div class="content-wrapper">
+          <div class="sidebar-status-section">
+            <p class="sidebar-status-label">Account</p>
+            <p class="sidebar-status-value" id="sidebarAuthAccount">Not connected</p>
+            <p class="sidebar-status-meta" id="sidebarAuthMeta">Connect GitHub to show the signed-in account and scopes.</p>
+          </div>
+
+          <div class="sidebar-status-section">
+            <p class="sidebar-status-label">API Calls</p>
+            <p class="sidebar-status-value" id="sidebarRateLimitValue">No data yet</p>
+            <p class="sidebar-status-meta" id="sidebarRateLimitMeta">Updates after the next GitHub request finishes.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="content-wrapper">
     <!-- Tab Panel 1: Setup -->
-    <div class="tab-panel" id="panel-setup" role="tabpanel" data-tab="setup" aria-labelledby="tab-setup">
+    <div class="tab-panel" id="panel-setup" role="tabpanel" data-tab="setup" aria-labelledby="tab-setup" hidden>
     <section class="section">
       <h2>Getting Started</h2>
       <p class="help-text">Set up DevWatch and shape the review queue the way you work.</p>
@@ -74,7 +94,8 @@
 
                 <div class="github-connect-copy">
                   <h3>Connect GitHub</h3>
-                  <p>Authorize DevWatch once so it can pull activity for the repositories you monitor without asking for a personal access token.</p>
+                  <p id="githubConnectIntroText">Authorize DevWatch once so it can pull activity for the repositories you monitor without asking for a personal access token.</p>
+                  <p id="githubConnectConnectedNote" class="github-connect-connected-note">You're all set. DevWatch keeps this browser profile connected until you disconnect or reset it.</p>
                 </div>
 
                 <div class="github-connect-facts">
@@ -85,8 +106,8 @@
                       </svg>
                     </div>
                     <div>
-                      <p class="github-connect-fact-title">Stored for this browser session</p>
-                      <p class="github-connect-fact-copy">Your GitHub connection stays in Chrome session storage and clears when the browser session ends.</p>
+                      <p class="github-connect-fact-title">Stays on this browser</p>
+                      <p class="github-connect-fact-copy">Your GitHub connection stays in this Chrome profile until you disconnect it or reset DevWatch.</p>
                     </div>
                   </div>
 
@@ -104,21 +125,29 @@
                 </div>
               </div>
 
-              <div class="github-connect-panel">
-                <div class="github-connect-panel-header">
-                  <div>
+              <div class="github-connect-panel settings-surface settings-surface-prominent">
+                <div class="github-connect-panel-header settings-surface-header">
+                  <div class="github-connect-panel-title">
                     <p class="github-panel-label">Connection status</p>
-                    <span id="tokenStatus" class="token-status" aria-live="polite"></span>
+                    <h4 id="githubConnectPanelHeading" class="github-connect-panel-heading">Connect once, then just paste if GitHub asks</h4>
+                    <p id="githubConnectPanelCopy" class="github-connect-panel-copy">DevWatch opens GitHub for you and copies the verification code automatically, so the only extra step is pasting it if GitHub prompts for one.</p>
                   </div>
-                  <button id="clearTokenBtn" class="danger hidden" aria-label="Disconnect GitHub">Disconnect</button>
                 </div>
 
-                <div class="github-connect-panel-body">
+                <div class="github-connect-panel-body settings-surface-body">
+                  <div class="github-connect-status-row">
+                    <span id="tokenStatus" class="token-status" aria-live="polite"></span>
+                    <button id="clearTokenBtn" class="github-disconnect-btn hidden" aria-label="Disconnect GitHub">Disconnect</button>
+                  </div>
+
                   <button id="connectGitHubBtn" class="primary github-connect-btn" aria-describedby="token-help tokenStatus">Connect GitHub</button>
 
-                  <p id="token-help" class="help-text github-connect-help">
-                    We'll open GitHub in a new tab. Approve access there, then come back here and DevWatch will finish connecting.
-                  </p>
+                  <div class="github-connect-inline-help">
+                    <span class="github-connect-status-hint">Paste the copied code only if GitHub asks for it.</span>
+                    <p id="token-help" class="help-text github-connect-help">
+                      We'll open GitHub in a new tab and copy the code for you. If GitHub asks for one, just paste it there, approve access, and come back here.
+                    </p>
+                  </div>
 
                   <div class="github-connect-flow" aria-hidden="true">
                     <div class="github-connect-flow-step">
@@ -135,12 +164,15 @@
                     </div>
                   </div>
 
-                  <div id="deviceCodeSection" class="device-code-card hidden">
+                  <div id="deviceCodeSection" class="device-code-card settings-surface settings-surface-nested settings-surface-dashed hidden">
                     <div class="device-code-header">
-                      <label for="githubToken" class="device-code-label">Verification code</label>
-                      <span class="device-code-note">Ready if GitHub asks for it</span>
+                      <div class="device-code-copy">
+                        <label for="githubToken" class="device-code-label">User verification code</label>
+                        <p class="device-code-copy-text">Already copied for you</p>
+                      </div>
+                      <span class="device-code-note">Paste on GitHub if prompted</span>
                     </div>
-                    <input type="text" id="githubToken" placeholder="Verification code appears here" aria-describedby="token-help tokenStatus" autocomplete="off" readonly>
+                    <input type="text" id="githubToken" aria-describedby="token-help tokenStatus" autocomplete="off" readonly>
                   </div>
                 </div>
               </div>
@@ -152,7 +184,7 @@
           <div class="step-number">2</div>
           <div class="step-content">
             <h3>Add Repositories</h3>
-            <p>Go to the <strong>Repositories</strong> tab to add repositories you want to monitor. You can add them manually or import from your GitHub account.</p>
+            <p>Go to the <strong>Repositories</strong> tab to add public repositories manually, or connect GitHub to import your repos and include private ones.</p>
           </div>
         </a>
 
@@ -178,24 +210,24 @@
           <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <span><strong>Tip:</strong> DevWatch checks for new activity every 15 minutes by default. You'll see a badge on the extension icon when there's new activity to review.</span>
+          <span><strong>Tip:</strong> DevWatch checks for new activity every 15 minutes by default. <a class="setup-inline-link" href="#preferences" data-tab="preferences">Change the check interval in Preferences.</a> You'll still see a badge on the extension icon when there's new activity to review.</span>
         </p>
       </div>
     </section>
     </div>
 
     <!-- Tab Panel 2: Repositories -->
-    <div class="tab-panel" id="panel-repositories" role="tabpanel" data-tab="repositories" aria-labelledby="tab-repositories" hidden>
+    <div class="tab-panel" id="panel-repositories" role="tabpanel" data-tab="repositories" aria-labelledby="tab-repositories">
     <section class="section" id="repositories">
       <!-- Add New Repository Card -->
-      <div class="repo-section-card add-repo-card">
-        <div class="repo-section-header">
+      <div class="repo-section-card settings-surface add-repo-card">
+        <div class="repo-section-header settings-surface-header">
           <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
           <div class="repo-section-title">
             <h2>Add New Repository</h2>
-	            <p class="help-text" id="repoHelpText">Connect GitHub above to start adding repositories</p>
+	            <p class="help-text" id="repoHelpText">Add public repositories manually now, or connect GitHub above to import your repos and access private ones.</p>
           </div>
         </div>
 
@@ -204,38 +236,44 @@
         <div class="add-repo-form" role="form" aria-label="Add new repository">
           <label for="repoInput" class="repo-input-label">Repository:</label>
           <div class="repo-input-wrapper">
-            <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, or GitHub URL" disabled aria-describedby="repo-help">
+            <input type="text" id="repoInput" placeholder="e.g., react, facebook/react, GitHub URL, or public npm package" aria-describedby="repo-help">
             <span id="repoValidationStatus" class="repo-validation-status" aria-live="polite"></span>
           </div>
-          <button id="addRepoBtn" class="primary" disabled aria-label="Add repository to watch list">Add</button>
+          <button id="addRepoBtn" class="primary" aria-label="Add repository to watch list">Add</button>
         </div>
-        <p id="repo-help" class="help-text">Enter repository name in format owner/repo, just repo name, or full GitHub URL</p>
+        <p id="repo-help" class="help-text">Enter a public repo in owner/repo format, a repo name, a GitHub URL, or an npm package. Connect GitHub to import and access private repos.</p>
         <div id="repoError" class="repo-error"></div>
 
         <!-- Quick Import Section -->
-        <div class="import-repos-section hidden" id="importReposSection">
-          <p class="help-text">Quick import repositories from your GitHub account:</p>
+        <div class="import-repos-section repo-utility-strip" id="importReposSection">
+          <p class="help-text">Quick add sources: browse a few popular public repos, or connect GitHub to import your own.</p>
           <div class="import-buttons">
-            <button id="importWatchedBtn" class="import-btn">
+            <button id="togglePopularReposBtn" class="import-btn" type="button" aria-expanded="false" aria-controls="popularReposPanel">
+              <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17.75 6.173 21l1.113-6.486L2.571 9.93l6.514-.946L12 3l2.915 5.984 6.514.946-4.715 4.584L17.827 21z"/>
+              </svg>
+              Browse Popular
+            </button>
+            <button id="importWatchedBtn" class="import-btn github-import-btn hidden">
               <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
               Import Watched
             </button>
-            <button id="importStarredBtn" class="import-btn">
+            <button id="importStarredBtn" class="import-btn github-import-btn hidden">
               <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
               </svg>
               Import Starred
             </button>
-            <button id="importParticipatingBtn" class="import-btn">
+            <button id="importParticipatingBtn" class="import-btn github-import-btn hidden">
               <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
               Import Participating
             </button>
-            <button id="importMineBtn" class="import-btn">
+            <button id="importMineBtn" class="import-btn github-import-btn hidden">
               <svg class="import-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
@@ -243,12 +281,25 @@
             </button>
           </div>
         </div>
-      </div>
+
+        <div id="popularReposPanel" class="repo-panel popular-repos-panel" aria-label="Popular public repositories">
+          <div class="popular-repos-surface settings-surface">
+            <div class="popular-repos-panel-header">
+              <div>
+                <h3>Popular Public Repositories</h3>
+                <p class="help-text">Quickly add a few active public repos without leaving the page.</p>
+              </div>
+            </div>
+            <div id="popularReposState" class="popular-repos-state">Loading popular repositories...</div>
+            <div id="popularReposList" class="popular-repo-suggestions hidden"></div>
+          </div>
+        </div>
+        </div>
       </div>
 
       <!-- Your Watched Repositories Card -->
-      <div class="repo-section-card watched-repos-card">
-        <div class="repo-section-header">
+      <div class="repo-section-card settings-surface watched-repos-card">
+        <div class="repo-section-header settings-surface-header">
           <svg class="repo-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
@@ -267,7 +318,7 @@
         </div>
 
       <!-- Search Repository Panel -->
-      <div class="repo-panel" id="searchRepoPanel">
+      <div class="repo-panel repo-toolbar" id="searchRepoPanel">
         <div class="repo-search-controls">
           <div class="search-input-wrapper">
             <input type="text" id="repoSearch" placeholder="Search repositories...">
@@ -280,28 +331,34 @@
         </div>
       </div>
 
-      <ul id="repoList" class="repo-list"></ul>
+      <ul id="repoList" class="repo-list settings-row-group"></ul>
 
       <div class="pagination-controls hidden" id="paginationControls">
         <button id="prevPage" disabled>Previous</button>
         <span id="pageInfo" class="page-info"></span>
         <button id="nextPage" disabled>Next</button>
       </div>
-
-      <div class="repo-features-info info-box">
-        <p class="help-text info-flex-start mb-8">
-          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Pin:</strong> Keep repositories at the top of your feed for quick access. Pinned repos always appear above other repositories in the popup.</span>
-        </p>
-        <p class="help-text info-flex-start">
-          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Mute:</strong> Stop receiving browser notifications for a repository (activity still appears in feed)</span>
-        </p>
       </div>
+
+      <div class="repo-notes" aria-label="Repository quick tips">
+        <div class="repo-note">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="repo-note-copy">
+            <span class="repo-note-label">Pin repositories</span>
+            <span class="repo-note-detail">Keep important repos at the top of your feed for quick access. Pinned repos always appear first in the popup.</span>
+          </div>
+        </div>
+        <div class="repo-note">
+          <svg class="info-icon icon-top-aligned" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="repo-note-copy">
+            <span class="repo-note-label">Mute notifications</span>
+            <span class="repo-note-detail">Stop browser notifications for a repository while still keeping its activity in your feed.</span>
+          </div>
+        </div>
       </div>
     </section>
     </div>
@@ -312,9 +369,9 @@
       <h2>Activity Filters & Notifications</h2>
       <p class="help-text">Choose which types of activity to show and get notified about</p>
 
-      <div class="activity-cards">
-        <div class="activity-card">
-          <div class="card-header">
+      <div class="activity-cards settings-row-group">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
             </svg>
@@ -323,15 +380,15 @@
               <p>Show new and updated PRs</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterPrs" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyPrs" checked>
@@ -341,8 +398,8 @@
           </div>
         </div>
 
-        <div class="activity-card">
-          <div class="card-header">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -351,15 +408,15 @@
               <p>Show new and updated issues</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterIssues" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyIssues" checked>
@@ -369,8 +426,8 @@
           </div>
         </div>
 
-        <div class="activity-card">
-          <div class="card-header">
+        <div class="activity-card settings-surface settings-surface-split settings-row">
+          <div class="card-header settings-surface-header">
             <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
@@ -379,15 +436,15 @@
               <p>Show new version releases</p>
             </div>
           </div>
-          <div class="card-controls">
-            <div class="control-section">
+          <div class="card-controls settings-surface-actions">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Show in feed</label>
               <label class="activity-toggle">
                 <input type="checkbox" id="filterReleases" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="control-section">
+            <div class="control-section settings-surface-action">
               <label class="control-label">Notifications</label>
               <label class="activity-toggle notification-toggle">
                 <input type="checkbox" id="notifyReleases" checked>
@@ -398,19 +455,31 @@
         </div>
       </div>
 
-      <div class="filters-help info-box">
-        <p class="help-text">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Activity Filters:</strong> Enable categories to show them in your activity feed</span>
-        </p>
-        <p class="help-text">
-          <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <span><strong>Notifications:</strong> Enable browser notifications (requires the category to be enabled first)</span>
-        </p>
+      <div class="filters-help info-box" aria-label="Activity filter help">
+        <div class="filters-help-header">
+          <span class="filters-help-eyebrow">How it works</span>
+          <p class="filters-help-intro">Feed visibility and browser notifications are controlled separately for each activity type.</p>
+        </div>
+        <div class="filters-help-grid">
+          <div class="filters-help-item">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="filters-help-copy">
+              <span class="filters-help-label">Activity feed</span>
+              <span class="filters-help-detail">Enable a category here to include new and updated items in your feed.</span>
+            </div>
+          </div>
+          <div class="filters-help-item">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="filters-help-copy">
+              <span class="filters-help-label">Notifications</span>
+              <span class="filters-help-detail">Browser notifications only work after the matching category is enabled in the feed first.</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
     </div>
@@ -421,8 +490,8 @@
       <h2>Feed Management</h2>
       <p class="help-text">Control how long activity items are stored in your feed and archive</p>
 
-      <div class="feed-management-card">
-        <div class="card-header">
+      <div class="feed-management-card settings-surface settings-surface-inline settings-row">
+        <div class="card-header settings-surface-header">
           <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -431,7 +500,7 @@
             <p>Automatically clean up items after a specified time period</p>
           </div>
         </div>
-        <div class="card-controls">
+        <div class="card-controls settings-surface-actions">
           <label class="activity-toggle">
             <input type="checkbox" id="itemExpiryEnabled">
             <span class="toggle-slider"></span>
@@ -505,42 +574,42 @@
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-polar" value="polar" checked>
             <label for="color-polar">
-              <span class="color-swatch" style="background: #0D9488;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-polar" aria-hidden="true"></span>
               Polar
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-graphite" value="graphite">
             <label for="color-graphite">
-              <span class="color-swatch" style="background: #6366F1;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-graphite" aria-hidden="true"></span>
               Graphite
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-nightfall" value="nightfall">
             <label for="color-nightfall">
-              <span class="color-swatch" style="background: #E87B00;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-nightfall" aria-hidden="true"></span>
               Nightfall
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-obsidian" value="obsidian">
             <label for="color-obsidian">
-              <span class="color-swatch" style="background: #10B981;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-obsidian" aria-hidden="true"></span>
               Obsidian
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-sand" value="sand">
             <label for="color-sand">
-              <span class="color-swatch" style="background: #9F1239;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-sand" aria-hidden="true"></span>
               Sand
             </label>
           </div>
           <div class="chip">
             <input type="radio" name="colorTheme" id="color-terminal-ledger" value="terminal-ledger">
             <label for="color-terminal-ledger">
-              <span class="color-swatch" style="background: #D3A24B;" aria-hidden="true"></span>
+              <span class="color-swatch swatch-terminal-ledger" aria-hidden="true"></span>
               Terminal Ledger
             </label>
           </div>
@@ -606,8 +675,8 @@
         </div>
       </fieldset>
 
-      <div class="feed-management-card mt-16">
-        <div class="card-header">
+      <div class="feed-management-card settings-surface settings-surface-inline settings-row mt-16">
+        <div class="card-header settings-surface-header">
           <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -616,7 +685,7 @@
             <p>Automatically mark all repository items as read when snoozing</p>
           </div>
         </div>
-        <div class="card-controls">
+        <div class="card-controls settings-surface-actions">
           <label class="activity-toggle">
             <input type="checkbox" id="markReadOnSnooze">
             <span class="toggle-slider"></span>
@@ -626,7 +695,7 @@
 
       <div class="current-snoozes">
         <h3>Currently Snoozed</h3>
-        <div id="snoozedReposList" class="snoozed-repos-list">
+        <div id="snoozedReposList" class="snoozed-repos-list settings-row-group">
           <div class="empty-snoozes" id="emptySnoozes">
             <p>No repositories are currently snoozed</p>
             <small>Snooze repositories from the popup to see them here</small>
@@ -642,7 +711,7 @@
       <h2>Data Management</h2>
       <p class="help-text">Manage your extension data, cache, and settings</p>
 
-      <div class="data-card mt-24">
+      <div class="data-card settings-surface settings-surface-inline settings-row mt-24">
         <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 8c-2.5 0-4.5 1.8-4.5 4s2 4 4.5 4c2 0 3.5-1.5 4.5-3.5 1 2 2.5 3.5 4.5 3.5 2.5 0 4.5-1.8 4.5-4s-2-4-4.5-4c-2 0-3.5 1.5-4.5 3.5-1-2-2.5-3.5-4.5-3.5z"/>
         </svg>
@@ -665,8 +734,8 @@
         </p>
       </div>
 
-      <div class="data-management-cards">
-        <div class="data-card">
+      <div class="data-management-cards settings-row-group">
+        <div class="data-card settings-surface settings-surface-inline settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
           </svg>
@@ -682,7 +751,7 @@
           </button>
         </div>
 
-        <div class="data-card danger-card">
+        <div class="data-card settings-surface settings-surface-inline settings-surface-danger danger-card settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
@@ -698,7 +767,7 @@
           </button>
         </div>
 
-        <div class="data-card danger-card">
+        <div class="data-card settings-surface settings-surface-inline settings-surface-danger danger-card settings-row">
           <svg class="data-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -759,24 +828,7 @@
     <div class="tab-panel" id="panel-help" role="tabpanel" data-tab="help" aria-labelledby="tab-help" hidden>
     <section class="section">
       <div class="help-hero">
-        <svg class="help-logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <!-- Git branch diagram (scaled up to use more space) -->
-          <circle cx="35" cy="35" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
-          <circle cx="35" cy="93" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
-          <circle cx="93" cy="93" r="14" fill="none" stroke="currentColor" stroke-width="5"/>
-
-          <!-- Branch lines -->
-          <line x1="35" y1="49" x2="35" y2="79" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-          <path d="M 35 64 Q 50 64 64 79 L 79 93" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-
-          <!-- Filled centers -->
-          <circle cx="35" cy="35" r="7" fill="currentColor"/>
-          <circle cx="35" cy="93" r="7" fill="currentColor"/>
-          <circle cx="93" cy="93" r="7" fill="currentColor"/>
-
-          <!-- Notification badge -->
-          <circle cx="100" cy="28" r="18" fill="#ef4444"/>
-        </svg>
+        <img class="help-logo" src="../icons/icon128.png" alt="DevWatch icon">
         <h2>GitHub DevWatch</h2>
         <p class="help-tagline">Monitor repositories easily and stay updated with GitHub activity</p>
       </div>
@@ -828,12 +880,15 @@
       </div>
 
       <div class="help-version-changelog">
-        <h3>Version & Changelog</h3>
+        <div class="help-version-header">
+          <h3>Latest Release</h3>
+          <p class="help-version-intro">See what shipped most recently and skim the full release notes.</p>
+        </div>
         <div id="versionInfo" class="version-info">
           <p>Loading version information...</p>
         </div>
         <div id="changelogContent" class="changelog-content">
-          <p>Loading changelog...</p>
+          <p>Loading latest release...</p>
         </div>
       </div>
 

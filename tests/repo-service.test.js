@@ -16,6 +16,7 @@ const {
   isWatchedRepoDuplicate,
   normalizeRepoInput,
   normalizeWatchedRepoRecord,
+  validateWatchedRepo,
   resolveWatchedRepoInput
 } = await import('../shared/repo-service.js');
 
@@ -177,6 +178,52 @@ describe('repo-service', () => {
       reason: 'duplicate',
       error: 'Repository already added',
       normalizedRepo: 'facebook/react'
+    });
+  });
+
+  test('validateWatchedRepo allows public repositories without GitHub auth', async () => {
+    mockValidateRepository.mockResolvedValueOnce({
+      valid: true,
+      metadata: {
+        fullName: 'facebook/react',
+        name: 'react',
+        description: 'UI library',
+        language: 'JavaScript',
+        stars: 100,
+        forks: 20,
+        updatedAt: '2026-04-01T00:00:00Z'
+      }
+    });
+
+    const result = await validateWatchedRepo('facebook/react', null);
+
+    expect(result).toEqual({
+      valid: true,
+      metadata: {
+        fullName: 'facebook/react',
+        name: 'react',
+        description: 'UI library',
+        language: 'JavaScript',
+        stars: 100,
+        forks: 20,
+        updatedAt: '2026-04-01T00:00:00Z',
+        latestRelease: null
+      }
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('validateWatchedRepo suggests GitHub when an unauthenticated lookup cannot see the repo', async () => {
+    mockValidateRepository.mockResolvedValueOnce({
+      valid: false,
+      error: 'Repository "owner/private-repo" not found or access denied.'
+    });
+
+    const result = await validateWatchedRepo('owner/private-repo', null);
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Repository "owner/private-repo" was not found publicly. If it\'s private, connect GitHub and try again.'
     });
   });
 });

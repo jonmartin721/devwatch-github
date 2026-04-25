@@ -229,7 +229,7 @@ export function showError(elementId, error, response = null, context = {}, durat
     </div>
   `;
 
-  element.style.display = 'block';
+  element.classList.remove('hidden');
   element.classList.add('toast-notification');
 
   // Add event listeners (CSP-compliant)
@@ -251,7 +251,7 @@ export function showError(elementId, error, response = null, context = {}, durat
       const elId = dismissBtn.dataset.elementId;
       const el = document.getElementById(elId);
       if (el) {
-        el.style.display = 'none';
+        el.classList.add('hidden');
       }
     });
   }
@@ -267,8 +267,8 @@ export function showError(elementId, error, response = null, context = {}, durat
   // Auto-hide after duration if specified
   if (duration > 0) {
     setTimeout(() => {
-      if (element.style.display !== 'none') {
-        element.style.display = 'none';
+      if (!element.classList.contains('hidden')) {
+        element.classList.add('hidden');
         element.classList.remove('toast-notification');
       }
     }, duration);
@@ -288,7 +288,7 @@ export function showError(elementId, error, response = null, context = {}, durat
 export function clearError(elementId) {
   const element = document.getElementById(elementId);
   if (element) {
-    element.style.display = 'none';
+    element.classList.add('hidden');
     element.innerHTML = '';
     element.classList.remove('toast-notification');
     element.removeAttribute('role');
@@ -315,13 +315,13 @@ export function showSuccess(elementId, message, duration = 3000) {
     </div>
   `;
 
-  element.style.display = 'block';
+  element.classList.remove('hidden');
   element.setAttribute('role', 'status');
   element.setAttribute('aria-live', 'polite');
 
   setTimeout(() => {
-    if (element.style.display !== 'none') {
-      element.style.display = 'none';
+    if (!element.classList.contains('hidden')) {
+      element.classList.add('hidden');
     }
   }, duration);
 }

@@ -4,28 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitHub Devwatch</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="../shared/theme-boot.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared/themes.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>GitHub Devwatch</h1>
-      <div class="header-info">
-        <div class="header-stats">
-          <span id="lastUpdated" class="last-updated" aria-live="polite">Never</span>
-          <span id="repoCount" class="repo-count" aria-live="polite">Watching 0 repos</span>
-        </div>
+    <header class="hidden">
+      <div class="header-main">
+        <h1>GitHub Devwatch</h1>
         <button id="refreshBtn" class="footer-btn header-refresh-btn" title="Check for new activity now" aria-label="Check for new activity now" tabindex="0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon" aria-hidden="true">
             <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
           </svg>
         </button>
       </div>
+      <div class="header-meta">
+        <span id="lastUpdated" class="last-updated" aria-live="polite">Never</span>
+        <span class="header-meta-separator" aria-hidden="true"></span>
+        <span id="repoCount" class="repo-count" aria-live="polite">0 repos</span>
+      </div>
     </header>
 
-    <div class="toolbar">
+    <div class="toolbar hidden">
       <div class="filters" role="tablist" aria-label="Filter activities by type">
         <button class="filter-btn active" data-type="all" role="tab" aria-selected="true" aria-controls="activityList" tabindex="0">All</button>
         <button class="filter-btn" data-type="pr" role="tab" aria-selected="false" aria-controls="activityList" tabindex="-1">PRs</button>
@@ -56,7 +58,7 @@
       <!-- Dynamic content will be inserted here -->
     </div>
 
-    <div id="activityList" class="activity-list" role="main" aria-label="GitHub activities" aria-live="polite">
+    <div id="activityList" class="activity-list hidden" role="main" aria-label="GitHub activities" aria-live="polite">
     </div>
 
     <footer role="contentinfo">
@@ -85,7 +87,7 @@
             </svg>
           </button>
         </div>
-        <span id="rateLimitInfo" class="rate-limit-info" aria-label="GitHub API rate limit status"></span>
+        <span id="rateLimitInfo" class="rate-limit-info hidden" aria-label="GitHub API rate limit status"></span>
         <button id="footerSkipBtn" class="footer-btn skip-btn hidden" title="Skip setup" aria-label="Skip setup" tabindex="0">
           Skip setup
         </button>

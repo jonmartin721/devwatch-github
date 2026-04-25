@@ -33,7 +33,9 @@ describe('activity-item-view', () => {
     });
 
     expect(html).toContain('activity-item unread');
-    expect(html).toContain('Pull Request');
+    expect(html).toContain('>PR<');
+    expect(html).toContain('title="Pull Request"');
+    expect(html).toContain('aria-label="Open Pull Request: Improve cache handling by octocat"');
     expect(html).toContain('5m ago');
     expect(html).toContain('data-action="mark-read"');
     expect(html).toContain('src="https://avatars.githubusercontent.com/u/1?v=4"');
@@ -54,7 +56,7 @@ describe('activity-item-view', () => {
     });
 
     expect(html).toContain('activity-item read');
-    expect(html).toContain('Issue');
+    expect(html).toContain('>Issue<');
     expect(html).not.toContain('mark-read-btn');
   });
 

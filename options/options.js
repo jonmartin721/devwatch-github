@@ -1,8 +1,10 @@
 import { applyTheme, applyColorTheme, formatDateVerbose } from '../shared/utils.js';
+import { escapeHtml } from '../shared/sanitize.js';
 import {
   clearAuthSession,
   getAuthSession,
   getAccessToken,
+  getLocalItem,
   getSettings,
   getWatchedRepos,
   setLocalItem,
@@ -19,6 +21,7 @@ import {
   normalizeSettings
 } from '../shared/settings-schema.js';
 import { NotificationManager } from '../shared/ui/notification-manager.js';
+import { OnboardingManager } from '../shared/onboarding.js';
 
 // Controllers
 import { setupThemeListener } from './controllers/theme-controller.js';
@@ -33,9 +36,13 @@ import { renderRepoList } from './views/repository-list-view.js';
 
 // Global toast manager instance (singleton)
 const toastManager = NotificationManager.getInstance();
+const onboardingManager = new OnboardingManager();
+const LATEST_RELEASE_API_URL = 'https://api.github.com/repos/jonmartin721/devwatch-github/releases/latest';
+const CHANGELOG_GITHUB_URL = 'https://github.com/jonmartin721/devwatch-github/releases';
 
 const state = {
   watchedRepos: [],
+  popularRepos: [],
   mutedRepos: [],
   pinnedRepos: [],
   currentPage: 1,
@@ -44,12 +51,15 @@ const state = {
   hidePinnedRepos: false
 };
 
+let sidebarStatusStorageListener = null;
+
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', async () => {
     // Initialize toast manager first
     toastManager.init();
 
     await loadSettings();
+    setupSidebarStatusAutoRefresh();
     setupEventListeners();
     setupThemeListener();
     setupSnoozedReposAutoRefresh();
@@ -144,23 +154,28 @@ function setupTabNavigation() {
   });
 
   // Add click listeners to clickable setup steps
-  const clickableSetupSteps = document.querySelectorAll('.setup-step.clickable');
-  clickableSetupSteps.forEach(step => {
-    step.addEventListener('click', (event) => {
+  const bindTabTrigger = (element) => {
+    element.addEventListener('click', (event) => {
       event.preventDefault();
-      const tabName = step.dataset.tab;
+      const tabName = element.dataset.tab;
       if (tabName) {
         switchTab(tabName, { focusTab: true });
       }
     });
-  });
+  };
+
+  const clickableSetupSteps = document.querySelectorAll('.setup-step.clickable');
+  clickableSetupSteps.forEach(bindTabTrigger);
+
+  const setupTabLinks = document.querySelectorAll('.setup-inline-link[data-tab]');
+  setupTabLinks.forEach(bindTabTrigger);
 
   // Initialize active tab from localStorage or URL hash
   const hash = window.location.hash.substring(1);
   const savedTab = localStorage.getItem('activeTab');
-  const initialTab = hash || savedTab || 'setup';
+  const initialTab = hash || savedTab || 'repositories';
 
-  const tabToActivate = validTabs.includes(initialTab) ? initialTab : 'setup';
+  const tabToActivate = validTabs.includes(initialTab) ? initialTab : 'repositories';
 
   switchTab(tabToActivate);
 }
@@ -180,6 +195,152 @@ function handleUrlParameters() {
     }, 100);
   }
 
+}
+
+function togglePopularReposPanel(forceOpen = null) {
+  const panel = document.getElementById('popularReposPanel');
+  const button = document.getElementById('togglePopularReposBtn');
+
+  if (!panel || !button) {
+    return;
+  }
+
+  const shouldOpen = forceOpen === null ? !panel.classList.contains('show') : forceOpen;
+  panel.classList.toggle('show', shouldOpen);
+  button.classList.toggle('active', shouldOpen);
+  button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+}
+
+function formatCompactNumber(num) {
+  if (!Number.isFinite(num)) {
+    return '0';
+  }
+
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+
+  return String(num);
+}
+
+function getPopularRepoFullName(repo) {
+  return `${repo?.owner?.login || 'unknown'}/${repo?.name || 'unknown'}`;
+}
+
+function renderPopularReposSection() {
+  const popularReposState = document.getElementById('popularReposState');
+  const popularReposList = document.getElementById('popularReposList');
+
+  if (!popularReposState || !popularReposList) {
+    return;
+  }
+
+  const watchedRepoNames = new Set(state.watchedRepos.map(repo => repo.fullName.toLowerCase()));
+  const visibleRepos = state.popularRepos
+    .filter(repo => !watchedRepoNames.has(getPopularRepoFullName(repo).toLowerCase()))
+    .slice(0, 3);
+
+  if (visibleRepos.length === 0) {
+    popularReposState.textContent = state.popularRepos.length > 0
+      ? 'All suggested repositories are already on your watchlist.'
+      : 'No popular repositories are available right now.';
+    popularReposState.classList.remove('hidden');
+    popularReposList.classList.add('hidden');
+    popularReposList.innerHTML = '';
+    return;
+  }
+
+  popularReposState.classList.add('hidden');
+  popularReposList.classList.remove('hidden');
+  popularReposList.innerHTML = visibleRepos.map((repo) => {
+    const fullName = getPopularRepoFullName(repo);
+    const stars = Number.isFinite(repo?.stargazers_count) ? formatCompactNumber(repo.stargazers_count) : '';
+
+    return `
+      <div class="popular-repo-card">
+        <div class="popular-repo-info">
+          <div class="popular-repo-name">${escapeHtml(repo?.owner?.login || 'unknown')}/${escapeHtml(repo?.name || 'unknown')}</div>
+          <div class="popular-repo-description">${escapeHtml(repo?.description || `${repo?.language || 'Popular'} project worth watching`)}</div>
+          <div class="popular-repo-meta">
+            ${repo?.language ? `<span class="meta-item">${escapeHtml(repo.language)}</span>` : ''}
+            ${stars ? `<span class="meta-item">${stars} stars</span>` : ''}
+          </div>
+        </div>
+        <button type="button" class="primary popular-repo-add-btn" data-popular-repo="${escapeHtml(fullName)}" aria-label="Add ${escapeHtml(fullName)}">+</button>
+      </div>
+    `;
+  }).join('');
+
+  popularReposList.querySelectorAll('.popular-repo-add-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const repoFullName = button.dataset.popularRepo;
+      if (!repoFullName) {
+        return;
+      }
+
+      button.disabled = true;
+
+      try {
+        const currentSettings = normalizeSettings(await getSettings());
+        if (!currentSettings.allowUnlimitedRepos && state.watchedRepos.length >= STORAGE_CONFIG.MAX_WATCHED_REPOS) {
+          showRepoError(`Maximum of ${STORAGE_CONFIG.MAX_WATCHED_REPOS} repositories allowed. Enable "Unlimited Repositories" in Advanced settings to watch more.`);
+          button.disabled = false;
+          return;
+        }
+
+        const githubToken = await getAccessToken();
+        const resolution = await resolveWatchedRepoInput(repoFullName, {
+          githubToken,
+          existingRepos: state.watchedRepos
+        });
+
+        if (!resolution.valid) {
+          showRepoError(resolution.error || 'Repository validation failed');
+          button.disabled = false;
+          return;
+        }
+
+        state.watchedRepos.push(resolution.record);
+        state.currentPage = Math.ceil(state.watchedRepos.length / state.reposPerPage);
+        renderRepoListWrapper();
+        renderPopularReposSection();
+        await setWatchedRepos(state.watchedRepos);
+        toastManager.success(`Successfully added ${resolution.record.fullName} to watched repositories`);
+      } catch (error) {
+        console.error('Error adding repository from popular list:', error);
+        showRepoError('Failed to add repository. Please try again.');
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+async function loadPopularRepos() {
+  const popularReposState = document.getElementById('popularReposState');
+  const popularReposList = document.getElementById('popularReposList');
+
+  if (!popularReposState || !popularReposList) {
+    return;
+  }
+
+  popularReposState.textContent = 'Loading popular repositories...';
+  popularReposState.classList.remove('hidden');
+  popularReposList.classList.add('hidden');
+
+  try {
+    state.popularRepos = await onboardingManager.getPopularRepos();
+    renderPopularReposSection();
+  } catch (error) {
+    console.error('Error loading popular repositories:', error);
+    state.popularRepos = [];
+    popularReposState.textContent = 'Could not load popular repositories right now.';
+    popularReposState.classList.remove('hidden');
+    popularReposList.classList.add('hidden');
+  }
 }
 
 function syncTokenUiWithStoredCredential(hasStoredToken) {
@@ -211,6 +372,132 @@ function getColorThemeDisplayName(colorTheme) {
   };
 
   return themeNames[colorTheme] || colorTheme;
+}
+
+function formatSidebarTimestamp(timestamp) {
+  if (!timestamp) {
+    return '';
+  }
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function getSidebarAuthMeta(authSession) {
+  if (!authSession?.accessToken) {
+    return 'Connect GitHub to show the signed-in account and scopes.';
+  }
+
+  const authTypeLabel = authSession.authType === 'oauth_device'
+    ? 'OAuth device flow'
+    : 'GitHub OAuth';
+  const scopes = Array.isArray(authSession.scopes) && authSession.scopes.length > 0
+    ? authSession.scopes.join(', ')
+    : 'scopes unavailable';
+  const grantedAt = formatSidebarTimestamp(authSession.grantedAt);
+
+  return grantedAt
+    ? `${authTypeLabel} · ${scopes} · since ${grantedAt}`
+    : `${authTypeLabel} · ${scopes}`;
+}
+
+function getSidebarRateLimitMeta(rateLimit) {
+  if (!rateLimit || !Number.isFinite(rateLimit.remaining) || !Number.isFinite(rateLimit.limit)) {
+    return 'Updates after the next GitHub request finishes.';
+  }
+
+  if (rateLimit.reset) {
+    const resetTime = formatSidebarTimestamp(rateLimit.reset);
+    if (resetTime) {
+      return `Latest GitHub budget snapshot. Resets ${resetTime}.`;
+    }
+  }
+
+  return 'Latest GitHub budget snapshot from the most recent API response.';
+}
+
+function renderSidebarStatus(authSession, rateLimit) {
+  const accountEl = document.getElementById('sidebarAuthAccount');
+  const authMetaEl = document.getElementById('sidebarAuthMeta');
+  const rateValueEl = document.getElementById('sidebarRateLimitValue');
+  const rateMetaEl = document.getElementById('sidebarRateLimitMeta');
+
+  if (!accountEl || !authMetaEl || !rateValueEl || !rateMetaEl) {
+    return;
+  }
+
+  const isConnected = Boolean(authSession?.accessToken);
+  accountEl.textContent = isConnected
+    ? `@${authSession.username || 'Connected'}`
+    : 'Not connected';
+  authMetaEl.textContent = getSidebarAuthMeta(authSession);
+
+  if (rateLimit && Number.isFinite(rateLimit.remaining) && Number.isFinite(rateLimit.limit)) {
+    rateValueEl.textContent = `${rateLimit.remaining}/${rateLimit.limit} left`;
+  } else {
+    rateValueEl.textContent = 'No data yet';
+  }
+
+  rateMetaEl.textContent = getSidebarRateLimitMeta(rateLimit);
+}
+
+async function refreshSidebarStatus(overrides = {}) {
+  const authSession = overrides.authSession !== undefined
+    ? overrides.authSession
+    : await getAuthSession();
+  const rateLimit = overrides.rateLimit !== undefined
+    ? overrides.rateLimit
+    : await getLocalItem('rateLimit', null);
+
+  renderSidebarStatus(authSession, rateLimit);
+}
+
+function teardownSidebarStatusAutoRefresh() {
+  if (sidebarStatusStorageListener && chrome?.storage?.onChanged) {
+    chrome.storage.onChanged.removeListener(sidebarStatusStorageListener);
+    sidebarStatusStorageListener = null;
+  }
+}
+
+function setupSidebarStatusAutoRefresh() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
+    return;
+  }
+
+  teardownSidebarStatusAutoRefresh();
+
+  sidebarStatusStorageListener = async (changes, areaName) => {
+    const authChanged = (areaName === 'local' || areaName === 'session') && changes.githubAuthSession;
+    const rateLimitChanged = areaName === 'local' && changes.rateLimit;
+
+    if (!authChanged && !rateLimitChanged) {
+      return;
+    }
+
+    try {
+      await refreshSidebarStatus({
+        authSession: authChanged ? changes.githubAuthSession.newValue ?? null : undefined,
+        rateLimit: rateLimitChanged ? changes.rateLimit.newValue ?? null : undefined
+      });
+    } catch (error) {
+      console.error('Failed to refresh sidebar status:', error);
+    }
+  };
+
+  chrome.storage.onChanged.addListener(sidebarStatusStorageListener);
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', teardownSidebarStatusAutoRefresh, { once: true });
+  }
 }
 
 function getOptionCategorySettingsFromDom() {
@@ -268,7 +555,7 @@ function applySettingsToUi(settings) {
 
   const itemExpiryEnabled = settings.itemExpiryHours !== null && settings.itemExpiryHours !== undefined;
   document.getElementById('itemExpiryEnabled').checked = itemExpiryEnabled;
-  document.getElementById('itemExpiryInputRow').style.display = itemExpiryEnabled ? 'block' : 'none';
+  document.getElementById('itemExpiryInputRow').classList.toggle('d-none', !itemExpiryEnabled);
   if (itemExpiryEnabled) {
     document.getElementById('itemExpiryHours').value = settings.itemExpiryHours;
   }
@@ -284,10 +571,16 @@ function setupEventListeners() {
 
   document.getElementById('addRepoBtn').addEventListener('click', addRepo);
   document.getElementById('connectGitHubBtn').addEventListener('click', async () => {
-    await connectGitHub(toastManager);
+    const result = await connectGitHub(toastManager);
+    await refreshSidebarStatus({
+      authSession: result?.authSession ?? undefined
+    });
   });
   document.getElementById('clearTokenBtn').addEventListener('click', async () => {
-    await clearToken();
+    const cleared = await clearToken();
+    if (cleared) {
+      await refreshSidebarStatus({ authSession: null });
+    }
   });
 
   // Action button toggles
@@ -302,6 +595,13 @@ function setupEventListeners() {
   document.getElementById('importStarredBtn').addEventListener('click', () => openImportModal('starred', state.watchedRepos));
   document.getElementById('importParticipatingBtn').addEventListener('click', () => openImportModal('participating', state.watchedRepos));
   document.getElementById('importMineBtn').addEventListener('click', () => openImportModal('mine', state.watchedRepos));
+  document.getElementById('togglePopularReposBtn').addEventListener('click', async () => {
+    togglePopularReposPanel();
+
+    if (state.popularRepos.length === 0) {
+      await loadPopularRepos();
+    }
+  });
 
   // Import/Export settings buttons
   document.getElementById('importBtn').addEventListener('click', () => {
@@ -326,7 +626,7 @@ function setupEventListeners() {
     renderRepoListWrapper();
 
     // Show/hide clear button
-    repoSearchClear.style.display = e.target.value ? 'flex' : 'none';
+    repoSearchClear.classList.toggle('hidden', !e.target.value);
   });
 
   repoSearchClear.addEventListener('click', () => {
@@ -334,7 +634,7 @@ function setupEventListeners() {
     state.searchQuery = '';
     state.currentPage = 1;
     renderRepoListWrapper();
-    repoSearchClear.style.display = 'none';
+    repoSearchClear.classList.add('hidden');
     repoSearchInput.focus();
   });
 
@@ -420,13 +720,13 @@ function setupEventListeners() {
   itemExpiryEnabledCheckbox.addEventListener('change', async (e) => {
     const isEnabled = e.target.checked;
     if (isEnabled) {
-      itemExpiryInputRow.style.display = 'block';
+      itemExpiryInputRow.classList.remove('d-none');
       const hours = parseInt(itemExpiryHoursInput.value) || 24;
       itemExpiryHoursInput.value = hours;
       await updateSettings({ itemExpiryHours: hours });
       toastManager.info(`Auto-removal enabled: items older than ${hours} hours will be removed`);
     } else {
-      itemExpiryInputRow.style.display = 'none';
+      itemExpiryInputRow.classList.add('d-none');
       await updateSettings({ itemExpiryHours: null });
       toastManager.info('Auto-removal disabled');
     }
@@ -526,13 +826,13 @@ function setupEventListeners() {
   importSearchInput.addEventListener('input', (e) => {
     filterImportRepos();
     // Show/hide clear button
-    importSearchClear.style.display = e.target.value ? 'flex' : 'none';
+    importSearchClear.classList.toggle('hidden', !e.target.value);
   });
 
   importSearchClear.addEventListener('click', () => {
     importSearchInput.value = '';
     filterImportRepos();
-    importSearchClear.style.display = 'none';
+    importSearchClear.classList.add('hidden');
     importSearchInput.focus();
   });
 
@@ -617,7 +917,9 @@ async function loadSettings() {
     state.pinnedRepos = settings.pinnedRepos;
 
     renderRepoListWrapper();
+    await loadPopularRepos();
     applySettingsToUi(settings);
+    await refreshSidebarStatus({ authSession });
 
     // Load and display current snoozes
     renderSnoozedRepos(settings.snoozedRepos || []);
@@ -628,6 +930,8 @@ async function loadSettings() {
     state.mutedRepos = state.mutedRepos || [];
     state.pinnedRepos = state.pinnedRepos || [];
     renderRepoListWrapper();
+    renderPopularReposSection();
+    await refreshSidebarStatus().catch(() => {});
   }
 }
 
@@ -820,6 +1124,7 @@ function renderRepoListWrapper() {
     (repo, pin) => togglePinRepo(repo, pin, state, renderRepoListWrapper),
     (repo) => removeRepo(repo)
   );
+  renderPopularReposSection();
 }
 
 // Global wrapper for external calls
@@ -946,59 +1251,420 @@ async function resetSettings() {
  * Load and display version information and changelog
  */
 async function loadVersionAndChangelog() {
+  const versionInfo = document.getElementById('versionInfo');
+  const changelogContent = document.getElementById('changelogContent');
+
   try {
     // Load version from manifest.json
     const manifestUrl = chrome.runtime.getURL('manifest.json');
     const manifestResponse = await fetch(manifestUrl);
     const manifest = await manifestResponse.json();
 
-    const versionInfo = document.getElementById('versionInfo');
+    const release = await fetchLatestRelease();
+
     if (versionInfo) {
-      versionInfo.innerHTML = `
-        <div class="version-badge">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-          </svg>
-          <span>Current Version: <strong>v${manifest.version}</strong></span>
-        </div>
-      `;
+      versionInfo.innerHTML = buildVersionBriefHtml(manifest.version, release);
     }
 
-    // Load changelog from CHANGELOG.md
-    const changelogUrl = chrome.runtime.getURL('CHANGELOG.md');
-    const changelogResponse = await fetch(changelogUrl);
-    const changelogText = await changelogResponse.text();
-
-    // Parse markdown to HTML (basic conversion)
-    const changelogHtml = parseChangelogMarkdown(changelogText);
-
-    const changelogContent = document.getElementById('changelogContent');
     if (changelogContent) {
-      changelogContent.innerHTML = changelogHtml + `
-        <div class="changelog-footer">
-          <a href="https://github.com/jonmartin721/devwatch-github/blob/main/CHANGELOG.md"
-             target="_blank"
-             rel="noopener noreferrer"
-             class="changelog-link">
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-            </svg>
-            View full changelog on GitHub
-          </a>
-        </div>
-      `;
+      changelogContent.innerHTML = buildLatestReleaseHtml(release);
+      bindReleaseSectionChips(changelogContent);
     }
   } catch (error) {
     console.error('Error loading version/changelog:', error);
-    const versionInfo = document.getElementById('versionInfo');
-    const changelogContent = document.getElementById('changelogContent');
+
     if (versionInfo) {
-      versionInfo.innerHTML = '<p class="error-text">Unable to load version information</p>';
+      versionInfo.innerHTML = buildFallbackVersionInfoHtml();
     }
     if (changelogContent) {
-      changelogContent.innerHTML = '<p class="error-text">Unable to load changelog</p>';
+      changelogContent.innerHTML = await buildFallbackChangelogHtml();
     }
   }
+}
+
+async function fetchLatestRelease() {
+  const response = await fetch(LATEST_RELEASE_API_URL, {
+    headers: {
+      Accept: 'application/vnd.github+json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch latest release: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function buildVersionBriefHtml(installedVersion, release) {
+  const sections = parseReleaseSections(release.body, release.tag_name);
+  const displayTitle = extractReleaseTitle(release.name, release.tag_name);
+  const publishedAt = formatAbsoluteDate(release.published_at || release.created_at);
+  const highlightCards = sections
+    .filter(section => section.items.length > 0 || section.paragraphs.length > 0)
+    .slice(0, 3)
+    .map(section => `
+      <div class="release-highlight-card">
+        <div class="release-highlight-title">${escapeHtml(section.title)}</div>
+        <p class="release-highlight-copy">${renderReleaseInlineMarkdown(summarizeReleaseSection(section))}</p>
+      </div>
+    `)
+    .join('');
+
+  const releasePills = [
+    buildVersionPill('Installed', `v${installedVersion}`),
+    buildReleasePill('Published', publishedAt)
+  ];
+
+  if (release.tag_name && release.tag_name !== `v${installedVersion}`) {
+    releasePills.push(buildReleasePill('Latest', release.tag_name));
+  }
+
+  return `
+    <div class="version-brief">
+      <div class="version-brief-top">
+        <div>
+          <div class="version-label">Latest release</div>
+          <h4 class="version-headline">${escapeHtml(release.tag_name || `v${installedVersion}`)}${displayTitle ? ` - ${escapeHtml(displayTitle)}` : ''}</h4>
+        </div>
+        <div class="release-pills">
+          ${releasePills.join('')}
+        </div>
+      </div>
+      <p class="version-summary">${escapeHtml(buildReleaseSummary(displayTitle, sections))}</p>
+      ${highlightCards ? `<div class="release-highlight-grid">${highlightCards}</div>` : ''}
+    </div>
+  `;
+}
+
+function buildFallbackVersionInfoHtml() {
+  return '<p class="error-text">Unable to load latest release information</p>';
+}
+
+async function buildFallbackChangelogHtml() {
+  try {
+    const changelogUrl = chrome.runtime.getURL('CHANGELOG.md');
+    const changelogResponse = await fetch(changelogUrl);
+    const changelogText = await changelogResponse.text();
+    const changelogHtml = parseChangelogMarkdown(changelogText);
+
+    return changelogHtml + `
+      <div class="changelog-footer">
+        <a href="https://github.com/jonmartin721/devwatch-github/blob/main/CHANGELOG.md"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="changelog-link">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          View full changelog on GitHub
+        </a>
+      </div>
+    `;
+  } catch (fallbackError) {
+    console.error('Fallback changelog load failed:', fallbackError);
+    return `
+      <div class="release-empty-state">
+        Unable to load the latest release right now. Please try again later.
+      </div>
+      <div class="changelog-footer">
+        <a href="${CHANGELOG_GITHUB_URL}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="changelog-link">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          View releases on GitHub
+        </a>
+      </div>
+    `;
+  }
+}
+
+function buildLatestReleaseHtml(release) {
+  const sections = parseReleaseSections(release.body, release.tag_name);
+  const chips = sections
+    .map((section, index) => `
+      <button type="button"
+              class="release-chip${index === 0 ? ' active' : ''}"
+              data-target="release-section-${index}"
+              aria-pressed="${index === 0 ? 'true' : 'false'}">
+        ${escapeHtml(section.title)}
+      </button>
+    `)
+    .join('');
+
+  const sectionCards = sections
+    .map((section, index) => {
+      const sectionBody = [
+        ...section.paragraphs.map(paragraph => `<p>${renderReleaseInlineMarkdown(paragraph)}</p>`),
+        section.items.length > 0
+          ? `<ul>${section.items.map(item => `<li>${renderReleaseInlineMarkdown(item)}</li>`).join('')}</ul>`
+          : ''
+      ].join('');
+
+      const countLabel = section.items.length > 0
+        ? `${section.items.length} ${section.items.length === 1 ? 'item' : 'items'}`
+        : `${section.paragraphs.length} ${section.paragraphs.length === 1 ? 'note' : 'notes'}`;
+
+      return `
+        <section id="release-section-${index}" class="release-section">
+          <div class="release-section-head">
+            <h4 class="release-section-title">${escapeHtml(section.title)}</h4>
+            <span class="release-section-count">${escapeHtml(countLabel)}</span>
+          </div>
+          <div class="release-section-body">${sectionBody}</div>
+        </section>
+      `;
+    })
+    .join('');
+
+  return `
+    ${chips ? `<div class="release-chip-row">${chips}</div>` : ''}
+    <div class="release-notes-list">
+      ${sectionCards || '<div class="release-empty-state">No release notes were included with this version.</div>'}
+    </div>
+    <div class="changelog-footer">
+      <a href="${escapeHtml(release.html_url || CHANGELOG_GITHUB_URL)}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="changelog-link">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        View this release on GitHub
+      </a>
+    </div>
+  `;
+}
+
+function parseReleaseSections(markdown, releaseTag = '') {
+  const normalizedMarkdown = (markdown || '').replace(/\r\n/g, '\n');
+  const lines = normalizedMarkdown.split('\n');
+  const sections = [];
+  let currentSection = null;
+
+  function ensureSection(title = 'Release notes') {
+    if (!currentSection) {
+      currentSection = { title, paragraphs: [], items: [] };
+      sections.push(currentSection);
+    }
+    return currentSection;
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const levelThreeHeading = line.match(/^###\s+(.+)$/);
+    if (levelThreeHeading) {
+      currentSection = {
+        title: cleanReleaseHeading(levelThreeHeading[1]),
+        paragraphs: [],
+        items: []
+      };
+      sections.push(currentSection);
+      continue;
+    }
+
+    const levelTwoHeading = line.match(/^##\s+(.+)$/);
+    if (levelTwoHeading) {
+      const title = cleanReleaseHeading(levelTwoHeading[1]);
+      if (shouldSkipReleaseHeading(title, releaseTag)) {
+        continue;
+      }
+
+      currentSection = {
+        title,
+        paragraphs: [],
+        items: []
+      };
+      sections.push(currentSection);
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      ensureSection().items.push(line.replace(/^[-*]\s+/, '').trim());
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      ensureSection().items.push(line.replace(/^\d+\.\s+/, '').trim());
+      continue;
+    }
+
+    ensureSection().paragraphs.push(line);
+  }
+
+  const nonEmptySections = sections.filter(section => section.items.length > 0 || section.paragraphs.length > 0);
+  if (nonEmptySections.length === 0 && normalizedMarkdown.trim()) {
+    return [{
+      title: 'Release notes',
+      paragraphs: [normalizedMarkdown.trim()],
+      items: []
+    }];
+  }
+
+  return nonEmptySections;
+}
+
+function cleanReleaseHeading(heading) {
+  return heading
+    .replace(/\s+[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/gu, '')
+    .trim();
+}
+
+function shouldSkipReleaseHeading(heading, releaseTag) {
+  const normalizedHeading = heading.toLowerCase();
+  const normalizedTag = releaseTag.toLowerCase();
+
+  return Boolean(
+    normalizedHeading === 'changelog' ||
+    (normalizedTag && normalizedHeading.startsWith(normalizedTag)) ||
+    /^v?\d+\.\d+\.\d+\b/i.test(heading)
+  );
+}
+
+function extractReleaseTitle(name, tagName) {
+  const trimmedName = (name || '').trim();
+  if (!trimmedName) {
+    return '';
+  }
+
+  if (!tagName) {
+    return trimmedName;
+  }
+
+  const tagPattern = new RegExp(`^${escapeRegExp(tagName)}\\s*[–—:-]\\s*`, 'i');
+  return trimmedName.replace(tagPattern, '').trim();
+}
+
+function buildReleaseSummary(displayTitle, sections) {
+  const sectionNames = sections.slice(0, 3).map(section => section.title);
+  if (!displayTitle && sectionNames.length === 0) {
+    return 'Read the latest release notes from GitHub.';
+  }
+
+  if (displayTitle && sectionNames.length === 0) {
+    return `This release focuses on ${displayTitle}.`;
+  }
+
+  if (!displayTitle) {
+    return `This release includes updates across ${joinNaturalList(sectionNames)}.`;
+  }
+
+  return `This release focuses on ${displayTitle} and includes updates across ${joinNaturalList(sectionNames)}.`;
+}
+
+function summarizeReleaseSection(section) {
+  return section.items[0] || section.paragraphs[0] || 'Release notes updated.';
+}
+
+function buildVersionPill(label, value) {
+  return `
+    <div class="version-badge">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+      </svg>
+      <span>${escapeHtml(label)} ${escapeHtml(value)}</span>
+    </div>
+  `;
+}
+
+function buildReleasePill(label, value) {
+  return `
+    <div class="release-pill">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      <span>${escapeHtml(label)} ${escapeHtml(value)}</span>
+    </div>
+  `;
+}
+
+function renderReleaseInlineMarkdown(text) {
+  let html = escapeHtml(text || '');
+
+  html = html.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+  );
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  return html;
+}
+
+function bindReleaseSectionChips(container) {
+  const chips = Array.from(container.querySelectorAll('.release-chip'));
+  if (chips.length === 0) {
+    return;
+  }
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const targetId = chip.dataset.target;
+      if (!targetId) {
+        return;
+      }
+
+      const selector = typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function'
+        ? `#${window.CSS.escape(targetId)}`
+        : `#${targetId}`;
+      const target = container.querySelector(selector);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      chips.forEach(button => {
+        button.classList.remove('active');
+        button.setAttribute('aria-pressed', 'false');
+      });
+
+      chip.classList.add('active');
+      chip.setAttribute('aria-pressed', 'true');
+    });
+  });
+}
+
+function formatAbsoluteDate(dateString) {
+  if (!dateString) {
+    return 'Unknown date';
+  }
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown date';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+}
+
+function joinNaturalList(items) {
+  if (items.length === 0) {
+    return '';
+  }
+
+  if (items.length === 1) {
+    return items[0];
+  }
+
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

@@ -11,6 +11,8 @@ import {
 import { setState } from '../../shared/state-manager.js';
 import { filterVisibleActivities } from '../../shared/feed-policy.js';
 
+const MIN_REFRESH_SPIN_MS = 500;
+
 /**
  * Loads activities from storage or cache, handles offline mode
  * @param {Function} renderActivitiesCallback - Callback to render activities after loading
@@ -122,7 +124,11 @@ export async function loadActivities(
  */
 export async function handleRefresh(loadActivitiesCallback) {
   const btn = document.getElementById('refreshBtn');
+  const refreshStartedAt = Date.now();
+  let refreshSucceeded = false;
+
   btn.disabled = true;
+  btn.classList.remove('refresh-complete');
   btn.classList.add('spinning');
 
   try {
@@ -130,17 +136,24 @@ export async function handleRefresh(loadActivitiesCallback) {
     await chrome.runtime.sendMessage({ action: 'checkNow' });
     // Pass skipLoadingIndicator to avoid clearing the existing feed
     await loadActivitiesCallback({ skipLoadingIndicator: true });
+    refreshSucceeded = true;
   } catch (error) {
     showError('errorMessage', error, null, { action: 'refresh activities' }, 5000);
   } finally {
+    const elapsed = Date.now() - refreshStartedAt;
+    if (elapsed < MIN_REFRESH_SPIN_MS) {
+      await new Promise(resolve => setTimeout(resolve, MIN_REFRESH_SPIN_MS - elapsed));
+    }
+
     btn.disabled = false;
     btn.classList.remove('spinning');
 
-    // Add completion animation
-    btn.classList.add('refresh-complete');
-    setTimeout(() => {
-      btn.classList.remove('refresh-complete');
-    }, 400);
+    if (refreshSucceeded) {
+      btn.classList.add('refresh-complete');
+      setTimeout(() => {
+        btn.classList.remove('refresh-complete');
+      }, 400);
+    }
   }
 }
 
@@ -170,7 +183,8 @@ export function updateRateLimit(rateLimit) {
   // Only show rate limit when remaining <= 1000
   if (!rateLimit || rateLimit.remaining > 1000) {
     rateLimitInfo.textContent = '';
-    rateLimitInfo.style.display = 'none';
+    rateLimitInfo.classList.add('hidden');
+    rateLimitInfo.classList.remove('warning');
     return;
   }
 
@@ -181,8 +195,8 @@ export function updateRateLimit(rateLimit) {
     </svg>
     ${rateLimit.remaining}/${rateLimit.limit} API calls remaining
   `;
-  rateLimitInfo.style.color = '#f0ad4e'; // Yellow/orange warning color
-  rateLimitInfo.style.display = 'block';
+  rateLimitInfo.classList.add('warning');
+  rateLimitInfo.classList.remove('hidden');
 
   // Show when rate limit resets
   if (rateLimit.reset) {

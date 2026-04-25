@@ -7,6 +7,7 @@ import { UI_CONFIG } from './config.js';
 import { SNOOZE_ICON, CHECK_ICON } from './icons.js';
 import { sanitizeImageUrl } from './sanitize.js';
 import {
+  getActivityTypeBadgeLabel as getSharedActivityTypeBadgeLabel,
   formatRelativeTime as formatSharedRelativeTime,
   getActivityTypeLabel as getSharedActivityTypeLabel,
   getSortedRepoGroups
@@ -460,6 +461,7 @@ class ActivityListRenderer {
     const sanitizedRepo = escapeHtml(activity.repo);
     const sanitizedType = escapeHtml(activity.type);
     const sanitizedTypeLabel = escapeHtml(getSharedActivityTypeLabel(activity.type));
+    const sanitizedTypeBadgeLabel = escapeHtml(getSharedActivityTypeBadgeLabel(activity.type));
     const sanitizedDescription = activity.description ? escapeHtml(activity.description) : '';
     const sanitizedAvatar = sanitizeImageUrl(activity.authorAvatar)
       || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
@@ -471,7 +473,7 @@ class ActivityListRenderer {
         <img src="${sanitizedAvatar}" class="activity-avatar" alt="${sanitizedAuthor}">
         <div class="activity-content">
           <div class="activity-header">
-            <span class="activity-type ${sanitizedType}">${sanitizedTypeLabel}</span>
+            <span class="activity-type ${sanitizedType}" title="${sanitizedTypeLabel}">${sanitizedTypeBadgeLabel}</span>
             <span class="activity-repo">${sanitizedRepo}</span>
           </div>
           <div class="activity-title">${sanitizedTitle}</div>

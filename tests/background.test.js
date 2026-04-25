@@ -208,6 +208,29 @@ describe('Background Service Worker', () => {
       );
     });
 
+    test('uses unauthenticated headers when no token is available', async () => {
+      fetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => null },
+        json: async () => []
+      });
+
+      await fetchRepoActivity(mockRepo, null, mockSince, {
+        prs: true,
+        issues: false,
+        releases: false
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/pulls'),
+        expect.objectContaining({
+          headers: {
+            Accept: 'application/vnd.github.v3+json'
+          }
+        })
+      );
+    });
+
     test('filters activities by since date', async () => {
 
       const oldPR = {
@@ -853,24 +876,17 @@ describe('Background Service Worker', () => {
         callback(result);
       });
 
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        const result = {};
-        if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
-          result.githubAuthSession = { accessToken: mockToken };
-        } else if (keys === 'githubAuthSession') {
-          result.githubAuthSession = { accessToken: mockToken };
-        }
-        callback(result);
-      });
-
       chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys)) {
           keys.forEach(key => {
-            if (key === 'encryptedGithubAuthSession') result[key] = null;
+            if (key === 'githubAuthSession') result[key] = { accessToken: mockToken };
+            else if (key === 'encryptedGithubAuthSession') result[key] = null;
             else if (key === 'activities') result[key] = [];
             else if (key === 'rateLimit') result[key] = null;
           });
+        } else if (keys === 'githubAuthSession') {
+          result.githubAuthSession = { accessToken: mockToken };
         } else if (keys === 'encryptedGithubAuthSession') {
           result.encryptedGithubAuthSession = null;
         }
@@ -888,22 +904,35 @@ describe('Background Service Worker', () => {
       });
     });
 
-    test('returns early if no token found', async () => {
-      allowUnexpectedConsole('warn');
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
+    test('continues checking public repositories when no token is found', async () => {
+      chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
-        if (typeof keys === 'string' && keys === 'githubAuthSession') {
+        if (Array.isArray(keys)) {
+          keys.forEach(key => {
+            if (key === 'githubAuthSession') result[key] = null;
+            else if (key === 'activities') result[key] = [];
+            else if (key === 'rateLimit') result[key] = null;
+          });
+        } else if (keys === 'githubAuthSession') {
           result.githubAuthSession = null;
-        } else if (Array.isArray(keys) && keys.includes('githubAuthSession')) {
-          result.githubAuthSession = null;
+        } else if (keys === 'activities') {
+          result.activities = [];
+        } else if (keys === 'rateLimit') {
+          result.rateLimit = null;
         }
         callback(result);
       });
 
       await checkGitHubActivity();
 
-      // Verify that no fetch was made
-      expect(fetch).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalled();
+      expect(fetch.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          headers: {
+            Accept: 'application/vnd.github.v3+json'
+          }
+        })
+      );
     });
 
     test('returns early if no watched repos', async () => {
@@ -967,15 +996,12 @@ describe('Background Service Worker', () => {
         callback(result);
       });
 
-      chrome.storage.session.get.mockImplementation((keys, callback) => {
-        callback({ githubAuthSession: { accessToken: mockToken } });
-      });
-
       chrome.storage.local.get.mockImplementation((keys, callback) => {
         const result = {};
         if (Array.isArray(keys)) {
           keys.forEach(key => {
-            if (key === 'activities') result[key] = [];
+            if (key === 'githubAuthSession') result[key] = { accessToken: mockToken };
+            else if (key === 'activities') result[key] = [];
             else if (key === 'rateLimit') result[key] = null;
             else if (key === 'watchedRepos') {
               result[key] = [
